@@ -1,0 +1,11 @@
+name = "ko-mcp-server"
+main = "src/index.ts"
+compatibility_date = "2025-03-03"
+compatibility_flags = ["nodejs_compat"]
+
+routes = [
+  { pattern = "mcp.ko.io/*", zone_name = "ko.io" }
+]
+
+[vars]
+KO_API_URL = "https://api.ko.io"

@@ -1,0 +1,19 @@
+{
+  "name": "ko-mcp-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250306.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}

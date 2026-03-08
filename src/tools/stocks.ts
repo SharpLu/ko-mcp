@@ -1,0 +1,264 @@
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { koFetch, type KoConfig } from "../ko-fetch.js";
+import { fmtMoney, fmtShares, fmtPct } from "../format.js";
+
+export function registerStockTools(server: McpServer, config: KoConfig) {
+  server.tool(
+    "get_stock_profile",
+    "Get a company's profile — sector, market cap, price, P/E ratio, 52-week range, beta, dividend yield, and other key financials.",
+    {
+      ticker: z.string().describe("Stock ticker symbol (e.g. 'AAPL', 'NVDA', 'MSFT')"),
+    },
+    async ({ ticker }) => {
+      const resp = await koFetch<{
+        data: { stock: StockProfile; top_holders: unknown[] };
+      }>(config, `/api/v1/stocks/${encodeURIComponent(ticker.toUpperCase())}`);
+
+      const s = resp.data.stock;
+
+      const lines: string[] = [
+        `## ${s.ticker}`,
+        "",
+        `| Metric | Value |`,
+        `|--------|-------|`,
+        `| **Sector** | ${s.sector || "N/A"} |`,
+        `| **Industry** | ${s.industry || "N/A"} |`,
+        `| **Market Cap** | ${fmtMoney(s.market_cap)} |`,
+        `| **Price** | $${s.current_price?.toFixed(2) ?? "N/A"} |`,
+        `| **Prev Close** | $${s.previous_close?.toFixed(2) ?? "N/A"} |`,
+        `| **52W High** | $${s.fifty_two_week_high?.toFixed(2) ?? "N/A"} |`,
+        `| **52W Low** | $${s.fifty_two_week_low?.toFixed(2) ?? "N/A"} |`,
+        `| **P/E** | ${s.pe_ratio?.toFixed(2) ?? "N/A"} |`,
+        `| **EPS** | $${s.eps?.toFixed(2) ?? "N/A"} |`,
+        `| **Beta** | ${s.beta?.toFixed(2) ?? "N/A"} |`,
+        `| **Dividend Yield** | ${s.dividend_yield ? s.dividend_yield.toFixed(2) + "%" : "N/A"} |`,
+        `| **Avg Volume** | ${fmtShares(s.avg_volume)} |`,
+        `| **Profit Margins** | ${s.profit_margins ? (s.profit_margins * 100).toFixed(1) + "%" : "N/A"} |`,
+      ];
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    }
+  );
+
+  server.tool(
+    "get_stock_holders",
+    "Get top institutional holders of a stock from SEC 13F filings. Shows which hedge funds, mutual funds, and pension funds own the most shares, with quarter-over-quarter changes.",
+    {
+      ticker: z.string().describe("Stock ticker symbol (e.g. 'NVDA')"),
+      page: z.number().int().min(1).optional().default(1).describe("Page number"),
+      limit: z.number().int().min(1).max(50).optional().default(20).describe("Results per page"),
+    },
+    async ({ ticker, page, limit }) => {
+      const resp = await koFetch<{
+        data: {
+          data: HolderRow[];
+          totalCount: number;
+          page: number;
+          totalPages: number;
+          quarterDate: string;
+        };
+      }>(config, `/api/v1/stock-holders/${encodeURIComponent(ticker.toUpperCase())}`, {
+        type: "holders",
+        page,
+        limit,
+      });
+
+      const d = resp.data;
+      const lines: string[] = [
+        `## Institutional Holders of ${ticker.toUpperCase()} — Q${d.quarterDate}`,
+        `**Total institutions:** ${d.totalCount}\n`,
+        "| # | Institution | Value | Shares | Weight | Change | Action |",
+        "|---|------------|-------|--------|--------|--------|--------|",
+      ];
+
+      for (const [i, h] of d.data.entries()) {
+        const num = (page - 1) * limit + i + 1;
+        const changeStr = h.share_change
+          ? `${h.share_change > 0 ? "+" : ""}${fmtShares(h.share_change)}`
+          : "—";
+        lines.push(
+          `| ${num} | **${h.name}** | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% | ${changeStr} | ${h.action} |`
+        );
+      }
+
+      if (page < d.totalPages) {
+        lines.push(`\n*Page ${page}/${d.totalPages} — use page=${page + 1} for more.*`);
+      }
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    }
+  );
+
+  server.tool(
+    "get_stock_activity",
+    "Get institutional buying/selling activity trend for a stock over multiple quarters. Shows how many institutions are buying vs selling, net share changes, and value flows — useful for detecting accumulation or distribution patterns.",
+    {
+      ticker: z.string().describe("Stock ticker symbol"),
+      quarters: z
+        .number()
+        .int()
+        .min(1)
+        .max(40)
+        .optional()
+        .default(8)
+        .describe("Number of quarters to return (default 8 = 2 years)"),
+    },
+    async ({ ticker, quarters }) => {
+      const resp = await koFetch<{
+        data: {
+          ticker: string;
+          summary: ActivitySummary;
+          trend: ActivityTrend[];
+        };
+      }>(config, `/api/v1/stock-holders/${encodeURIComponent(ticker.toUpperCase())}`, {
+        type: "activity",
+        quarters,
+      });
+
+      const data = resp.data;
+      const lines: string[] = [
+        `## Institutional Activity — ${data.ticker}`,
+        "",
+        `**Latest Quarter (${data.summary.quarterDate}):**`,
+        `- Institutions increased: ${data.summary.institutionsIncreased} | Decreased: ${data.summary.institutionsDecreased}`,
+        `- New positions: ${data.summary.institutionsNew} | Exited: ${data.summary.institutionsExited}`,
+        `- Net shares: ${fmtShares(data.summary.netShares)} | Net value: ${fmtMoney(data.summary.netValue)}`,
+        "",
+        "### Quarterly Trend\n",
+        "| Quarter | Increased | Decreased | New | Exited | Net Shares | Net Value |",
+        "|---------|-----------|-----------|-----|--------|------------|-----------|",
+      ];
+
+      for (const t of data.trend) {
+        lines.push(
+          `| ${t.quarter} | ${t.institutionsIncreased} | ${t.institutionsDecreased} | ${t.institutionsNew} | ${t.institutionsExited} | ${fmtShares(t.netShares)} | ${fmtMoney(t.netValue)} |`
+        );
+      }
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    }
+  );
+
+  server.tool(
+    "get_stock_price",
+    "Get historical stock price data (closing prices). Useful for charting or checking price at specific dates.",
+    {
+      ticker: z.string().describe("Stock ticker symbol"),
+      period: z
+        .enum(["1y", "3y", "5y", "10y"])
+        .optional()
+        .default("1y")
+        .describe("Time period"),
+      aggregation: z
+        .enum(["daily", "weekly"])
+        .optional()
+        .default("weekly")
+        .describe("Data aggregation level"),
+    },
+    async ({ ticker, period, aggregation }) => {
+      const resp = await koFetch<{
+        data: PriceRow[];
+      }>(config, `/api/v1/stock-price/${encodeURIComponent(ticker.toUpperCase())}`, {
+        period,
+        agg: aggregation,
+      });
+
+      const prices = resp.data;
+      if (prices.length === 0) {
+        return { content: [{ type: "text", text: `No price data found for ${ticker}.` }] };
+      }
+
+      const latest = prices[prices.length - 1];
+      const first = prices[0];
+      const totalReturn = ((latest.close - first.close) / first.close) * 100;
+      const high = Math.max(...prices.map((p) => p.close));
+      const low = Math.min(...prices.map((p) => p.close));
+
+      const lines: string[] = [
+        `## ${ticker.toUpperCase()} Price — ${period} (${aggregation})`,
+        "",
+        `| Metric | Value |`,
+        `|--------|-------|`,
+        `| **Latest** | $${latest.close.toFixed(2)} (${latest.date}) |`,
+        `| **Period Start** | $${first.close.toFixed(2)} (${first.date}) |`,
+        `| **Total Return** | ${fmtPct(totalReturn)} |`,
+        `| **Period High** | $${high.toFixed(2)} |`,
+        `| **Period Low** | $${low.toFixed(2)} |`,
+        `| **Data Points** | ${prices.length} |`,
+      ];
+
+      lines.push("", "### Recent Prices\n");
+      lines.push("| Date | Close |");
+      lines.push("|------|-------|");
+      for (const p of prices.slice(-10)) {
+        lines.push(`| ${p.date} | $${p.close.toFixed(2)} |`);
+      }
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    }
+  );
+}
+
+interface StockProfile {
+  ticker: string;
+  sector: string | null;
+  industry: string | null;
+  market_cap: number | null;
+  current_price: number | null;
+  previous_close: number | null;
+  fifty_two_week_high: number | null;
+  fifty_two_week_low: number | null;
+  pe_ratio: number | null;
+  eps: number | null;
+  beta: number | null;
+  dividend_yield: number | null;
+  avg_volume: number | null;
+  profit_margins: number | null;
+}
+
+interface HolderRow {
+  cik: string;
+  name: string;
+  slug: string;
+  shares_held: number;
+  holding_value: number;
+  share_change: number;
+  action: string;
+  portfolio_weight_pct: number | null;
+}
+
+interface ActivitySummary {
+  quarterDate: string;
+  institutionsIncreased: number;
+  institutionsDecreased: number;
+  institutionsNew: number;
+  institutionsExited: number;
+  institutionsTotal: number;
+  sharesAdded: number;
+  sharesRemoved: number;
+  netShares: number;
+  valueAdded: number;
+  valueRemoved: number;
+  netValue: number;
+}
+
+interface ActivityTrend {
+  quarter: string;
+  institutionsIncreased: number;
+  institutionsDecreased: number;
+  institutionsNew: number;
+  institutionsExited: number;
+  netShares: number;
+  netValue: number;
+}
+
+interface PriceRow {
+  ticker: string;
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: string;
+}
