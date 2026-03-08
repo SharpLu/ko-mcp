@@ -6,6 +6,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -13,9 +16,12 @@ jobs:
           node-version: "20"
       - run: npm ci
       - run: npm run type-check
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
-          wranglerVersion: "4"
+      - name: Upload Worker version
+        id: upload
+        run: |
+          OUTPUT=$(npx wrangler versions upload 2>&1)
+          echo "$OUTPUT"
+          VERSION_ID=$(echo "$OUTPUT" | grep -oP 'Worker Version ID: \K[a-f0-9-]+')
+          echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
+      - name: Deploy Worker version
+        run: npx wrangler versions deploy "${{ steps.upload.outputs.version_id }}@100%" -y
