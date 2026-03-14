@@ -1,11 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
-import { fmtMoney, fmtShares } from "../format.js";
-
-function truncate(arr: unknown[], max: number): unknown[] {
-  return arr.slice(0, max);
-}
+import { fmtMoney, fmtShares, truncate } from "../format.js";
 
 export function registerForm144Tools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
@@ -20,10 +16,8 @@ export function registerForm144Tools(server: McpServer, config: KoConfig) {
       limit: z.number().int().min(1).max(200).optional().default(50).describe("Max notices to return"),
     },
     async ({ ticker, insider_cik, limit }) => {
-      const data = await koFetch<{
-        data: Form144Row[];
-        meta: { total_count: number; page: number; per_page: number };
-      }>(config, "/api/v1/form144-notices", {
+      // koFetch returns the array directly
+      const notices = await koFetch<Form144Row[]>(config, "/api/v1/form144-notices", {
         ticker: ticker?.toUpperCase(),
         cik: insider_cik,
         per_page: limit,
@@ -31,23 +25,23 @@ export function registerForm144Tools(server: McpServer, config: KoConfig) {
 
       const lines: string[] = [
         `## Form 144 Notices${ticker ? ` — ${ticker.toUpperCase()}` : ""}`,
-        `*${data.meta.total_count} total filings*\n`,
+        `*${notices.length} filings returned*\n`,
       ];
 
-      if (data.data.length > 0) {
+      if (notices.length > 0) {
         lines.push("| Filed | Ticker | Seller | Relationship | Units to Sell | Market Value | 10b5-1 |");
         lines.push("|-------|--------|--------|-------------|---------------|-------------|--------|");
 
-        for (const n of truncate(data.data, 50) as Form144Row[]) {
+        for (const n of truncate(notices, 50) as Form144Row[]) {
           const plan = n.has_10b5_1_plan ? "Yes" : "—";
           lines.push(
             `| ${n.filed_date} | **${n.issuer_ticker || "—"}** | ${n.seller_name} | ${n.relationship || "—"} | ${fmtShares(n.num_units_to_sell)} | ${fmtMoney(n.aggregate_market_value)} | ${plan} |`
           );
         }
 
-        if (data.meta.total_count > data.data.length) {
+        if (notices.length > 50) {
           lines.push(
-            `\n*Showing ${data.data.length} of ${data.meta.total_count} total notices.*`
+            `\n*Showing 50 of ${notices.length} total notices.*`
           );
         }
       } else {

@@ -1,9 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
-import { fmtMoney, fmtShares, fmtPct } from "../format.js";
+import { fmtMoney, fmtShares, fmtPct, truncate } from "../format.js";
 
 export function registerStockTools(server: McpServer, config: KoConfig) {
+  // ---------------------------------------------------------------------------
+  // Tool: get_stock_profile
+  // ---------------------------------------------------------------------------
   server.tool(
     "get_stock_profile",
     "Get a company's profile — sector, market cap, price, P/E ratio, 52-week range, beta, dividend yield, and other key financials.",
@@ -11,11 +14,12 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       ticker: z.string().describe("Stock ticker symbol (e.g. 'AAPL', 'NVDA', 'MSFT')"),
     },
     async ({ ticker }) => {
-      const resp = await koFetch<{
-        data: { stock: StockProfile; top_holders: unknown[] };
-      }>(config, `/api/v1/stocks/${encodeURIComponent(ticker.toUpperCase())}`);
+      const data = await koFetch<StockProfileResponse>(
+        config,
+        `/api/v1/stocks/${encodeURIComponent(ticker.toUpperCase())}`
+      );
 
-      const s = resp.data.stock;
+      const s = data.stock;
 
       const lines: string[] = [
         `## ${s.ticker}`,
@@ -26,21 +30,35 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         `| **Industry** | ${s.industry || "N/A"} |`,
         `| **Market Cap** | ${fmtMoney(s.market_cap)} |`,
         `| **Price** | $${s.current_price?.toFixed(2) ?? "N/A"} |`,
-        `| **Prev Close** | $${s.previous_close?.toFixed(2) ?? "N/A"} |`,
+        `| **Previous Close** | $${s.previous_close?.toFixed(2) ?? "N/A"} |`,
         `| **52W High** | $${s.fifty_two_week_high?.toFixed(2) ?? "N/A"} |`,
         `| **52W Low** | $${s.fifty_two_week_low?.toFixed(2) ?? "N/A"} |`,
         `| **P/E** | ${s.pe_ratio?.toFixed(2) ?? "N/A"} |`,
         `| **EPS** | $${s.eps?.toFixed(2) ?? "N/A"} |`,
         `| **Beta** | ${s.beta?.toFixed(2) ?? "N/A"} |`,
-        `| **Dividend Yield** | ${s.dividend_yield ? s.dividend_yield.toFixed(2) + "%" : "N/A"} |`,
+        `| **Dividend Yield** | ${s.dividend_yield ? (s.dividend_yield * 100).toFixed(2) + "%" : "N/A"} |`,
+        `| **Profit Margins** | ${s.profit_margins ? (s.profit_margins * 100).toFixed(2) + "%" : "N/A"} |`,
         `| **Avg Volume** | ${fmtShares(s.avg_volume)} |`,
-        `| **Profit Margins** | ${s.profit_margins ? (s.profit_margins * 100).toFixed(1) + "%" : "N/A"} |`,
       ];
+
+      if (data.top_holders?.length) {
+        lines.push("", "### Top Institutional Holders\n");
+        lines.push("| Institution | Shares | Value | Weight |");
+        lines.push("|------------|--------|-------|--------|");
+        for (const h of (truncate(data.top_holders, 10) as TopHolder[])) {
+          lines.push(
+            `| **${h.name}** | ${fmtShares(h.shares_held)} | ${fmtMoney(h.holding_value)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% |`
+          );
+        }
+      }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }
   );
 
+  // ---------------------------------------------------------------------------
+  // Tool: get_stock_holders
+  // ---------------------------------------------------------------------------
   server.tool(
     "get_stock_holders",
     "Get top institutional holders of a stock from SEC 13F filings. Shows which hedge funds, mutual funds, and pension funds own the most shares, with quarter-over-quarter changes.",
@@ -50,29 +68,20 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       limit: z.number().int().min(1).max(50).optional().default(20).describe("Results per page"),
     },
     async ({ ticker, page, limit }) => {
-      const resp = await koFetch<{
-        data: {
-          data: HolderRow[];
-          totalCount: number;
-          page: number;
-          totalPages: number;
-          quarterDate: string;
-        };
-      }>(config, `/api/v1/stock-holders/${encodeURIComponent(ticker.toUpperCase())}`, {
-        type: "holders",
-        page,
-        limit,
-      });
+      const data = await koFetch<HoldersResponse>(
+        config,
+        `/api/v1/stock-holders/${encodeURIComponent(ticker.toUpperCase())}`,
+        { type: "holders", page, limit }
+      );
 
-      const d = resp.data;
       const lines: string[] = [
-        `## Institutional Holders of ${ticker.toUpperCase()} — Q${d.quarterDate}`,
-        `**Total institutions:** ${d.totalCount}\n`,
+        `## Institutional Holders of ${ticker.toUpperCase()} — Q${data.quarterDate}`,
+        `**Total institutions:** ${data.totalCount}\n`,
         "| # | Institution | Value | Shares | Weight | Change | Action |",
         "|---|------------|-------|--------|--------|--------|--------|",
       ];
 
-      for (const [i, h] of d.data.entries()) {
+      for (const [i, h] of data.data.entries()) {
         const num = (page - 1) * limit + i + 1;
         const changeStr = h.share_change
           ? `${h.share_change > 0 ? "+" : ""}${fmtShares(h.share_change)}`
@@ -82,14 +91,17 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         );
       }
 
-      if (page < d.totalPages) {
-        lines.push(`\n*Page ${page}/${d.totalPages} — use page=${page + 1} for more.*`);
+      if (data.totalPages && page < data.totalPages) {
+        lines.push(`\n*Page ${page}/${data.totalPages} — use page=${page + 1} for more.*`);
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }
   );
 
+  // ---------------------------------------------------------------------------
+  // Tool: get_stock_activity
+  // ---------------------------------------------------------------------------
   server.tool(
     "get_stock_activity",
     "Get institutional buying/selling activity trend for a stock over multiple quarters. Shows how many institutions are buying vs selling, net share changes, and value flows — useful for detecting accumulation or distribution patterns.",
@@ -105,18 +117,15 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         .describe("Number of quarters to return (default 8 = 2 years)"),
     },
     async ({ ticker, quarters }) => {
-      const resp = await koFetch<{
-        data: {
-          ticker: string;
-          summary: ActivitySummary;
-          trend: ActivityTrend[];
-        };
+      const data = await koFetch<{
+        ticker: string;
+        summary: ActivitySummary;
+        trend: ActivityTrend[];
       }>(config, `/api/v1/stock-holders/${encodeURIComponent(ticker.toUpperCase())}`, {
         type: "activity",
         quarters,
       });
 
-      const data = resp.data;
       const lines: string[] = [
         `## Institutional Activity — ${data.ticker}`,
         "",
@@ -140,6 +149,9 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
     }
   );
 
+  // ---------------------------------------------------------------------------
+  // Tool: get_stock_price
+  // ---------------------------------------------------------------------------
   server.tool(
     "get_stock_price",
     "Get historical stock price data (closing prices). Useful for charting or checking price at specific dates.",
@@ -157,14 +169,12 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         .describe("Data aggregation level"),
     },
     async ({ ticker, period, aggregation }) => {
-      const resp = await koFetch<{
-        data: PriceRow[];
-      }>(config, `/api/v1/stock-price/${encodeURIComponent(ticker.toUpperCase())}`, {
-        period,
-        agg: aggregation,
-      });
+      const prices = await koFetch<PriceRow[]>(
+        config,
+        `/api/v1/stock-price/${encodeURIComponent(ticker.toUpperCase())}`,
+        { period, agg: aggregation }
+      );
 
-      const prices = resp.data;
       if (prices.length === 0) {
         return { content: [{ type: "text", text: `No price data found for ${ticker}.` }] };
       }
@@ -189,10 +199,10 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       ];
 
       lines.push("", "### Recent Prices\n");
-      lines.push("| Date | Close |");
-      lines.push("|------|-------|");
+      lines.push("| Date | Open | High | Low | Close | Volume |");
+      lines.push("|------|------|------|-----|-------|--------|");
       for (const p of prices.slice(-10)) {
-        lines.push(`| ${p.date} | $${p.close.toFixed(2)} |`);
+        lines.push(`| ${p.date} | $${p.open?.toFixed(2) ?? "—"} | $${p.high?.toFixed(2) ?? "—"} | $${p.low?.toFixed(2) ?? "—"} | $${p.close.toFixed(2)} | ${fmtShares(p.volume)} |`);
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
@@ -200,21 +210,43 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
   );
 }
 
-interface StockProfile {
-  ticker: string;
-  sector: string | null;
-  industry: string | null;
-  market_cap: number | null;
-  current_price: number | null;
-  previous_close: number | null;
-  fifty_two_week_high: number | null;
-  fifty_two_week_low: number | null;
-  pe_ratio: number | null;
-  eps: number | null;
-  beta: number | null;
-  dividend_yield: number | null;
-  avg_volume: number | null;
-  profit_margins: number | null;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface StockProfileResponse {
+  stock: {
+    ticker: string;
+    sector: string | null;
+    industry: string | null;
+    market_cap: number | null;
+    current_price: number | null;
+    previous_close: number | null;
+    fifty_two_week_high: number | null;
+    fifty_two_week_low: number | null;
+    beta: number | null;
+    avg_volume: number | null;
+    pe_ratio: number | null;
+    eps: number | null;
+    dividend_yield: number | null;
+    profit_margins: number | null;
+  };
+  top_holders: TopHolder[];
+}
+
+interface TopHolder {
+  name: string;
+  shares_held: number;
+  holding_value: number;
+  portfolio_weight_pct: number | null;
+}
+
+interface HoldersResponse {
+  data: HolderRow[];
+  totalCount: number;
+  page: number;
+  per_page: number;
+  totalPages: number;
+  quarterDate: string;
 }
 
 interface HolderRow {
@@ -256,9 +288,9 @@ interface ActivityTrend {
 interface PriceRow {
   ticker: string;
   date: string;
-  open: number;
-  high: number;
-  low: number;
+  open: number | null;
+  high: number | null;
+  low: number | null;
   close: number;
-  volume: string;
+  volume: number | null;
 }
