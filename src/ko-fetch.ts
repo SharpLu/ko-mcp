@@ -27,7 +27,7 @@ export async function koFetch<T = unknown>(
   };
 
   if (config.apiKey) {
-    headers["X-API-Key"] = config.apiKey;
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
 
   const res = await fetch(url.toString(), { headers });
@@ -39,5 +39,7 @@ export async function koFetch<T = unknown>(
     );
   }
 
-  return res.json() as Promise<T>;
+  const json = await res.json() as Record<string, unknown>;
+  // ko-api wraps responses in { data: ..., meta: ... } — unwrap automatically
+  return (json.data !== undefined ? json.data : json) as T;
 }
