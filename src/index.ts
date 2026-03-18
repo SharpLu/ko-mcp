@@ -5,12 +5,15 @@ import { registerStockTools } from "./tools/stocks.js";
 import { registerInsiderTools } from "./tools/insiders.js";
 import { registerCongressTools } from "./tools/congress.js";
 import { registerSearchTool } from "./tools/search.js";
+import { registerForm144Tools } from "./tools/form144.js";
+import { registerFinancialTools } from "./tools/financials.js";
+import { registerMacroTools } from "./tools/macro.js";
 import type { KoConfig } from "./ko-fetch.js";
 
 function createServer(env: Env): McpServer {
   const server = new McpServer({
     name: "ko-sec-data",
-    version: "1.0.0",
+    version: "1.1.0",
   });
 
   const config: KoConfig = {
@@ -23,6 +26,9 @@ function createServer(env: Env): McpServer {
   registerInsiderTools(server, config);
   registerCongressTools(server, config);
   registerSearchTool(server, config);
+  registerForm144Tools(server, config);
+  registerFinancialTools(server, config);
+  registerMacroTools(server, config);
 
   return server;
 }
