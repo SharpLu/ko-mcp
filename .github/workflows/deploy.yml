@@ -25,3 +25,20 @@ jobs:
           echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
       - name: Deploy Worker version
         run: npx wrangler versions deploy "${{ steps.upload.outputs.version_id }}@100%" -y
+
+  # 2026-05-17: shared Telegram notification (reusable workflow lives in airflow-project)
+  notify:
+    name: Telegram notification
+    needs: deploy
+    if: always() && github.event_name == 'push'
+    uses: SharpLu/airflow-project/.github/workflows/notify-telegram.yml@main
+    with:
+      status: ${{ needs.deploy.result }}
+      repo: ${{ github.repository }}
+      workflow: ${{ github.workflow }}
+      sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message }}
+      branch: ${{ github.ref_name }}
+    secrets:
+      bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
