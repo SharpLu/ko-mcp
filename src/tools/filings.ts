@@ -91,13 +91,29 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
     async ({ cik, accession_no, file, include_excerpt }) => {
       const base = `/api/v1/filings/${encodeURIComponent(cik)}/${encodeURIComponent(accession_no)}/file`;
       const q = file ? `?file=${encodeURIComponent(file)}` : "";
-      const htmlLink = new URL(`${base}${q}`, config.baseUrl).toString();
+
+      // Browsers can't send Authorization headers, so the View link must be a
+      // signed share link (ko.io-minted, expiring, scoped to this filing).
+      // Fall back to the bare URL (works for API clients) if share fails.
+      let htmlLink = new URL(`${base}${q}`, config.baseUrl).toString();
+      let linkNote = "";
+      try {
+        const share = await koFetch<{ url: string; expires_at: string }>(
+          config,
+          `/api/v1/filings/${encodeURIComponent(cik)}/${encodeURIComponent(accession_no)}/share`,
+          file ? { file } : {},
+        );
+        htmlLink = share.url;
+        linkNote = ` *(link valid until ${share.expires_at})*`;
+      } catch {
+        linkNote = " *(unsigned link — requires an API key to open)*";
+      }
 
       const lines = [
         `## SEC Filing Document`,
         `**CIK** ${cik} · **Accession** \`${accession_no}\`${file ? ` · **File** \`${file}\`` : " · primary document"}`,
         `**Source:** SEC EDGAR · served by ko.io`,
-        `\n**View:** ${htmlLink}`,
+        `\n**View:** ${htmlLink}${linkNote}`,
       ];
 
       if (include_excerpt) {
