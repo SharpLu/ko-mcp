@@ -6,6 +6,7 @@ import { registerInsiderTools } from "./tools/insiders.js";
 import { registerCongressTools } from "./tools/congress.js";
 import { registerSearchTool } from "./tools/search.js";
 import { registerForm144Tools } from "./tools/form144.js";
+import { registerFilingTools } from "./tools/filings.js";
 import { registerFinancialTools } from "./tools/financials.js";
 import { registerMacroTools } from "./tools/macro.js";
 import type { KoConfig } from "./ko-fetch.js";
@@ -42,6 +43,7 @@ function createServer(env: Env, userApiKey?: string): McpServer {
   registerCongressTools(server, config);
   registerSearchTool(server, config);
   registerForm144Tools(server, config);
+  registerFilingTools(server, config);
   registerFinancialTools(server, config);
   registerMacroTools(server, config);
 
