@@ -33,10 +33,19 @@ export async function koFetch<T = unknown>(
   const res = await fetch(url.toString(), { headers });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(
-      `ko.io API error: ${res.status} ${res.statusText} — ${body.slice(0, 300)}`
-    );
+    // Surface a generic, status-based message — do NOT pass through ko-api's raw
+    // error body (could contain internal/upstream detail) to the model/user.
+    // Prefer the structured { error: { message } } field if ko-api provided one.
+    let detail = "";
+    try {
+      const j = await res.json() as { error?: { message?: string } };
+      if (typeof j?.error?.message === "string") detail = `: ${j.error.message}`;
+    } catch { /* non-JSON body — ignore */ }
+    const generic: Record<number, string> = {
+      400: "Bad request", 401: "Authentication required", 403: "Access forbidden (check your plan)",
+      404: "Not found", 429: "Rate limit exceeded", 500: "Upstream error", 502: "Upstream error", 503: "Service unavailable",
+    };
+    throw new Error(`ko.io API error (${res.status}): ${generic[res.status] ?? "Request failed"}${detail}`);
   }
 
   const json = await res.json() as Record<string, unknown>;
