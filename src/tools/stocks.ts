@@ -179,11 +179,14 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         return { content: [{ type: "text", text: `No price data found for ${ticker}.` }] };
       }
 
-      const latest = prices[prices.length - 1];
-      const first = prices[0];
+      // The API returns newest-first; sort defensively by date DESC so latest /
+      // period-start / recent-prices never depend on the upstream row order.
+      const desc = [...prices].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+      const latest = desc[0];
+      const first = desc[desc.length - 1];
       const totalReturn = ((latest.close - first.close) / first.close) * 100;
-      const high = Math.max(...prices.map((p) => p.close));
-      const low = Math.min(...prices.map((p) => p.close));
+      const high = Math.max(...desc.map((p) => p.close));
+      const low = Math.min(...desc.map((p) => p.close));
 
       const lines: string[] = [
         `## ${ticker.toUpperCase()} Price — ${period} (${aggregation})`,
@@ -201,7 +204,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       lines.push("", "### Recent Prices\n");
       lines.push("| Date | Open | High | Low | Close | Volume |");
       lines.push("|------|------|------|-----|-------|--------|");
-      for (const p of prices.slice(-10)) {
+      for (const p of desc.slice(0, 10)) {
         lines.push(`| ${p.date} | $${p.open?.toFixed(2) ?? "—"} | $${p.high?.toFixed(2) ?? "—"} | $${p.low?.toFixed(2) ?? "—"} | $${p.close.toFixed(2)} | ${fmtShares(p.volume)} |`);
       }
 
