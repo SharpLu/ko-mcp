@@ -36,7 +36,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         `| **P/E** | ${s.pe_ratio?.toFixed(2) ?? "N/A"} |`,
         `| **EPS** | $${s.eps?.toFixed(2) ?? "N/A"} |`,
         `| **Beta** | ${s.beta?.toFixed(2) ?? "N/A"} |`,
-        `| **Dividend Yield** | ${s.dividend_yield ? (s.dividend_yield * 100).toFixed(2) + "%" : "N/A"} |`,
+        `| **Dividend Yield** | ${s.dividend_yield ? s.dividend_yield.toFixed(2) + "%" : "N/A"} |`,
         `| **Profit Margins** | ${s.profit_margins ? (s.profit_margins * 100).toFixed(2) + "%" : "N/A"} |`,
         `| **Avg Volume** | ${fmtShares(s.avg_volume)} |`,
       ];

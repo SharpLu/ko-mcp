@@ -27,13 +27,17 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
         .describe("Number of periods to return (default 8)"),
     },
     async ({ ticker, period_type, limit }) => {
-      const rows = await koFetch<FinancialRow[]>(
+      // The endpoint returns { quarterly: [...], annual: [...] } (oldest->newest),
+      // NOT a flat array. Pick the requested series and take the most recent `limit`.
+      const result = await koFetch<{ quarterly?: FinancialRow[]; annual?: FinancialRow[] }>(
         config,
         `/api/v1/stocks/${encodeURIComponent(ticker.toUpperCase())}/financials/historical`,
-        { period_type, per_page: limit }
+        { period_type }
       );
+      const series = (period_type === "annual" ? result?.annual : result?.quarterly) ?? [];
+      const rows = series.slice(-limit).reverse(); // newest first
 
-      if (!rows || rows.length === 0) {
+      if (rows.length === 0) {
         return {
           content: [{ type: "text", text: `No financial data found for ${ticker.toUpperCase()}.` }],
         };
@@ -42,13 +46,17 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
       const lines: string[] = [
         `## ${ticker.toUpperCase()} Financials — ${period_type === "annual" ? "Annual" : "Quarterly"}`,
         "",
-        "| Period | Revenue | Net Income | EPS | Gross Margin | Op Margin | FCF | D/E |",
-        "|--------|---------|------------|-----|-------------|-----------|-----|-----|",
+        "| Period | Revenue | Net Income | EPS | Gross Margin | Op Margin | Op Cash Flow | D/E |",
+        "|--------|---------|------------|-----|-------------|-----------|--------------|-----|",
       ];
 
       for (const r of rows) {
+        const gm = r.revenue && r.gross_profit != null ? r.gross_profit / r.revenue : null;
+        const om = r.revenue && r.operating_income != null ? r.operating_income / r.revenue : null;
+        const eq = r.stockholders_equity;
+        const de = eq ? ((r.long_term_debt ?? 0) + (r.short_term_debt ?? 0)) / eq : null;
         lines.push(
-          `| ${r.period_end || r.quarter_date || "N/A"} | ${fmtMoney(r.total_revenue)} | ${fmtMoney(r.net_income)} | ${fmtEps(r.eps_diluted ?? r.eps_basic)} | ${fmtPctVal(r.gross_margin)} | ${fmtPctVal(r.operating_margin)} | ${fmtMoney(r.free_cash_flow)} | ${fmtRatio(r.debt_to_equity)} |`
+          `| ${r.period_end ?? "N/A"} | ${fmtMoney(r.revenue)} | ${fmtMoney(r.net_income)} | ${fmtEps(r.eps_diluted ?? r.eps_basic)} | ${fmtPctVal(gm)} | ${fmtPctVal(om)} | ${fmtMoney(r.operating_cashflow)} | ${fmtRatio(de)} |`
         );
       }
 
@@ -81,13 +89,14 @@ function fmtRatio(value: number | null | undefined): string {
 interface FinancialRow {
   ticker?: string;
   period_end?: string;
-  quarter_date?: string;
-  total_revenue: number | null;
+  revenue: number | null;
   net_income: number | null;
   eps_basic: number | null;
   eps_diluted: number | null;
-  gross_margin: number | null;
-  operating_margin: number | null;
-  free_cash_flow: number | null;
-  debt_to_equity: number | null;
+  gross_profit: number | null;
+  operating_income: number | null;
+  operating_cashflow: number | null;
+  long_term_debt: number | null;
+  short_term_debt: number | null;
+  stockholders_equity: number | null;
 }
