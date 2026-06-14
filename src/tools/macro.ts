@@ -92,55 +92,10 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
     }
   );
 
-  // ---------------------------------------------------------------------------
-  // Tool: get_short_volume
-  // ---------------------------------------------------------------------------
-  server.tool(
-    "get_short_volume",
-    "Get FINRA daily short sale volume data for a stock. Shows short volume, total volume, and short ratio — useful for gauging bearish sentiment.",
-    {
-      ticker: z.string().describe("Stock ticker symbol (e.g. 'GME', 'AMC')"),
-      days: z
-        .number()
-        .int()
-        .min(1)
-        .max(1825)
-        .optional()
-        .default(30)
-        .describe("Number of days of history (default 30)"),
-    },
-    async ({ ticker, days }) => {
-      const rows = await koFetch<ShortVolumeRow[]>(
-        config,
-        "/api/v1/finra/short-volume",
-        { ticker: ticker.toUpperCase(), days }
-      );
-
-      if (!rows || rows.length === 0) {
-        return {
-          content: [{ type: "text", text: `No short volume data found for ${ticker.toUpperCase()}.` }],
-        };
-      }
-
-      const lines: string[] = [
-        `## FINRA Short Volume — ${ticker.toUpperCase()}`,
-        "",
-        "| Date | Short Vol | Total Vol | Short Ratio | Market |",
-        "|------|-----------|-----------|-------------|--------|",
-      ];
-
-      for (const r of rows) {
-        const ratio = r.short_volume && r.total_volume
-          ? ((r.short_volume / r.total_volume) * 100).toFixed(1) + "%"
-          : (r.short_ratio ? (r.short_ratio * 100).toFixed(1) + "%" : "N/A");
-        lines.push(
-          `| ${r.date} | ${fmtShares(r.short_volume)} | ${fmtShares(r.total_volume)} | ${ratio} | ${r.market || "N/A"} |`
-        );
-      }
-
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
-  );
+  // get_short_volume tool removed 2026-06-14: backing FINRA short-volume DAG was
+  // retired and market.finra_short_volume dropped, so /api/v1/finra/short-volume
+  // 404s. Tool removed rather than serve a dead endpoint. Restore both the DAG
+  // and the endpoint if short-volume data is reinstated.
 
   // ---------------------------------------------------------------------------
   // Tool: get_economic_indicators
