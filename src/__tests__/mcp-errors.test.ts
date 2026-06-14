@@ -57,7 +57,7 @@ describe("tool parameter schemas (declarative validation)", () => {
   });
 
   it("pagination params are optional and bounded (reject out-of-range)", () => {
-    const h = reg(registerInstitutionTools).get("get_institution_holdings")!.schema;
+    const h = reg(registerInstitutionTools).get("get_institution_holdings")!.schema as Record<string, any>;
     expect(isOptional(h.limit)).toBe(true);
     expect(isOptional(h.page)).toBe(true);
     expect(() => h.limit.parse(0)).toThrow();
