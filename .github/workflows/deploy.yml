@@ -17,6 +17,7 @@ jobs:
           node-version: "20"
       - run: npm ci
       - run: npm run type-check
+      - run: npm test
       - name: Upload Worker version
         id: upload
         run: |
