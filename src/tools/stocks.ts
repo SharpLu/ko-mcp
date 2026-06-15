@@ -154,28 +154,41 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   server.tool(
     "get_stock_price",
-    "Get historical stock price data (closing prices). Useful for charting or checking price at specific dates.",
+    "Get historical daily stock prices (OHLC). Returns a summary by default; set series=true to get the full daily price series (for backtesting / charting).",
     {
       ticker: z.string().describe("Stock ticker symbol"),
       period: z
         .enum(["1y", "3y", "5y", "10y"])
         .optional()
         .default("1y")
-        .describe("Time period"),
-      aggregation: z
-        .enum(["daily", "weekly"])
+        .describe("Look-back window"),
+      series: z
+        .boolean()
         .optional()
-        .default("weekly")
-        .describe("Data aggregation level"),
+        .default(false)
+        .describe("If true, return the full daily OHLC series (up to `limit` rows) instead of just a summary."),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(3000)
+        .optional()
+        .default(500)
+        .describe("Max rows of the daily series to return when series=true."),
     },
-    async ({ ticker, period, aggregation }) => {
+    async ({ ticker, period, series, limit }) => {
+      // REST /stock-price ignores period/aggregation; it scales coverage off `days`.
+      // Map the look-back window to days so the summary (and series) actually cover it
+      // instead of silently using the latest 50 rows.
+      const daysByPeriod: Record<string, number> = { "1y": 365, "3y": 1095, "5y": 1825, "10y": 3650 };
+      const days = daysByPeriod[period] ?? 365;
       const prices = await koFetch<PriceRow[]>(
         config,
         `/api/v1/stock-price/${encodeURIComponent(ticker.toUpperCase())}`,
-        { period, agg: aggregation }
+        { days, per_page: Math.min(5000, Math.max(days, series ? limit : 0) || days) }
       );
 
-      if (prices.length === 0) {
+      if (!prices || prices.length === 0) {
         return { content: [{ type: "text", text: `No price data found for ${ticker}.` }] };
       }
 
@@ -189,7 +202,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       const low = Math.min(...desc.map((p) => p.close));
 
       const lines: string[] = [
-        `## ${ticker.toUpperCase()} Price — ${period} (${aggregation})`,
+        `## ${ticker.toUpperCase()} Price — ${period}`,
         "",
         `| Metric | Value |`,
         `|--------|-------|`,
@@ -201,10 +214,12 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         `| **Data Points** | ${prices.length} |`,
       ];
 
-      lines.push("", "### Recent Prices\n");
+      // Full daily series (newest-first) for backtesting/charting, or the recent 10.
+      const rows = series ? desc.slice(0, limit) : desc.slice(0, 10);
+      lines.push("", series ? `### Daily Series (${rows.length} rows)\n` : "### Recent Prices\n");
       lines.push("| Date | Open | High | Low | Close | Volume |");
       lines.push("|------|------|------|-----|-------|--------|");
-      for (const p of desc.slice(0, 10)) {
+      for (const p of rows) {
         lines.push(`| ${p.date} | $${p.open?.toFixed(2) ?? "—"} | $${p.high?.toFixed(2) ?? "—"} | $${p.low?.toFixed(2) ?? "—"} | $${p.close.toFixed(2)} | ${fmtShares(p.volume)} |`);
       }
 

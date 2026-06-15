@@ -78,3 +78,46 @@ describe("every tool proxies to a ko-api /api/ path", () => {
     });
   }
 });
+
+describe("get_stock_price series mode (Fix 3)", () => {
+  const tools = registerAll();
+  const fakeRows = Array.from({ length: 800 }, (_, i) => ({
+    date: `2025-${String((i % 12) + 1).padStart(2, "0")}-01`,
+    open: 100 + i, high: 101 + i, low: 99 + i, close: 100 + i, volume: 1000 + i,
+  }));
+
+  beforeEach(() => mock.mockReset());
+
+  it("maps period -> days so coverage is not capped at 50 rows", async () => {
+    mock.mockResolvedValue(fakeRows as unknown as never);
+    await tools.get("get_stock_price")!.handler({ ticker: "AAPL", period: "5y" });
+    const params = mock.mock.calls[0][2] as Record<string, unknown>;
+    expect(params.days).toBe(1825); // 5y
+    expect(Number(params.per_page)).toBeGreaterThanOrEqual(1825);
+  });
+
+  it("series=false returns a summary (<=10 recent rows)", async () => {
+    mock.mockResolvedValue(fakeRows as unknown as never);
+    const res = await tools.get("get_stock_price")!.handler({ ticker: "AAPL", series: false });
+    const text = res.content[0].text as string;
+    expect(text).toContain("Recent Prices");
+    // 10 data rows + header + separator -> count data pipes modestly
+    const dataLines = text.split("\n").filter((l) => l.startsWith("| 2025-"));
+    expect(dataLines.length).toBe(10);
+  });
+
+  it("series=true returns the full daily series up to limit", async () => {
+    mock.mockResolvedValue(fakeRows as unknown as never);
+    const res = await tools.get("get_stock_price")!.handler({ ticker: "AAPL", series: true, limit: 300 });
+    const text = res.content[0].text as string;
+    expect(text).toContain("Daily Series");
+    const dataLines = text.split("\n").filter((l) => l.startsWith("| 2025-"));
+    expect(dataLines.length).toBe(300);
+  });
+
+  it("handles empty price data gracefully", async () => {
+    mock.mockResolvedValue([] as unknown as never);
+    const res = await tools.get("get_stock_price")!.handler({ ticker: "ZZZZ" });
+    expect(res.content[0].text).toContain("No price data");
+  });
+});
