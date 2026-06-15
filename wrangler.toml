@@ -1,4 +1,5 @@
 name = "ko-mcp-server"
+account_id = "237efba0110d396eeb799f61312e93ba"
 main = "src/index.ts"
 compatibility_date = "2025-03-03"
 compatibility_flags = ["nodejs_compat"]
