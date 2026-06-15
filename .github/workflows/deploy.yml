@@ -21,9 +21,10 @@ jobs:
       - name: Upload Worker version
         id: upload
         run: |
-          OUTPUT=$(npx wrangler versions upload 2>&1)
-          echo "$OUTPUT"
-          VERSION_ID=$(echo "$OUTPUT" | grep -oP 'Worker Version ID: \K[a-f0-9-]+')
+          # Run wrangler directly so its errors stream to the log (the old
+          # OUTPUT=$(...) under `bash -e` swallowed the real error on failure).
+          npx wrangler versions upload 2>&1 | tee /tmp/wrangler-upload.log
+          VERSION_ID=$(grep -oP 'Worker Version ID: \K[a-f0-9-]+' /tmp/wrangler-upload.log)
           echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
       - name: Deploy Worker version
         run: npx wrangler versions deploy "${{ steps.upload.outputs.version_id }}@100%" -y
