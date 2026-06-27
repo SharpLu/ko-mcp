@@ -10,7 +10,7 @@ import { registerFilingTools } from "./tools/filings.js";
 import { registerFinancialTools } from "./tools/financials.js";
 import { registerMacroTools } from "./tools/macro.js";
 import { registerCryptoTools } from "./tools/crypto.js";
-import { extractUserKey, resolveApiKey } from "./auth.js";
+import { extractUserKey, resolveApiKey, keyTransport } from "./auth.js";
 import type { KoConfig } from "./ko-fetch.js";
 
 function createServer(env: Env, userApiKey?: string): McpServer {
@@ -77,6 +77,14 @@ export default {
       const headers = new Headers(response.headers);
       for (const [k, v] of Object.entries(CORS_HEADERS)) {
         headers.set(k, v);
+      }
+      // Warn (don't break) when the key arrived via URL query: keys in URLs leak
+      // into history / Referer / proxy + edge logs. Clients should use a header.
+      if (keyTransport(req) === "query") {
+        headers.set(
+          "X-Ko-Key-Transport-Warning",
+          "API key passed via URL query param is discouraged (URLs leak into logs, history and Referer). Send it as 'Authorization: Bearer ko_...' or the 'x-ko-api-key' header instead.",
+        );
       }
       return new Response(response.body, {
         status: response.status,

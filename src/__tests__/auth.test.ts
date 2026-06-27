@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractUserKey, resolveApiKey } from "../auth.js";
+import { extractUserKey, resolveApiKey, keyTransport } from "../auth.js";
 
 const req = (opts: { auth?: string; xkey?: string; qs?: string }) =>
   new Request(`https://mcp.ko.io/mcp${opts.qs ? `?${opts.qs}` : ""}`, {
@@ -43,5 +43,26 @@ describe("resolveApiKey (fallback-key vulnerability fix)", () => {
   it("returns empty string when no user key (-> demo mode, NOT a deployment key)", () => {
     expect(resolveApiKey(undefined)).toBe("");
     expect(resolveApiKey("")).toBe("");
+  });
+});
+
+describe("keyTransport (warn on key-in-URL)", () => {
+  it("header transport for Authorization Bearer", () => {
+    expect(keyTransport(req({ auth: "Bearer ko_live_abc" }))).toBe("header");
+  });
+  it("header transport for x-ko-api-key", () => {
+    expect(keyTransport(req({ xkey: "ko_live_abc" }))).toBe("header");
+  });
+  it("query transport for ?api_key= (discouraged)", () => {
+    expect(keyTransport(req({ qs: "api_key=ko_live_q" }))).toBe("query");
+  });
+  it("query transport for ?key=", () => {
+    expect(keyTransport(req({ qs: "key=ko_live_k" }))).toBe("query");
+  });
+  it("none when no key present", () => {
+    expect(keyTransport(req({}))).toBe("none");
+  });
+  it("prefers header over query when both supplied", () => {
+    expect(keyTransport(req({ auth: "Bearer ko_A", qs: "api_key=ko_C" }))).toBe("header");
   });
 });
