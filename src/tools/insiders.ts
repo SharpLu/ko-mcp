@@ -65,10 +65,27 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
     {
       search: z.string().optional().describe("Search by name or ticker"),
       role: z
-        .enum(["ceo", "executive", "all"])
+        .preprocess((v) => {
+          if (v == null) return v;
+          const s = String(v).toLowerCase().trim();
+          const map: Record<string, string> = {
+            ceo: "ceo",
+            "chief executive": "ceo",
+            "chief executive officer": "ceo",
+            executive: "executive",
+            exec: "executive",
+            executives: "executive",
+            officer: "executive",
+            officers: "executive",
+            all: "all",
+            any: "all",
+            "": "all",
+          };
+          return map[s] ?? s;
+        }, z.enum(["ceo", "executive", "all"]))
         .optional()
         .default("all")
-        .describe("Filter by role — 'ceo' for CEOs only, 'executive' for officers, 'all' for everyone"),
+        .describe("Filter by role (case-insensitive): CEO, executive/officer, or all"),
       page: z.number().int().min(1).optional().default(1),
       limit: z.number().int().min(1).max(50).optional().default(20),
     },

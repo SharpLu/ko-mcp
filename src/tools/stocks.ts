@@ -74,6 +74,17 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         { type: "holders", page, limit }
       );
 
+      if (!data || !data.data) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No institutional holders found for ${ticker.toUpperCase()}. Check the ticker symbol.`,
+            },
+          ],
+        };
+      }
+
       const lines: string[] = [
         `## Institutional Holders of ${ticker.toUpperCase()} — Q${data.quarterDate}`,
         `**Total institutions:** ${data.totalCount}\n`,
@@ -125,6 +136,17 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         type: "activity",
         quarters,
       });
+
+      if (!data || !data.summary) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No institutional activity data found for ${ticker.toUpperCase()}. Check the ticker symbol (it may be invalid or have no 13F coverage).`,
+            },
+          ],
+        };
+      }
 
       const lines: string[] = [
         `## Institutional Activity — ${data.ticker}`,

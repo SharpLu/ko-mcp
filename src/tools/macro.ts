@@ -105,10 +105,36 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
     "Get U.S. economic indicators from BLS — CPI (inflation), PPI (producer prices), Non-farm Payrolls (employment), Unemployment Rate, JOLTS. Filter by category.",
     {
       category: z
-        .enum(["cpi", "unemployment", "nfp", "ppi", "jolts", "all"])
+        .preprocess((v) => {
+          if (v == null) return v;
+          const s = String(v).toLowerCase().trim();
+          const map: Record<string, string> = {
+            cpi: "cpi",
+            inflation: "cpi",
+            ppi: "ppi",
+            "producer prices": "ppi",
+            nfp: "nfp",
+            payrolls: "nfp",
+            "nonfarm payrolls": "nfp",
+            "non-farm payrolls": "nfp",
+            employment: "nfp",
+            jobs: "nfp",
+            unemployment: "unemployment",
+            "unemployment rate": "unemployment",
+            jobless: "unemployment",
+            jolts: "jolts",
+            "job openings": "jolts",
+            all: "all",
+            any: "all",
+            "": "all",
+          };
+          return map[s] ?? s;
+        }, z.enum(["cpi", "unemployment", "nfp", "ppi", "jolts", "all"]))
         .optional()
         .default("all")
-        .describe("Filter by indicator category (default 'all')"),
+        .describe(
+          "Category (case-insensitive): cpi/inflation, ppi, nfp/payrolls, unemployment, jolts, or all"
+        ),
       days: z
         .number()
         .int()
