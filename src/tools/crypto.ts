@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
+import { resolveInstitution } from "../resolve.js";
 import { fmtMoney, fmtShares } from "../format.js";
 
 // Institutional exposure to US spot crypto ETFs (BTC complex: IBIT, FBTC, GBTC,
@@ -93,17 +94,34 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
     "get_crypto_holder",
     "Get one institution's spot crypto-ETF holdings (Bitcoin ETF complex): its per-ETF positions in the latest filed quarter (shares, USD, QoQ change, action) plus its rank among all crypto-ETF holders. Use a CIK number (find it with get_crypto_holders or the search tool).",
     {
-      institution: z.string().describe("Institution CIK number, e.g. '1512857' (Brevan Howard)."),
+      institution: z
+        .string()
+        .describe("Institution CIK number (e.g. '1512857' for Brevan Howard) or name (e.g. 'BlackRock')."),
     },
     async ({ institution }) => {
-      const cik = institution.replace(/\D/g, "");
+      // Prefer embedded digits (CIK / "CIK 1512857"); fall back to name resolution.
+      let cik = institution.replace(/\D/g, "");
+      let note = "";
       if (!cik) {
-        return { content: [{ type: "text", text: "Please provide a numeric CIK (e.g. '1512857')." }] };
+        const resolved = await resolveInstitution(config, institution);
+        cik = (resolved?.target ?? "").replace(/\D/g, "");
+        note = resolved?.note ?? "";
+      }
+      if (!cik) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No institution found matching "${institution}". Provide a numeric CIK (e.g. '1512857') or use get_crypto_holders / search to find one.`,
+            },
+          ],
+        };
       }
       const data = await koFetch<HolderDetail>(config, `/api/v1/crypto/holder/${encodeURIComponent(cik)}`);
       const inst = data.institution;
       const positions = data.positions ?? [];
       const lines: string[] = [];
+      if (note) lines.push(note);
       lines.push(`## ${inst?.name || `CIK ${cik}`} — Spot Crypto-ETF Holdings`);
       lines.push(`**Latest quarter:** ${inst?.latest_quarter ?? "—"}`);
       lines.push(`**Total crypto-ETF USD:** ${fmtMoney(num(inst?.total_usd))} (QoQ ${qoq(inst?.qoq_change)})`);

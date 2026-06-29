@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
+import { resolveInstitution } from "../resolve.js";
 import { fmtMoney, fmtShares } from "../format.js";
 
 export function registerInstitutionTools(server: McpServer, config: KoConfig) {
@@ -14,22 +15,36 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
       institution: z
         .string()
         .describe(
-          "Institution CIK number (e.g. '1067983' for Berkshire Hathaway) or slug (e.g. 'berkshire-hathaway'). Use the search tool first if you only have a name."
+          "Institution CIK number (e.g. '1067983'), slug (e.g. 'berkshire-hathaway'), or name (e.g. 'Berkshire Hathaway') — names are resolved automatically."
         ),
       page: z.number().int().min(1).optional().default(1).describe("Page number"),
       limit: z.number().int().min(1).max(100).optional().default(50).describe("Results per page"),
     },
     async ({ institution, page, limit }) => {
+      // Accept a CIK, a slug, or a free-text name (resolve names -> CIK).
+      const resolved = await resolveInstitution(config, institution);
+      if (!resolved) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No institution found matching "${institution}". Use list_institutions or the search tool to find the exact CIK or slug.`,
+            },
+          ],
+        };
+      }
+
       // koFetch returns the array directly (unwrapped from { data, meta })
       const holdings = await koFetch<HoldingRow[]>(
         config,
-        `/api/v1/holdings/${encodeURIComponent(institution)}`,
+        `/api/v1/holdings/${encodeURIComponent(resolved.target)}`,
         { page, per_page: limit }
       );
 
       const totalCount = holdings.length;
       const lines: string[] = [];
 
+      if (resolved.note) lines.push(resolved.note);
       const qtr = holdings.length > 0 ? holdings[0].quarter_date : "Unknown";
       lines.push(`## 13F Holdings — Quarter: ${qtr}`);
       lines.push(`**Positions shown:** ${totalCount}\n`);
