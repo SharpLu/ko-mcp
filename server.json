@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.ko/financial-data",
+  "description": "Real SEC, 13F, insider, congress & macro data your AI agent can cite. 24 tools over a hosted MCP endpoint — one command to plug into Claude, Cursor or ChatGPT.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/SharpLu/ko-mcp-worker",
+    "source": "github"
+  },
+  "websiteUrl": "https://ko.io",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.ko.io/mcp"
+    }
+  ]
+}
