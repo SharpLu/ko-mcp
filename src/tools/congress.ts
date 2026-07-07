@@ -8,28 +8,30 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   server.tool(
     "get_congress_trades",
-    "Get stock trades made by U.S. Congress members (House & Senate). Data sourced from mandatory financial disclosures. Filter by chamber, party, state, date range, or specific stock ticker.",
+    "Search individual stock trades disclosed by U.S. Congress members (House and Senate) under the STOCK Act. Returns a markdown table of transactions: member name, chamber, ticker, buy/sell type, transaction date, disclosure date (the gap between the two reveals reporting delay), dollar amount range, and owner (self/spouse/joint). Use for questions like 'What did Nancy Pelosi trade recently?', 'Which members bought NVDA?', or 'Show the largest Senate trades this quarter'. Filter by chamber, party, state, ticker, or member name; sort by traded value, trade count, or recency. For one member's profile and complete trading history, use get_congress_member instead.",
     {
       chamber: z
         .enum(["house", "senate", "all"])
         .optional()
         .default("all")
-        .describe("Filter by congressional chamber"),
+        .describe("Congressional chamber: house, senate, or all (default all)"),
       party: z
         .enum(["D", "R", "I", "all"])
         .optional()
         .default("all")
         .describe("Filter by party — D=Democrat, R=Republican, I=Independent"),
-      ticker: z.string().optional().describe("Filter trades by stock ticker"),
-      state: z.string().optional().describe("Filter by U.S. state (2-letter code)"),
-      search: z.string().optional().describe("Search by member name"),
+      ticker: z.string().optional().describe("Stock ticker symbol to filter by, e.g. NVDA or AAPL"),
+      state: z.string().optional().describe("Member 2-letter U.S. state code, e.g. CA or TX"),
+      search: z.string().optional().describe("Full or partial member name, e.g. 'Pelosi' or 'Dan Crenshaw'"),
       sort: z
         .enum(["volume", "trades", "recent"])
         .optional()
         .default("volume")
         .describe("Sort order — volume (most traded value), trades (most trades), recent (latest first)"),
-      page: z.number().int().min(1).optional().default(1),
-      limit: z.number().int().min(1).max(50).optional().default(20),
+      page: z.number().int().min(1).optional().default(1)
+        .describe("Page number for pagination (default 1)"),
+      limit: z.number().int().min(1).max(50).optional().default(20)
+        .describe("Trades per page, 1-50 (default 20)"),
     },
     async ({ chamber, party, ticker, state, search, sort, page, limit }) => {
       // koFetch returns the array directly

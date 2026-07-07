@@ -18,7 +18,7 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         .max(3650)
         .optional()
         .default(30)
-        .describe("Number of days of history (default 30)"),
+        .describe("Days of daily history to return, 1-3650 (default 30 = last month)"),
     },
     async ({ days }) => {
       const rows = await koFetch<TreasuryYieldRow[]>(
@@ -53,7 +53,7 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   server.tool(
     "get_fed_rates",
-    "Get Federal Reserve interest rates — Fed Funds Rate, SOFR, Prime Rate, Discount Rate, and Treasury yields. Key indicators for monetary policy.",
+    "Get daily U.S. policy and money-market interest rates as a markdown table: Effective Fed Funds Rate, SOFR, Prime Rate, and benchmark Treasury yields (3M, 2Y, 10Y, 30Y) per date, newest first. Use for monetary-policy questions like 'Where is the Fed funds rate now?' or 'How has SOFR moved this quarter?', or to compare policy rates against long-end yields for inversion analysis. Covers up to 10 years of daily history. For the full Treasury curve across all maturities, use get_treasury_yields instead.",
     {
       days: z
         .number()
