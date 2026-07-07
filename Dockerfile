@@ -7,7 +7,10 @@ FROM node:22-slim
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# wrangler lives in devDependencies and IS the runtime here (miniflare) --
+# do not --omit=dev or the container falls back to an npx network download
+# at start time, which is exactly when a sandboxed Glama check would fail.
+RUN npm ci --ignore-scripts && npm cache clean --force
 
 COPY . .
 
