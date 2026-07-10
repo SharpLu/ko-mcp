@@ -11,7 +11,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
     "get_stock_profile",
     "Get a company's profile — sector, market cap, price, P/E ratio, 52-week range, beta, dividend yield, and other key financials.",
     {
-      ticker: z.string().describe("Stock ticker symbol (e.g. 'AAPL', 'NVDA', 'MSFT')"),
+      ticker: z.string().max(200).describe("Stock ticker symbol (e.g. 'AAPL', 'NVDA', 'MSFT')"),
     },
     async ({ ticker }) => {
       const data = await koFetch<StockProfileResponse>(
@@ -63,7 +63,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
     "get_stock_holders",
     "Get top institutional holders of a stock from SEC 13F filings. Shows which hedge funds, mutual funds, and pension funds own the most shares, with quarter-over-quarter changes.",
     {
-      ticker: z.string().describe("Stock ticker symbol (e.g. 'NVDA')"),
+      ticker: z.string().max(200).describe("Stock ticker symbol (e.g. 'NVDA')"),
       page: z.number().int().min(1).optional().default(1).describe("Page number"),
       limit: z.number().int().min(1).max(50).optional().default(20).describe("Results per page"),
     },
@@ -117,7 +117,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
     "get_stock_activity",
     "Get institutional buying/selling activity trend for a stock over multiple quarters. Shows how many institutions are buying vs selling, net share changes, and value flows — useful for detecting accumulation or distribution patterns.",
     {
-      ticker: z.string().describe("Stock ticker symbol"),
+      ticker: z.string().max(200).describe("Stock ticker symbol"),
       quarters: z
         .number()
         .int()
@@ -178,7 +178,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
     "get_stock_price",
     "Get historical daily stock prices (OHLC). Returns a summary by default; set series=true to get the full daily price series (for backtesting / charting).",
     {
-      ticker: z.string().describe("Stock ticker symbol"),
+      ticker: z.string().max(200).describe("Stock ticker symbol"),
       period: z
         .enum(["1y", "3y", "5y", "10y"])
         .optional()

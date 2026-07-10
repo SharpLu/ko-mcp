@@ -11,6 +11,7 @@ export function registerSearchTool(server: McpServer, config: KoConfig) {
       query: z
         .string()
         .min(2)
+        .max(200)
         .describe("Search query — company name, ticker, person name, or institution name (min 2 characters)"),
       limit: z
         .number()

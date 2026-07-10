@@ -11,8 +11,8 @@ export function registerForm144Tools(server: McpServer, config: KoConfig) {
     "get_form144_notices",
     "Get SEC Form 144 filings — notices of proposed sale of restricted/controlled securities by insiders. Filed before selling, these signal upcoming insider sales. Complements Form 4 (post-trade) with pre-trade intent.",
     {
-      ticker: z.string().optional().describe("Filter by stock ticker (e.g. 'AAPL')"),
-      insider_cik: z.string().optional().describe("Filter by insider's CIK number"),
+      ticker: z.string().max(200).optional().describe("Filter by stock ticker (e.g. 'AAPL')"),
+      insider_cik: z.string().max(200).optional().describe("Filter by insider's CIK number"),
       limit: z.number().int().min(1).max(200).optional().default(50).describe("Max notices to return"),
     },
     async ({ ticker, insider_cik, limit }) => {

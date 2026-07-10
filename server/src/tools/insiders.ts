@@ -11,7 +11,7 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
     "get_insider_trades",
     "Get insider/executive stock trades (SEC Form 4) for a company. Shows CEO, CFO, directors, and other officers buying or selling their own company's stock — a key signal for institutional investors.",
     {
-      ticker: z.string().describe("Stock ticker symbol (e.g. 'AAPL')"),
+      ticker: z.string().max(200).describe("Stock ticker symbol (e.g. 'AAPL')"),
       executive_cik: z
         .string()
         .optional()
@@ -63,7 +63,7 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
     "list_insider_traders",
     "List executives/insiders who have recently traded their company stock. Filter by role (CEO only or all executives). Useful for finding notable insider buying/selling activity across the market.",
     {
-      search: z.string().optional().describe("Search by name or ticker"),
+      search: z.string().max(200).optional().describe("Search by name or ticker"),
       role: z
         .preprocess((v) => {
           if (v == null) return v;

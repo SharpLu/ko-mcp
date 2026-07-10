@@ -11,7 +11,7 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
     "get_stock_financials",
     "Get quarterly or annual financial statements for a company (revenue, net income, EPS, margins, cash flow, debt ratios) from SEC 10-K/10-Q filings.",
     {
-      ticker: z.string().describe("Stock ticker symbol (e.g. 'AAPL', 'MSFT')"),
+      ticker: z.string().max(200).describe("Stock ticker symbol (e.g. 'AAPL', 'MSFT')"),
       period_type: z
         .enum(["quarterly", "annual"])
         .optional()

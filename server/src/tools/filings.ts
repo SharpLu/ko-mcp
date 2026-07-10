@@ -24,10 +24,10 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
     "sec_list_filings",
     "List an entity's SEC filings from EDGAR (most recent first), each with its accession number. Provide the company's CIK (use search or get_stock_profile to find it). Returns accession numbers to pass to sec_get_filing_index / sec_get_filing_document.",
     {
-      cik: z.string().describe("Company CIK number (e.g. '320193' for Apple)"),
-      form_type: z.string().optional().describe("Exact SEC form filter, e.g. '10-K', '13F-HR', '8-K'"),
-      from: z.string().optional().describe("Earliest filing date, ISO YYYY-MM-DD"),
-      to: z.string().optional().describe("Latest filing date, ISO YYYY-MM-DD"),
+      cik: z.string().max(200).describe("Company CIK number (e.g. '320193' for Apple)"),
+      form_type: z.string().max(200).optional().describe("Exact SEC form filter, e.g. '10-K', '13F-HR', '8-K'"),
+      from: z.string().max(200).optional().describe("Earliest filing date, ISO YYYY-MM-DD"),
+      to: z.string().max(200).optional().describe("Latest filing date, ISO YYYY-MM-DD"),
       limit: z.number().int().min(1).max(200).optional().default(50).describe("Max filings to return"),
     },
     async ({ cik, form_type, from, to, limit }) => {
@@ -55,8 +55,8 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
     "sec_get_filing_index",
     "Enumerate every file in a single SEC filing (primary document, exhibits, images, XBRL, the full .txt submission). Pass a file name from here to sec_get_filing_document.",
     {
-      cik: z.string().describe("Company CIK number"),
-      accession_no: z.string().describe("Accession number, e.g. '0000320193-23-000106'"),
+      cik: z.string().max(200).describe("Company CIK number"),
+      accession_no: z.string().max(200).describe("Accession number, e.g. '0000320193-23-000106'"),
     },
     async ({ cik, accession_no }) => {
       const index = await koFetch<FilingIndex>(
@@ -83,9 +83,9 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
     "sec_get_filing_document",
     "Get a source document from a SEC filing, served by ko.io. Returns a ko.io LINK to the rendered document (open in a browser) plus, optionally, an extracted text excerpt. Never returns the whole file — for full content, open the link or request a specific section.",
     {
-      cik: z.string().describe("Company CIK number"),
-      accession_no: z.string().describe("Accession number, e.g. '0000320193-23-000106'"),
-      file: z.string().optional().describe("File name within the filing (from sec_get_filing_index). Omit for the primary document."),
+      cik: z.string().max(200).describe("Company CIK number"),
+      accession_no: z.string().max(200).describe("Accession number, e.g. '0000320193-23-000106'"),
+      file: z.string().max(200).optional().describe("File name within the filing (from sec_get_filing_index). Omit for the primary document."),
       include_excerpt: z.boolean().optional().default(true).describe("Include a text excerpt (first ~6000 chars) in the response"),
     },
     async ({ cik, accession_no, file, include_excerpt }) => {

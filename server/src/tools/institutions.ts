@@ -14,6 +14,7 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
     {
       institution: z
         .string()
+        .max(200)
         .describe(
           "Institution CIK number (e.g. '1067983'), slug (e.g. 'berkshire-hathaway'), or name (e.g. 'Berkshire Hathaway') — names are resolved automatically."
         ),
@@ -82,7 +83,7 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
     "list_institutions",
     "List top institutional investors (hedge funds, mutual funds, etc.) tracked in the SEC 13F database. Supports search by name and pagination.",
     {
-      search: z.string().optional().describe("Search by institution or founder name"),
+      search: z.string().max(200).optional().describe("Search by institution or founder name"),
       page: z.number().int().min(1).optional().default(1).describe("Page number"),
       limit: z.number().int().min(1).max(50).optional().default(20).describe("Results per page"),
     },

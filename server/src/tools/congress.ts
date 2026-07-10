@@ -20,9 +20,9 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
         .optional()
         .default("all")
         .describe("Filter by party — D=Democrat, R=Republican, I=Independent"),
-      ticker: z.string().optional().describe("Stock ticker symbol to filter by, e.g. NVDA or AAPL"),
-      state: z.string().optional().describe("Member 2-letter U.S. state code, e.g. CA or TX"),
-      search: z.string().optional().describe("Full or partial member name, e.g. 'Pelosi' or 'Dan Crenshaw'"),
+      ticker: z.string().max(200).optional().describe("Stock ticker symbol to filter by, e.g. NVDA or AAPL"),
+      state: z.string().max(200).optional().describe("Member 2-letter U.S. state code, e.g. CA or TX"),
+      search: z.string().max(200).optional().describe("Full or partial member name, e.g. 'Pelosi' or 'Dan Crenshaw'"),
       sort: z
         .enum(["volume", "trades", "recent"])
         .optional()

@@ -1,5 +1,7 @@
 name = "ko-mcp-server"
-account_id = "237efba0110d396eeb799f61312e93ba"
+# account_id comes from the CLOUDFLARE_ACCOUNT_ID env var (CI secret, or your
+# own account when self-hosting) — not committed, so this repo isn't tied to
+# one Cloudflare account.
 main = "src/index.ts"
 compatibility_date = "2025-03-03"
 compatibility_flags = ["nodejs_compat"]

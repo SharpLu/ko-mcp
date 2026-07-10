@@ -179,7 +179,7 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
     "get_ftd_data",
     "Get SEC Failures-to-Deliver (FTD) data for a stock. High FTD quantities may indicate naked short selling or settlement issues.",
     {
-      ticker: z.string().describe("Stock ticker symbol (e.g. 'GME', 'TSLA')"),
+      ticker: z.string().max(200).describe("Stock ticker symbol (e.g. 'GME', 'TSLA')"),
       days: z
         .number()
         .int()

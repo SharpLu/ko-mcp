@@ -55,7 +55,7 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
     "get_crypto_holders",
     "List institutional investors holding US spot crypto ETFs (Bitcoin ETF complex), ranked by total USD held, from the latest quarter of SEC 13F filings. Optionally filter to holders of a specific ETF via the `product` parameter (e.g. 'IBIT').",
     {
-      product: z.string().optional().describe("Filter to holders of a specific spot crypto ETF ticker, e.g. 'IBIT', 'FBTC', 'GBTC'."),
+      product: z.string().max(200).optional().describe("Filter to holders of a specific spot crypto ETF ticker, e.g. 'IBIT', 'FBTC', 'GBTC'."),
       page: z.number().int().min(1).optional().default(1).describe("Page number"),
       limit: z.number().int().min(1).max(200).optional().default(50).describe("Results per page"),
     },
@@ -96,6 +96,7 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
     {
       institution: z
         .string()
+        .max(200)
         .describe("Institution CIK number (e.g. '1512857' for Brevan Howard) or name (e.g. 'BlackRock')."),
     },
     async ({ institution }) => {
