@@ -1,0 +1,84 @@
+# ko.io
+
+> Source-traced SEC & market data for AI agents and quants. 120M+ records:
+> 13F institutional holdings (2013→today, family-consolidated), insider
+> trades (Forms 3/4/5), Congress trading, crypto ETF exposure, Form 144,
+> fails-to-deliver, Reg SHO, stock prices & financials, US macro, and a
+> white-labeled SEC EDGAR filings gateway. Served over MCP and REST.
+
+Base REST URL: https://api.ko.io (paths start with /api/v1/)
+MCP endpoint (Streamable HTTP, stateless): https://mcp.ko.io/mcp
+Auth (REST): Authorization: Bearer ko_live_...  |  keyless demo: append ?demo=true
+Auth (MCP): Authorization: Bearer header, or ?api_key= on the URL; keyless = demo mode
+Free key: 200 calls/day, no credit card — https://ko.io/console
+Response envelope: {"data": ..., "meta": {total_count, page, per_page, truncated?, upgrade_hint?}}
+Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "message": "..."}}
+
+## Connect an MCP client
+
+- Claude Code: claude mcp add ko-sec-data --transport http https://mcp.ko.io/mcp
+- Claude Desktop: {"mcpServers": {"ko-sec-data": {"type": "http", "url": "https://mcp.ko.io/mcp"}}}
+- Cursor (~/.cursor/mcp.json): {"mcpServers": {"ko-sec-data": {"url": "https://mcp.ko.io/mcp"}}}
+- Codex CLI: codex mcp add ko-sec-data --url https://mcp.ko.io/mcp
+- stdio-only clients: npx -y @ko-io/mcp-sec-data (env KO_API_KEY)
+
+## MCP tools (24)
+
+- search(query, limit): universal search across institutions, stocks, Congress members
+- get_institution_holdings(institution, page, limit): 13F holdings by CIK or fuzzy name
+- list_institutions(search, page, limit): 13F filers ranked by portfolio value
+- get_stock_profile(ticker): company info + ownership summary
+- get_stock_holders(ticker, page, limit): institutional holders of a ticker
+- get_stock_activity(ticker, quarters): institutional accumulation/distribution trend
+- get_stock_price(ticker, period, series, limit): daily OHLCV
+- get_stock_financials(ticker, period_type, limit): XBRL-derived statements
+- get_insider_trades(ticker, executive_cik, limit): Form 3/4/5 transactions
+- list_insider_traders(search, role, page, limit): insiders directory
+- get_congress_trades(chamber, party, ticker, state, search, sort, page, limit)
+- get_congress_member(member, page, limit): one member's trades by slug
+- get_form144_notices(ticker, insider_cik, limit): planned insider sales
+- get_crypto_exposure(): market-wide institutional spot-BTC-ETF exposure
+- get_crypto_holders(product, page, limit): institutions holding BTC ETFs
+- get_crypto_holder(institution): one institution's crypto exposure
+- sec_list_filings(cik, form_type, from, to, limit): EDGAR filings list
+- sec_get_filing_index(cik, accession_no): files inside a filing
+- sec_get_filing_document(cik, accession_no, file, include_excerpt): document + signed link
+- get_ftd_data(ticker, days): SEC fails-to-deliver
+- get_treasury_yields(days) [Pro]
+- get_fed_rates(days) [Pro]
+- get_economic_indicators(category, days) [Pro]
+- get_financial_stress(days) [Pro]
+
+## Key REST endpoints
+
+- /api/v1/institutions?search=&category=&page=&per_page=
+- /api/v1/institutions/{cik} · /api/v1/institutions/{cik}/similar
+- /api/v1/holdings/{cik}?quarter=&ticker=&action=&type=quarters
+- /api/v1/institution-activity/{cik}
+- /api/v1/stocks?search=&sector= · /api/v1/stocks/{ticker}
+- /api/v1/stock-price/{ticker}?days=&start_date=&end_date=
+- /api/v1/stock-holders/{ticker}?quarter=&type=activity&quarters=
+- /api/v1/stocks/{ticker}/financials · /financials/historical
+- /api/v1/insider-trades?ticker=&role= · /api/v1/insider/{cik}/transactions
+- /api/v1/executive-trades/{ticker}
+- /api/v1/congress-trades?ticker=&chamber=&party=&sort=
+- /api/v1/congress-trades/{member-slug} · /stock/{ticker}
+- /api/v1/crypto/exposure-summary · /institutional-holders?product= · /holder/{cik}
+- /api/v1/form144-notices?ticker=&cik=
+- /api/v1/sec/ftd?ticker=&days= · /api/v1/reg-sho-threshold?symbol=
+- /api/v1/treasury/yields [Pro] · /api/v1/fed/rates [Pro]
+- /api/v1/economic/indicators [Pro] · /api/v1/stress/ofr [Pro]
+- /api/v1/filings/{cik}?form=&from=&to= · /{accession} · /{accession}/share
+- /api/v1/search?q=
+
+## SDKs
+
+- Python: pip install ko-sec — from ko_sec import KoClient; KoClient().stocks.holders("NVDA")
+- TypeScript: npm install @ko-io/sdk — new KoClient().congress.trades({sort: "recent"})
+- OpenAPI spec: https://ko.io/openapi.yaml
+
+## Docs
+
+- REST reference: https://ko.io/docs
+- MCP setup for every client: https://ko.io/mcp
+- Pricing: https://ko.io/pricing

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">
+  <defs>
+    <clipPath id="window"><rect x="0" y="0" width="760" height="400" rx="10"/></clipPath>
+  </defs>
+  <g clip-path="url(#window)">
+    <rect width="760" height="400" fill="#0d1117"/>
+    <rect width="760" height="36" fill="#161b22"/>
+    <circle cx="22" cy="18" r="6" fill="#ff5f56"/>
+    <circle cx="42" cy="18" r="6" fill="#ffbd2e"/>
+    <circle cx="62" cy="18" r="6" fill="#27c93f"/>
+    <text x="380" y="23" fill="#8b949e" text-anchor="middle" font-size="12">claude — connected to ko.io</text>
+
+    <text x="24" y="68" fill="#8b949e">$ <tspan fill="#e6edf3">claude mcp add ko-sec-data --transport http https://mcp.ko.io/mcp</tspan></text>
+    <text x="24" y="92" fill="#3fb950">✓ ko-sec-data connected — 24 tools available</text>
+
+    <text x="24" y="128" fill="#8b949e">&gt; <tspan fill="#e6edf3">who is buying NVDA right now?</tspan></text>
+
+    <text x="24" y="160" fill="#d2a8ff">● get_stock_holders <tspan fill="#8b949e">(ticker: "NVDA")</tspan></text>
+
+    <text x="44" y="190" fill="#e6edf3">VANGUARD CAPITAL MGMT      <tspan fill="#79c0ff">$268.3B</tspan>  <tspan fill="#3fb950">NEW_POSITION</tspan></text>
+    <text x="44" y="214" fill="#e6edf3">STATE STREET CORP          <tspan fill="#79c0ff">$173.3B</tspan>  <tspan fill="#3fb950">ADDED</tspan></text>
+    <text x="44" y="238" fill="#e6edf3">FMR LLC (Fidelity)         <tspan fill="#79c0ff">$173.3B</tspan>  <tspan fill="#3fb950">ADDED</tspan></text>
+    <text x="44" y="262" fill="#e6edf3">GEODE CAPITAL MGMT         <tspan fill="#79c0ff">$104.6B</tspan>  <tspan fill="#3fb950">ADDED</tspan></text>
+    <text x="44" y="286" fill="#e6edf3">JPMORGAN CHASE &amp; CO        <tspan fill="#79c0ff"> $74.0B</tspan>  <tspan fill="#f85149">TRIMMED</tspan></text>
+
+    <text x="44" y="322" fill="#8b949e">Q1 2026: 2,832 institutions added vs 2,441 reduced — net buy $395B</text>
+    <text x="44" y="346" fill="#8b949e">source: SEC 13F-HR filings, quarter ending 2026-03-31</text>
+
+    <text x="24" y="380" fill="#3fb950">▍</text>
+  </g>
+</svg>

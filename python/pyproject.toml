@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ko-sec"
+version = "0.1.0"
+description = "Official Python SDK for ko.io — source-traced SEC & market data for AI agents and quants"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{ name = "ko.io", email = "support@ko.io" }]
+keywords = [
+  "sec", "edgar", "13f", "insider-trading", "congress-trading",
+  "financial-data", "hedge-funds", "mcp", "ai-agents",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Financial and Insurance Industry",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business :: Financial :: Investment",
+  "Typing :: Typed",
+]
+dependencies = ["httpx>=0.24,<1"]
+
+[project.urls]
+Homepage = "https://ko.io"
+Documentation = "https://ko.io/docs"
+Repository = "https://github.com/SharpLu/ko-mcp"
+Issues = "https://github.com/SharpLu/ko-mcp/issues"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.4",
+  "mypy>=1.8",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ko_sec"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
