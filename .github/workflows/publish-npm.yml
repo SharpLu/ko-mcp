@@ -1,0 +1,42 @@
+name: Publish @ko-io packages (npm)
+
+# Publishes @ko-io/sdk and @ko-io/mcp-sec-data to npm when a Release is published.
+# Uses npm provenance (signed supply-chain attestation via OIDC).
+# One-time setup: create the npm org `ko-io`, then add an automation token as
+# the repo secret NPM_TOKEN (Settings → Secrets → Actions).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required for npm provenance
+    strategy:
+      matrix:
+        pkg: [sdk, mcp-proxy]
+    defaults:
+      run:
+        working-directory: typescript/${{ matrix.pkg }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Test
+        run: npm test
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
