@@ -68,7 +68,7 @@ class ServerError(KoError):
     """5xx — transient upstream or server failure. Safe to retry."""
 
 
-_STATUS_MAP = {
+_STATUS_MAP: dict[int, type[KoError]] = {
     400: BadRequestError,
     401: AuthenticationError,
     403: PlanRequiredError,
