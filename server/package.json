@@ -1,5 +1,5 @@
 {
-  "name": "ko-mcp-worker",
+  "name": "ko-mcp-server",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -17,5 +17,10 @@
     "typescript": "^5.7.0",
     "vitest": "^2.1.9",
     "wrangler": "^4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SharpLu/ko-mcp",
+    "directory": "server"
   }
 }

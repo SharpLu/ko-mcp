@@ -49,3 +49,21 @@ jobs:
         run: npm run build
       - name: Test
         run: npm test
+
+  server:
+    name: MCP Server (mcp.ko.io worker)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm ci
+      - name: Type-check
+        run: npm run type-check
+      - name: Test
+        run: npm test

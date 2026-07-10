@@ -67,6 +67,7 @@ Free keys are 200 calls/day, forever, no credit card → [ko.io/console](https:/
 
 | Directory | What it is |
 |-----------|------------|
+| [`server/`](server) | **The hosted MCP server** (mcp.ko.io) — Cloudflare Worker, 24 tools, deployed from this repo |
 | [`docs/clients/`](docs/clients) | Verified setup guides for every MCP client |
 | [`python/`](python) | `ko-sec` — official Python SDK (sync + async, typed) |
 | [`typescript/sdk/`](typescript/sdk) | `@ko-io/sdk` — official TypeScript SDK (Node 18+, browsers, edge) |
@@ -74,10 +75,12 @@ Free keys are 200 calls/day, forever, no credit card → [ko.io/console](https:/
 | [`cookbook/`](cookbook) | 10 runnable answers to real investing questions |
 | [`llms.txt`](llms.txt) | Machine-readable map of every tool and endpoint |
 
-The hosted MCP server and data pipelines are **not** in this repo — they run as
-a managed service (dual-region, 3-replica ClickHouse, 26 data pipelines
-refreshing on each source's publication schedule). This repo is everything you
-need to connect to it.
+The MCP server in [`server/`](server) is the exact code running at
+`https://mcp.ko.io/mcp` — every push deploys it. You can also self-host it on
+your own Cloudflare account (`cd server && npx wrangler deploy`); it proxies
+to `api.ko.io` with your API key, so your quota and plan follow you. The data
+pipelines behind the API run as a managed service (dual-region, 3-replica
+ClickHouse, 26 pipelines refreshing on each source's publication schedule).
 
 > **Note**: `ko-sec`, `@ko-io/sdk`, and `@ko-io/mcp-sec-data` publish to
 > PyPI/npm at public launch. Until then, install from source

@@ -1,7 +1,11 @@
-name: Deploy MCP Worker
+name: Deploy MCP Server
+
 on:
   push:
     branches: [main]
+    paths:
+      - "server/**"
+      - ".github/workflows/deploy-server.yml"
   workflow_dispatch:
 
 jobs:
@@ -10,6 +14,9 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    defaults:
+      run:
+        working-directory: server
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,15 +28,24 @@ jobs:
       - name: Upload Worker version
         id: upload
         run: |
-          # Run wrangler directly so its errors stream to the log (the old
-          # OUTPUT=$(...) under `bash -e` swallowed the real error on failure).
+          # Run wrangler directly so its errors stream to the log (an
+          # OUTPUT=$(...) under `bash -e` would swallow the real error).
           npx wrangler versions upload 2>&1 | tee /tmp/wrangler-upload.log
           VERSION_ID=$(grep -oP 'Worker Version ID: \K[a-f0-9-]+' /tmp/wrangler-upload.log)
           echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
       - name: Deploy Worker version
         run: npx wrangler versions deploy "${{ steps.upload.outputs.version_id }}@100%" -y
+      - name: Verify deployment
+        working-directory: .
+        run: |
+          sleep 5
+          curl -sSf https://mcp.ko.io/health
+          TOOLS=$(curl -sS -X POST https://mcp.ko.io/mcp \
+            -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["result"]["tools"]))')
+          echo "tools/list -> $TOOLS tools"
+          test "$TOOLS" -ge 24
 
-  # 2026-05-17: shared Telegram notification (reusable workflow lives in airflow-project)
   notify:
     name: Telegram notification
     needs: deploy
