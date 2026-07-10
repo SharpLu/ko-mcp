@@ -7,6 +7,13 @@ sync and async clients. Keep these free of I/O.
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
+
+
+def _seg(value: str) -> str:
+    """URL-escape a path segment (defends against '/', '?', '#' in ids)."""
+    return quote(str(value), safe="")
+
 
 Endpoint = tuple[str, dict[str, Any]]
 
@@ -30,7 +37,7 @@ def institutions_list(
 
 
 def institution_get(cik: str) -> Endpoint:
-    return f"/api/v1/institutions/{cik}", {}
+    return f"/api/v1/institutions/{_seg(cik)}", {}
 
 
 def institution_holdings(
@@ -42,7 +49,7 @@ def institution_holdings(
     page: int | None,
     per_page: int | None,
 ) -> Endpoint:
-    return f"/api/v1/holdings/{cik}", {
+    return f"/api/v1/holdings/{_seg(cik)}", {
         "quarter": quarter,
         "ticker": ticker,
         "action": action,
@@ -53,15 +60,15 @@ def institution_holdings(
 
 
 def institution_quarters(cik: str) -> Endpoint:
-    return f"/api/v1/holdings/{cik}", {"type": "quarters"}
+    return f"/api/v1/holdings/{_seg(cik)}", {"type": "quarters"}
 
 
 def institution_activity(cik: str) -> Endpoint:
-    return f"/api/v1/institution-activity/{cik}", {}
+    return f"/api/v1/institution-activity/{_seg(cik)}", {}
 
 
 def institution_similar(cik: str) -> Endpoint:
-    return f"/api/v1/institutions/{cik}/similar", {}
+    return f"/api/v1/institutions/{_seg(cik)}/similar", {}
 
 
 # -- Stocks ------------------------------------------------------------------
@@ -79,7 +86,7 @@ def stocks_list(
 
 
 def stock_get(ticker: str) -> Endpoint:
-    return f"/api/v1/stocks/{ticker.upper()}", {}
+    return f"/api/v1/stocks/{_seg(ticker.upper())}", {}
 
 
 def stock_price(
@@ -90,7 +97,7 @@ def stock_price(
     page: int | None,
     per_page: int | None,
 ) -> Endpoint:
-    return f"/api/v1/stock-price/{ticker.upper()}", {
+    return f"/api/v1/stock-price/{_seg(ticker.upper())}", {
         "days": days,
         "start_date": start_date,
         "end_date": end_date,
@@ -106,7 +113,7 @@ def stock_holders(
     page: int | None,
     per_page: int | None,
 ) -> Endpoint:
-    return f"/api/v1/stock-holders/{ticker.upper()}", {
+    return f"/api/v1/stock-holders/{_seg(ticker.upper())}", {
         "quarter": quarter,
         "action": action,
         "page": page,
@@ -115,15 +122,16 @@ def stock_holders(
 
 
 def stock_activity(ticker: str, quarters: int | None) -> Endpoint:
-    return f"/api/v1/stock-holders/{ticker.upper()}", {"type": "activity", "quarters": quarters}
+    path = f"/api/v1/stock-holders/{_seg(ticker.upper())}"
+    return path, {"type": "activity", "quarters": quarters}
 
 
 def stock_financials(ticker: str) -> Endpoint:
-    return f"/api/v1/stocks/{ticker.upper()}/financials", {}
+    return f"/api/v1/stocks/{_seg(ticker.upper())}/financials", {}
 
 
 def stock_financials_history(ticker: str) -> Endpoint:
-    return f"/api/v1/stocks/{ticker.upper()}/financials/historical", {}
+    return f"/api/v1/stocks/{_seg(ticker.upper())}/financials/historical", {}
 
 
 # -- Insiders (Forms 3/4/5) ---------------------------------------------------
@@ -146,11 +154,11 @@ def insider_trades(
 
 
 def insider_by_company(ticker: str) -> Endpoint:
-    return f"/api/v1/insider/by-company/{ticker.upper()}", {}
+    return f"/api/v1/insider/by-company/{_seg(ticker.upper())}", {}
 
 
 def insider_get(cik: str) -> Endpoint:
-    return f"/api/v1/insider/{cik}", {}
+    return f"/api/v1/insider/{_seg(cik)}", {}
 
 
 def insider_transactions(
@@ -161,7 +169,7 @@ def insider_transactions(
     page: int | None,
     per_page: int | None,
 ) -> Endpoint:
-    return f"/api/v1/insider/{cik}/transactions", {
+    return f"/api/v1/insider/{_seg(cik)}/transactions", {
         "ticker": ticker,
         "signal": signal,
         "side": side,
@@ -171,7 +179,7 @@ def insider_transactions(
 
 
 def executive_trades(ticker: str) -> Endpoint:
-    return f"/api/v1/executive-trades/{ticker.upper()}", {}
+    return f"/api/v1/executive-trades/{_seg(ticker.upper())}", {}
 
 
 # -- Congress -----------------------------------------------------------------
@@ -198,11 +206,12 @@ def congress_trades(
 
 
 def congress_member(slug: str, page: int | None, per_page: int | None) -> Endpoint:
-    return f"/api/v1/congress-trades/{slug}", {"page": page, "per_page": per_page}
+    return f"/api/v1/congress-trades/{_seg(slug)}", {"page": page, "per_page": per_page}
 
 
 def congress_stock(ticker: str, page: int | None, per_page: int | None) -> Endpoint:
-    return f"/api/v1/congress-trades/stock/{ticker.upper()}", {"page": page, "per_page": per_page}
+    path = f"/api/v1/congress-trades/stock/{_seg(ticker.upper())}"
+    return path, {"page": page, "per_page": per_page}
 
 
 # -- Crypto (spot BTC ETFs) -----------------------------------------------------
@@ -223,7 +232,7 @@ def crypto_holders(
 
 
 def crypto_holder(cik: str) -> Endpoint:
-    return f"/api/v1/crypto/holder/{cik}", {}
+    return f"/api/v1/crypto/holder/{_seg(cik)}", {}
 
 
 # -- Form 144 -------------------------------------------------------------------
@@ -300,12 +309,12 @@ def financial_stress(days: int | None, series_name: str | None) -> Endpoint:
 def filings_list(
     cik: str, form: str | None, from_: str | None, to: str | None, limit: int | None
 ) -> Endpoint:
-    return f"/api/v1/filings/{cik}", {"form": form, "from": from_, "to": to, "limit": limit}
+    return f"/api/v1/filings/{_seg(cik)}", {"form": form, "from": from_, "to": to, "limit": limit}
 
 
 def filings_index(cik: str, accession: str) -> Endpoint:
-    return f"/api/v1/filings/{cik}/{accession}", {}
+    return f"/api/v1/filings/{_seg(cik)}/{_seg(accession)}", {}
 
 
 def filings_share(cik: str, accession: str, file: str | None) -> Endpoint:
-    return f"/api/v1/filings/{cik}/{accession}/share", {"file": file}
+    return f"/api/v1/filings/{_seg(cik)}/{_seg(accession)}/share", {"file": file}

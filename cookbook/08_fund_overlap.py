@@ -22,12 +22,16 @@ def top_holdings(ko: KoClient, cik: str, n: int = 50) -> dict:
 
 
 def main() -> None:
-    cik_a = sys.argv[1] if len(sys.argv) > 2 else "1067983"
+    cik_a = sys.argv[1] if len(sys.argv) > 1 else "1067983"
     cik_b = sys.argv[2] if len(sys.argv) > 2 else "1350694"
     ko = KoClient()
 
-    name_a = ko.institutions.get(cik_a).rows[0].get("name", cik_a)
-    name_b = ko.institutions.get(cik_b).rows[0].get("name", cik_b)
+    def name_of(cik: str) -> str:
+        rows = ko.institutions.get(cik).rows
+        return rows[0].get("name", cik) if rows else cik
+
+    name_a = name_of(cik_a)
+    name_b = name_of(cik_b)
 
     a = top_holdings(ko, cik_a)
     b = top_holdings(ko, cik_b)

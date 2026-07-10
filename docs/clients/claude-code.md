@@ -8,8 +8,8 @@ Connect [ko.io](https://ko.io) to Claude Code in one command.
 claude mcp add ko-sec-data --transport http https://mcp.ko.io/mcp
 ```
 
-Demo mode is limited to 100 requests/day and core SEC tools. Grab a free key
-(200/day, no credit card) at <https://ko.io/console>.
+Demo mode is rate-limited per IP and covers core SEC tools. Grab a free key
+(200 calls/day, no credit card) at <https://ko.io/console>.
 
 ## With your API key (recommended)
 
@@ -47,6 +47,6 @@ Set `KO_API_KEY=ko_live_...` in the environment to use your quota.
 ## Troubleshooting
 
 - `disconnected` → check corporate proxy allows `https://mcp.ko.io`.
-- `403 ... requires a paid plan` → macro/short-interest tools are Pro+; core
-  SEC tools (13F, insiders, Congress, stocks, crypto) work on Free.
+- `403 ... requires a paid plan` → the 4 macro tools are Pro+; core SEC tools
+  (13F, insiders, Congress, stocks, crypto, FTD) work on Free.
 - Quota resets at 00:00 UTC. Check usage at <https://ko.io/console>.

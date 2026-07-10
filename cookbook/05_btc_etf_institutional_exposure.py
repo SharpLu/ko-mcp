@@ -15,8 +15,8 @@ def main() -> None:
 
     summary = ko.crypto.exposure_summary()
     data = summary.data if isinstance(summary.data, dict) else {}
-    complex_stats = data.get("complex", {})
-    products = data.get("products", [])
+    complex_stats = data.get("complex") or {}
+    products = data.get("products") or []
 
     total = float(complex_stats.get("total_usd") or 0)
     qoq = float(complex_stats.get("qoq_change") or 0)
@@ -33,13 +33,7 @@ def main() -> None:
         )
 
     print("\nTop IBIT holders:\n")
-    holders_result = ko.crypto.holders(product="IBIT", per_page=10)
-    holder_rows = (
-        holders_result.data.get("holders", [])
-        if isinstance(holders_result.data, dict)
-        else holders_result.rows
-    )
-    for h in holder_rows:
+    for h in ko.crypto.holders(product="IBIT", per_page=10):
         value = float(h.get("total_usd") or 0)
         print(f"  {h.get('name', '?'):<50} ${value / 1e6:>9.1f}M")
 

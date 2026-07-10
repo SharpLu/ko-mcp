@@ -48,7 +48,7 @@ If your Claude Desktop version doesn't support remote HTTP servers:
 }
 ```
 
-Requires Node.js 18+. Omit `env` to run in demo mode (100 requests/day).
+Requires Node.js 18+. Omit `env` to run in demo mode (rate-limited per IP).
 
 ## Verify
 

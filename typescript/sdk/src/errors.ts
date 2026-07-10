@@ -70,10 +70,17 @@ export async function errorFromResponse(response: Response): Promise<KoError> {
 
   try {
     const body = (await response.json()) as {
-      error?: { code?: string; message?: string };
+      error?: { code?: string; message?: string } | string;
+      message?: string;
     };
-    if (body?.error?.code) code = body.error.code;
-    if (body?.error?.message) message = body.error.message;
+    if (typeof body?.error === "string") {
+      // Flat docs-style shape: { error: "CODE", message: "..." }
+      if (body.error) code = body.error;
+      if (typeof body.message === "string" && body.message) message = body.message;
+    } else if (body?.error && typeof body.error === "object") {
+      if (typeof body.error.code === "string" && body.error.code) code = body.error.code;
+      if (typeof body.error.message === "string" && body.error.message) message = body.error.message;
+    }
   } catch {
     // Non-JSON body (e.g. proxy HTML error page): keep fallbacks.
   }
@@ -92,8 +99,9 @@ export async function errorFromResponse(response: Response): Promise<KoError> {
     case 404:
       return new NotFoundError(message, options);
     case 429: {
-      const raw = response.headers.get("retry-after");
-      const retryAfter = raw !== null && Number.isFinite(Number(raw)) ? Number(raw) : undefined;
+      // Only plain digit seconds; empty strings and HTTP-date forms yield undefined.
+      const raw = response.headers.get("retry-after")?.trim();
+      const retryAfter = raw && /^\d+$/.test(raw) ? Number(raw) : undefined;
       return new RateLimitError(message, { ...options, retryAfter });
     }
     default:

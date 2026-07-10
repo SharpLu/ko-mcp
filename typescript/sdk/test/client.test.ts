@@ -68,13 +68,53 @@ describe("envelope parsing and rows normalization", () => {
     expect((res.data as { summary: { holders: number } }).summary.holders).toBe(2);
   });
 
-  it("returns rows=[] for plain-object data (financials historical shape)", async () => {
+  it("wraps plain-object data as [data] (financials historical shape)", async () => {
     const body = { data: { revenue: { "2025": 1 } }, meta: {} };
     const { fn } = mockFetch(jsonResponse(body));
     const ko = new KoClient({ fetch: fn });
     const res = await ko.stocks.financialsHistory("NVDA");
-    expect(res.rows).toEqual([]);
+    expect(res.rows).toEqual([{ revenue: { "2025": 1 } }]);
     expect(res.data).toEqual({ revenue: { "2025": 1 } });
+  });
+
+  it("extracts the single array-valued property (crypto holders / activity / by-company shapes)", async () => {
+    const body = { data: { summary: { total: 2 }, holders: [{ cik: "1" }, { cik: "2" }] }, meta: {} };
+    const { fn } = mockFetch(jsonResponse(body));
+    const ko = new KoClient({ fetch: fn });
+    const res = await ko.crypto.holders();
+    expect(res.rows).toEqual([{ cik: "1" }, { cik: "2" }]);
+  });
+
+  it("prefers data.data over the single-array-key rule", async () => {
+    const body = { data: { data: [1, 2], meta_info: "x" }, meta: {} };
+    const { fn } = mockFetch(jsonResponse(body));
+    const ko = new KoClient({ fetch: fn });
+    const res = await ko.stocks.holders("NVDA");
+    expect(res.rows).toEqual([1, 2]);
+  });
+
+  it("wraps objects with multiple array-valued properties as [data]", async () => {
+    const payload = { adds: [1], drops: [2] };
+    const { fn } = mockFetch(jsonResponse({ data: payload, meta: {} }));
+    const ko = new KoClient({ fetch: fn });
+    const res = await ko.stocks.activity("NVDA");
+    expect(res.rows).toEqual([payload]);
+  });
+
+  it("wraps non-object data as [data]", async () => {
+    const { fn } = mockFetch(jsonResponse({ data: 42, meta: {} }));
+    const ko = new KoClient({ fetch: fn });
+    const res = await ko.get("/api/v1/anything");
+    expect(res.rows).toEqual([42]);
+  });
+
+  it("throws INVALID_RESPONSE when a 2xx body has no data property", async () => {
+    const { fn } = mockFetch(jsonResponse({ meta: { page: 1 } }));
+    const ko = new KoClient({ fetch: fn });
+    const err = await ko.stocks.list().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(KoError);
+    expect(err).toMatchObject({ code: "INVALID_RESPONSE", status: 200 });
+    expect((err as KoError).message).toMatch(/"data"/);
   });
 
   it("surfaces plan truncation via truncated flag and meta", async () => {
@@ -182,6 +222,39 @@ describe("error mapping", () => {
     expect(err).toBeInstanceOf(ServerError);
     expect(err).toMatchObject({ status: 500, code: "INTERNAL_ERROR" });
   });
+
+  it("parses the flat docs-style error shape {error: CODE, message}", async () => {
+    const { fn } = mockFetch(
+      jsonResponse({ error: "NOT_FOUND", message: "institution not found" }, { status: 404 }),
+    );
+    const ko = new KoClient({ fetch: fn });
+    const err = await ko.institutions.get("999").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(NotFoundError);
+    expect(err).toMatchObject({ code: "NOT_FOUND", message: "institution not found" });
+  });
+
+  it("treats an empty Retry-After header as undefined", async () => {
+    const res = jsonResponse({ error: { code: "RATE_LIMIT_EXCEEDED", message: "slow down" } }, {
+      status: 429,
+      headers: { "content-type": "application/json", "retry-after": "" },
+    });
+    const { fn } = mockFetch(res);
+    const ko = new KoClient({ fetch: fn });
+    const err = await ko.stocks.list().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RateLimitError);
+    expect((err as RateLimitError).retryAfter).toBeUndefined();
+  });
+
+  it("ignores non-digit Retry-After values (HTTP-date form)", async () => {
+    const res = jsonResponse({ error: { code: "RATE_LIMIT_EXCEEDED", message: "slow down" } }, {
+      status: 429,
+      headers: { "content-type": "application/json", "retry-after": "Wed, 21 Oct 2026 07:28:00 GMT" },
+    });
+    const { fn } = mockFetch(res);
+    const ko = new KoClient({ fetch: fn });
+    const err = await ko.stocks.list().catch((e: unknown) => e);
+    expect((err as RateLimitError).retryAfter).toBeUndefined();
+  });
 });
 
 describe("retries and timeout", () => {
@@ -217,17 +290,60 @@ describe("retries and timeout", () => {
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
-  it("aborts via timeout and throws a TIMEOUT KoError", async () => {
-    const hanging = ((_url: RequestInfo | URL, init?: RequestInit) =>
-      new Promise<Response>((_resolve, reject) => {
+  it("aborts via timeout and throws a TIMEOUT KoError when retries are exhausted", async () => {
+    let attempts = 0;
+    const hanging = ((_url: RequestInfo | URL, init?: RequestInit) => {
+      attempts++;
+      return new Promise<Response>((_resolve, reject) => {
         init?.signal?.addEventListener("abort", () =>
           reject(new DOMException("The operation was aborted", "AbortError")),
         );
-      })) as unknown as typeof fetch;
-    const ko = new KoClient({ fetch: hanging, timeoutMs: 30, maxRetries: 0 });
+      });
+    }) as unknown as typeof fetch;
+    const ko = new KoClient({ fetch: hanging, timeoutMs: 20, maxRetries: 1 });
     const err = await ko.stocks.list().catch((e: unknown) => e);
     expect(err).toBeInstanceOf(KoError);
     expect(err).toMatchObject({ status: 0, code: "TIMEOUT" });
+    expect(attempts).toBe(2); // timeouts are retried like network errors
+  });
+
+  it("retries a timeout and succeeds on the next attempt", async () => {
+    let attempts = 0;
+    const flaky = ((_url: RequestInfo | URL, init?: RequestInit) => {
+      attempts++;
+      if (attempts === 1) {
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("The operation was aborted", "AbortError")),
+          );
+        });
+      }
+      return Promise.resolve(jsonResponse(OK));
+    }) as unknown as typeof fetch;
+    const ko = new KoClient({ fetch: flaky, timeoutMs: 20, maxRetries: 1 });
+    const res = await ko.stocks.list();
+    expect(res.rows).toHaveLength(1);
+    expect(attempts).toBe(2);
+  });
+
+  it("does not retry non-network TypeErrors and wraps them in KoError", async () => {
+    const { fn } = mockFetch(new TypeError("Headers.append: 'ko_live_\\n' is an invalid header value"));
+    const ko = new KoClient({ fetch: fn });
+    const err = await ko.stocks.list().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(KoError);
+    expect(err).toMatchObject({ status: 0, code: "REQUEST_ERROR" });
+    expect((err as KoError).message).toContain("invalid header value");
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels the response body before retrying a retryable status", async () => {
+    const first = new Response("gateway down", { status: 503 });
+    const cancelSpy = vi.spyOn(first.body!, "cancel");
+    const { fn } = mockFetch(first, jsonResponse(OK));
+    const ko = new KoClient({ fetch: fn });
+    const res = await ko.stocks.list();
+    expect(res.rows).toHaveLength(1);
+    expect(cancelSpy).toHaveBeenCalledTimes(1);
   });
 });
 

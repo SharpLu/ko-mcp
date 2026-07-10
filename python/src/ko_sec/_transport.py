@@ -25,9 +25,9 @@ def resolve_config(
     base_url: str | None,
 ) -> tuple[str | None, str]:
     """Resolve key and base URL from arguments, falling back to env vars."""
-    key = api_key if api_key is not None else os.environ.get("KO_API_KEY") or None
+    key = api_key if api_key is not None else os.environ.get("KO_API_KEY")
     url = (base_url or os.environ.get("KO_API_URL") or DEFAULT_BASE_URL).rstrip("/")
-    return key, url
+    return key or None, url
 
 
 def build_headers(api_key: str | None) -> dict[str, str]:
@@ -45,6 +45,8 @@ def prepare_params(api_key: str | None, params: Mapping[str, Any]) -> dict[str, 
             continue
         if isinstance(value, bool):
             prepared[name] = "true" if value else "false"
+        elif isinstance(value, (list, tuple)):
+            prepared[name] = ",".join(str(item) for item in value)
         else:
             prepared[name] = str(value)
     if not api_key:
@@ -59,13 +61,14 @@ def parse_response(response: httpx.Response) -> ApiResult:
         code, message = "", f"HTTP {response.status_code}"
         try:
             body = response.json()
-            error = body.get("error")
-            if isinstance(error, dict):
-                code = str(error.get("code", ""))
-                message = str(error.get("message", message))
-            elif isinstance(error, str):  # docs-style flat error shape
-                code = error
-                message = str(body.get("message", message))
+            if isinstance(body, dict):
+                error = body.get("error")
+                if isinstance(error, dict):
+                    code = str(error.get("code", ""))
+                    message = str(error.get("message", message))
+                elif isinstance(error, str):  # docs-style flat error shape
+                    code = error
+                    message = str(body.get("message", message))
         except ValueError:
             pass
         retry_after: int | None = None

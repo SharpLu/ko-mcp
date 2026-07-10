@@ -56,13 +56,30 @@ function seg(value: string): string {
   return encodeURIComponent(value);
 }
 
+const NETWORKISH_MESSAGE = /fetch failed|network|ENOTFOUND|ECONNREFUSED|EAI_AGAIN|socket|terminated/i;
+
+// Only fetch's own connectivity failures are retryable; other TypeErrors
+// (e.g. an invalid header value from a malformed API key) are programmer errors.
+function isNetworkError(err: unknown): boolean {
+  return err instanceof TypeError && NETWORKISH_MESSAGE.test(err.message);
+}
+
+/**
+ * Deterministic rows extraction (matches the Python SDK):
+ * (a) `data` is an array -> `data`;
+ * (b) `data.data` is an array -> `data.data`;
+ * (c) `data` is an object with exactly one array-valued property -> that array;
+ * (d) otherwise -> `[data]`.
+ */
 function normalizeRows(data: unknown): unknown[] {
   if (Array.isArray(data)) return data;
   if (data !== null && typeof data === "object") {
-    const inner = (data as { data?: unknown }).data;
-    if (Array.isArray(inner)) return inner;
+    const record = data as Record<string, unknown>;
+    if (Array.isArray(record.data)) return record.data;
+    const arrays = Object.values(record).filter((value): value is unknown[] => Array.isArray(value));
+    if (arrays.length === 1) return arrays[0]!;
   }
-  return [];
+  return [data];
 }
 
 /**
@@ -109,9 +126,9 @@ export class KoClient {
     const response = await this.requestWithRetry(url);
     if (!response.ok) throw await errorFromResponse(response);
 
-    let body: { data: T; meta?: Meta };
+    let raw: unknown;
     try {
-      body = (await response.json()) as { data: T; meta?: Meta };
+      raw = await response.json();
     } catch {
       throw new KoError("ko.io API returned a non-JSON success body", {
         status: response.status,
@@ -119,6 +136,14 @@ export class KoClient {
       });
     }
 
+    if (raw === null || typeof raw !== "object" || !("data" in raw)) {
+      throw new KoError('ko.io API returned a success body without a "data" property', {
+        status: response.status,
+        code: "INVALID_RESPONSE",
+      });
+    }
+
+    const body = raw as { data: T; meta?: Meta };
     const meta: Meta = body.meta ?? {};
     return {
       data: body.data,
@@ -142,29 +167,43 @@ export class KoClient {
 
   private async requestWithRetry(url: string): Promise<Response> {
     for (let attempt = 0; ; attempt++) {
+      const canRetry = attempt < this.maxRetries;
       try {
         const response = await this.doFetch(url);
-        if (RETRYABLE_STATUSES.has(response.status) && attempt < this.maxRetries) {
+        if (RETRYABLE_STATUSES.has(response.status) && canRetry) {
+          // Consume the discarded body so the connection can be reused.
+          await response.body?.cancel().catch(() => undefined);
           await sleep(250 * 2 ** attempt);
           continue;
         }
         return response;
       } catch (err) {
         if (err instanceof KoError) throw err;
+        // We accept no caller-provided signals, so every abort is our own timeout.
         if (isAbortError(err)) {
+          if (canRetry) {
+            await sleep(250 * 2 ** attempt);
+            continue;
+          }
           throw new KoError(`Request timed out after ${this.timeoutMs}ms`, {
             status: 0,
             code: "TIMEOUT",
           });
         }
-        if (attempt < this.maxRetries) {
-          await sleep(250 * 2 ** attempt);
-          continue;
+        if (isNetworkError(err)) {
+          if (canRetry) {
+            await sleep(250 * 2 ** attempt);
+            continue;
+          }
+          throw new KoError(`Network error calling ko.io API: ${(err as Error).message}`, {
+            status: 0,
+            code: "NETWORK_ERROR",
+          });
         }
         const message = err instanceof Error ? err.message : String(err);
-        throw new KoError(`Network error calling ko.io API: ${message}`, {
+        throw new KoError(`Request failed: ${message}`, {
           status: 0,
-          code: "NETWORK_ERROR",
+          code: "REQUEST_ERROR",
         });
       }
     }
@@ -251,11 +290,11 @@ export class KoClient {
 
     /**
      * Available filing quarters for an institution.
-     * Returns an object `{ quarters: [...], latest_quarter }` in `data` (rows is empty).
+     * Returns `{ quarters: [...], latest_quarter }` in `data`; `rows` surfaces the quarters array.
      *
      * @example
      * ```ts
-     * const { data } = await ko.institutions.quarters("1067983");
+     * const { data, rows } = await ko.institutions.quarters("1067983");
      * ```
      */
     quarters: <T = unknown>(cik: string): Promise<ApiResult<T>> =>
@@ -375,7 +414,8 @@ export class KoClient {
       this.get<T>(`/api/v1/stocks/${tick(ticker)}/financials`),
 
     /**
-     * Multi-year financial history. Returns an object in `data` (rows is empty).
+     * Multi-year financial history. Returns a plain object — read it from `data`
+     * (`rows` wraps it as `[data]`).
      *
      * @example
      * ```ts
@@ -510,7 +550,7 @@ export class KoClient {
   readonly crypto = {
     /**
      * Market-wide crypto ETF exposure summary.
-     * Returns `{ complex, products: [...] }` in `data`.
+     * Returns `{ complex, products: [...] }` in `data`; `rows` surfaces the products array.
      *
      * @example
      * ```ts

@@ -20,11 +20,11 @@ ko = KoClient()  # demo mode; or KoClient(api_key="ko_live_...")
 
 # Who is Berkshire Hathaway holding right now?
 for holding in ko.institutions.holdings("1067983", per_page=10):
-    print(holding["ticker"], holding["value"])
+    print(holding["ticker"], holding["holding_value"])
 
 # Which institutions hold NVDA?
 for holder in ko.stocks.holders("NVDA"):
-    print(holder["institution_name"], holder["shares"])
+    print(holder["name"], holder["shares_held"])
 
 # What did Congress trade recently?
 for trade in ko.congress.trades(sort="recent", per_page=10):

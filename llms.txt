@@ -1,6 +1,6 @@
 # ko.io
 
-> Source-traced SEC & market data for AI agents and quants. 120M+ records:
+> Source-traced SEC & market data for AI agents and quants. 100M+ records:
 > 13F institutional holdings (2013→today, family-consolidated), insider
 > trades (Forms 3/4/5), Congress trading, crypto ETF exposure, Form 144,
 > fails-to-deliver, Reg SHO, stock prices & financials, US macro, and a
@@ -11,7 +11,7 @@ MCP endpoint (Streamable HTTP, stateless): https://mcp.ko.io/mcp
 Auth (REST): Authorization: Bearer ko_live_...  |  keyless demo: append ?demo=true
 Auth (MCP): Authorization: Bearer header, or ?api_key= on the URL; keyless = demo mode
 Free key: 200 calls/day, no credit card — https://ko.io/console
-Response envelope: {"data": ..., "meta": {total_count, page, per_page, truncated?, upgrade_hint?}}
+Response envelope (most endpoints): {"data": ..., "meta": {total_count, page, per_page, truncated?, upgrade_hint?}}; a few nest pagination inside data (e.g. stock-holders)
 Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "message": "..."}}
 
 ## Connect an MCP client

@@ -3,7 +3,7 @@
 # ko.io — Wall Street data feed for AI agents
 
 **One command connects Claude, Cursor, Windsurf, Zed, Codex, and any MCP client
-to 120M+ source-traced SEC filings. Every answer cites a real filing.**
+to 100M+ source-traced SEC records. Every answer traces to a real filing.**
 
 [![CI](https://github.com/SharpLu/ko-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/SharpLu/ko-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/ko-sec)](https://pypi.org/project/ko-sec/)
@@ -75,8 +75,13 @@ Free keys are 200 calls/day, forever, no credit card → [ko.io/console](https:/
 | [`llms.txt`](llms.txt) | Machine-readable map of every tool and endpoint |
 
 The hosted MCP server and data pipelines are **not** in this repo — they run as
-a managed service (dual-region, 3-replica ClickHouse, refreshed daily by 26
-data pipelines). This repo is everything you need to connect to it.
+a managed service (dual-region, 3-replica ClickHouse, 26 data pipelines
+refreshing on each source's publication schedule). This repo is everything you
+need to connect to it.
+
+> **Note**: `ko-sec`, `@ko-io/sdk`, and `@ko-io/mcp-sec-data` publish to
+> PyPI/npm at public launch. Until then, install from source
+> (`pip install -e python/`). The hosted MCP endpoint and REST API work today.
 
 ## Connect your client
 
@@ -107,8 +112,9 @@ URL, or send `Authorization: Bearer YOUR_KEY`.
 | SEC filings gateway | Any filing document, signed shareable links | list/index ✅ · documents Pro |
 | Macro (Treasury, Fed, CPI, OFR stress) | Daily federal sources | Pro |
 
-Every row carries its provenance — 13F values trace to the filing accession
-number, so your agent cites documents instead of inventing numbers.
+All data is source-traced through the pipeline, and the filings gateway can
+pull the underlying SEC documents — so your agent cites real filings instead
+of inventing numbers.
 
 ## The 24 MCP tools
 
@@ -151,7 +157,7 @@ ko.io solves a different problem — the questions raw EDGAR can't answer:
 | Rows/request | 500 | 500 | 5,000 | 50,000 |
 | Core SEC data | ✅ | ✅ | ✅ | ✅ |
 | History depth | latest | latest | full | full |
-| Macro + short-interest | — | — | ✅ | ✅ |
+| Macro (Treasury/Fed/CPI/stress) | — | — | ✅ | ✅ |
 | Bulk export | — | — | — | ✅ |
 
 Quota resets 00:00 UTC. MCP and REST share one quota. [Details →](https://ko.io/pricing)

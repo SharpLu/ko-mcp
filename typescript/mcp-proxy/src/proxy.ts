@@ -7,8 +7,20 @@ import {
   type CallToolResult,
   type ListToolsResult,
 } from "@modelcontextprotocol/sdk/types.js";
-import { requestHeaders, type ProxyConfig } from "./config.js";
+import { DEFAULT_CONNECT_TIMEOUT_MS, requestHeaders, type ProxyConfig } from "./config.js";
 import { VERSION } from "./version.js";
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /** Minimal surface of the remote MCP client the proxy depends on (injectable for tests). */
 export interface RemoteClient {
@@ -74,11 +86,17 @@ export async function createProxy(
   config: ProxyConfig,
   factory: RemoteClientFactory = connectRemote,
 ): Promise<Proxy> {
-  const remote = await factory(config);
+  const connectTimeoutMs = config.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
+  const remote = await withTimeout(
+    factory(config),
+    connectTimeoutMs,
+    `Timed out connecting to ${config.url} after ${connectTimeoutMs}ms — check network access and KO_MCP_URL`,
+  );
 
+  // No listChanged: the stateless remote can never push tool-list notifications.
   const server = new Server(
     { name: "ko-sec-data", version: VERSION },
-    { capabilities: { tools: { listChanged: true } } },
+    { capabilities: { tools: {} } },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, (request) =>

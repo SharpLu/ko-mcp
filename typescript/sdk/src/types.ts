@@ -19,8 +19,12 @@ export interface Meta {
  * Normalized result returned by every SDK method.
  *
  * - `data` — the raw `data` field of the API envelope (array or object).
- * - `rows` — normalized row array: `data` when it is an array, `data.data`
- *   when the endpoint double-nests (e.g. `/stock-holders/:t`), else `[]`.
+ * - `rows` — normalized row array, derived deterministically from `data`:
+ *   (a) `data` is an array -> `data`;
+ *   (b) `data.data` is an array -> `data.data` (e.g. `/stock-holders/:t`);
+ *   (c) `data` is an object with exactly one array-valued property -> that
+ *       array (e.g. `data.holders`, `data.trend`, `data.insiders`, `data.quarters`);
+ *   (d) otherwise -> `[data]` (single-element array wrapping the payload).
  * - `truncated` — true when the plan row-cap truncated the result.
  */
 export interface ApiResult<T = unknown> {

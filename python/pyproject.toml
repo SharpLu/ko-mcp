@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [project]
@@ -9,7 +9,7 @@ description = "Official Python SDK for ko.io — source-traced SEC & market data
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
-authors = [{ name = "ko.io", email = "support@ko.io" }]
+authors = [{ name = "ko.io", email = "admin@ko.io" }]
 keywords = [
   "sec", "edgar", "13f", "insider-trading", "congress-trading",
   "financial-data", "hedge-funds", "mcp", "ai-agents",

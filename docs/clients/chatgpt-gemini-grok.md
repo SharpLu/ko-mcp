@@ -34,7 +34,7 @@ Or use the official SDKs: [`ko-sec` (Python)](../../python) ·
 
 ## Demo mode
 
-Append `?demo=true` to any endpoint for keyless evaluation (100 requests/day):
+Append `?demo=true` to any endpoint for keyless evaluation (rate-limited per IP):
 
 ```bash
 curl "https://api.ko.io/api/v1/institutions?search=berkshire&demo=true"

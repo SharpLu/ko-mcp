@@ -6,7 +6,7 @@ Thanks for your interest in improving the ko.io connector kit!
 
 This repository contains the **client-side** tooling for [ko.io](https://ko.io):
 the Python SDK (`ko-sec`), the TypeScript SDK (`@ko-io/sdk`), the stdio MCP
-proxy (`@ko-io/mcp`), per-client setup guides, and the cookbook. The hosted MCP
+proxy (`@ko-io/mcp-sec-data`), per-client setup guides, and the cookbook. The hosted MCP
 server and data pipelines are not part of this repo.
 
 ## Development setup

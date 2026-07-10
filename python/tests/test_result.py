@@ -18,10 +18,15 @@ def test_rows_double_nested_object() -> None:
     assert result.rows == [{"cik": "1"}]
 
 
-def test_rows_plain_object_wrapped_as_single_row() -> None:
-    # /crypto/exposure-summary returns an object
-    result = ApiResult({"complex": {}, "products": []}, {})
-    assert result.rows == [{"complex": {}, "products": []}]
+def test_rows_single_list_field_unwrapped() -> None:
+    # /crypto/exposure-summary: exactly one list field (products) → those rows
+    result = ApiResult({"complex": {}, "products": [{"p": "IBIT"}]}, {})
+    assert result.rows == [{"p": "IBIT"}]
+
+
+def test_rows_plain_object_without_lists_wrapped_as_single_row() -> None:
+    result = ApiResult({"cik": "1067983", "name": "Berkshire"}, {})
+    assert result.rows == [{"cik": "1067983", "name": "Berkshire"}]
     assert len(result) == 1
 
 

@@ -36,7 +36,12 @@ console.log(holdings.meta.total_count, "positions");
 if (holdings.truncated) console.log(holdings.meta.upgrade_hint);
 
 // Every method returns { data, meta, rows, truncated }.
-// `rows` is always an array regardless of the endpoint's envelope shape.
+// `rows` is always an array, derived deterministically from `data`:
+//   (a) data is an array           -> data
+//   (b) data.data is an array      -> data.data   (double-nested endpoints)
+//   (c) data has exactly one
+//       array-valued property      -> that array  (e.g. data.holders, data.trend)
+//   (d) otherwise                  -> [data]      (object payloads, e.g. financials history)
 ```
 
 ## Error handling

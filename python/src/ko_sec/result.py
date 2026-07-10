@@ -31,9 +31,13 @@ class ApiResult:
     def rows(self) -> list[Any]:
         """Normalized row list.
 
-        Handles the three envelope shapes found on v1: a plain list, a
-        paginated object with rows nested at ``data["data"]``, and plain
-        objects (returned as a single-element list).
+        Deterministic rule covering every v1 envelope shape:
+
+        1. ``data`` is a list → ``data``
+        2. ``data["data"]`` is a list → that list (paginated objects)
+        3. ``data`` is an object with exactly one list-valued field → that
+           list (e.g. ``holders``, ``trend``, ``quarters``, ``insiders``)
+        4. anything else → ``[data]`` (single-row view of an object)
         """
         if isinstance(self.data, list):
             return self.data
@@ -41,6 +45,9 @@ class ApiResult:
             inner = self.data.get("data")
             if isinstance(inner, list):
                 return inner
+            list_fields = [v for v in self.data.values() if isinstance(v, list)]
+            if len(list_fields) == 1:
+                return list_fields[0]
             return [self.data]
         return [self.data] if self.data is not None else []
 
@@ -54,8 +61,21 @@ class ApiResult:
 
     @property
     def total_count(self) -> int:
-        """Total rows available server-side (0 when the endpoint omits it)."""
-        value = self.meta.get("total_count", self.meta.get("total_available", 0))
+        """Total rows available server-side (0 when the endpoint omits it).
+
+        Checks ``meta.total_count`` / ``meta.total_available`` first, then
+        the data-level ``total_count`` / ``totalCount`` that a few nested
+        endpoints (stock-holders, crypto holders) use instead.
+        """
+        value = self.meta.get("total_count")
+        if value is None:
+            value = self.meta.get("total_available")
+        if value is None and isinstance(self.data, dict):
+            value = self.data.get("total_count")
+            if value is None:
+                value = self.data.get("totalCount")
+        if value is None:
+            return 0
         try:
             return int(value)
         except (TypeError, ValueError):

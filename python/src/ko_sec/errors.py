@@ -68,12 +68,12 @@ class ServerError(KoError):
     """5xx — transient upstream or server failure. Safe to retry."""
 
 
+# 429 is handled explicitly in error_for_status (RateLimitError needs retry_after).
 _STATUS_MAP: dict[int, type[KoError]] = {
     400: BadRequestError,
     401: AuthenticationError,
     403: PlanRequiredError,
     404: NotFoundError,
-    429: RateLimitError,
 }
 
 

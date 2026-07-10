@@ -56,11 +56,13 @@ npx -y @ko-io/mcp-sec-data
 |---|---|---|---|
 | `KO_API_KEY` | no | — | ko.io API key (`ko_live_...`). Without it the remote serves keyless **demo mode** with capped rows. Get a key at [ko.io](https://ko.io). |
 | `KO_MCP_URL` | no | `https://mcp.ko.io/mcp` | Remote MCP endpoint override. |
+| `KO_MCP_CONNECT_TIMEOUT_MS` | no | `10000` | Startup timeout for the initial remote connection; on expiry the process prints a fatal error to stderr and exits 1. |
 
 ## Notes
 
 - Diagnostics go to stderr; stdout is reserved for the MCP protocol.
 - Remote tool failures are returned as `isError` tool results — the local process never crashes on upstream errors.
+- The process exits cleanly on SIGINT/SIGTERM, on stdin EOF (client disconnect), or when the transport closes; a second signal during shutdown forces exit 130.
 - `--version` / `--help` are supported.
 
 Looking for a plain REST client instead? See [`@ko-io/sdk`](https://www.npmjs.com/package/@ko-io/sdk).

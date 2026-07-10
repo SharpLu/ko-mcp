@@ -83,6 +83,29 @@ describe("createProxy", () => {
     expect(remote.close).toHaveBeenCalledTimes(1);
   });
 
+  it("fails startup with a clear error when the remote connect exceeds the timeout", async () => {
+    const neverConnects = () => new Promise<RemoteClient>(() => undefined);
+    await expect(
+      createProxy({ ...config, connectTimeoutMs: 25 }, neverConnects),
+    ).rejects.toThrow(/Timed out connecting to https:\/\/mcp\.ko\.io\/mcp after 25ms/);
+  });
+
+  it("does not advertise tools.listChanged (stateless remote cannot push it)", async () => {
+    const proxy = await createProxy(config, async () => fakeRemote());
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await proxy.server.connect(serverTransport);
+    const client = new Client({ name: "test-client", version: "0.0.0" });
+    await client.connect(clientTransport);
+
+    const caps = client.getServerCapabilities();
+    expect(caps?.tools).toBeDefined();
+    expect(caps?.tools?.listChanged).toBeUndefined();
+
+    await client.close();
+    await proxy.close();
+  });
+
   it("serves remote tools to a real MCP client over an in-memory transport", async () => {
     const remote = fakeRemote();
     const proxy = await createProxy(config, async () => remote);

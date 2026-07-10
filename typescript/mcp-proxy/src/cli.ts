@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { loadConfig } from "./config.js";
+import { wireLifecycle } from "./lifecycle.js";
 import { createProxy } from "./proxy.js";
 import { VERSION } from "./version.js";
 
@@ -11,8 +12,9 @@ Usage:
   npx -y @ko-io/mcp-sec-data
 
 Environment:
-  KO_API_KEY   ko.io API key (optional; without it the remote serves demo mode)
-  KO_MCP_URL   remote MCP endpoint (default: https://mcp.ko.io/mcp)
+  KO_API_KEY                 ko.io API key (optional; without it the remote serves demo mode)
+  KO_MCP_URL                 remote MCP endpoint (default: https://mcp.ko.io/mcp)
+  KO_MCP_CONNECT_TIMEOUT_MS  startup connect timeout in ms (default: 10000)
 
 Options:
   --version, -v   print version
@@ -40,18 +42,12 @@ async function main(): Promise<void> {
 
   const proxy = await createProxy(config);
 
-  let shuttingDown = false;
-  const shutdown = async (): Promise<void> => {
-    if (shuttingDown) return;
-    shuttingDown = true;
-    try {
-      await proxy.close();
-    } finally {
-      process.exit(0);
-    }
-  };
-  process.on("SIGINT", () => void shutdown());
-  process.on("SIGTERM", () => void shutdown());
+  // SIGINT/SIGTERM, stdin EOF and transport close all funnel into one shutdown.
+  wireLifecycle(proxy, {
+    proc: process,
+    stdin: process.stdin,
+    exit: (code) => process.exit(code),
+  });
 
   await proxy.server.connect(new StdioServerTransport());
   log("ready — proxying MCP over stdio");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_MCP_URL, loadConfig, requestHeaders } from "../src/config.js";
+import { DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_MCP_URL, loadConfig, requestHeaders } from "../src/config.js";
 
 describe("loadConfig", () => {
   it("defaults to the hosted ko.io MCP URL with no API key", () => {
@@ -29,6 +29,21 @@ describe("loadConfig", () => {
 
   it("rejects a non-http(s) URL", () => {
     expect(() => loadConfig({ KO_MCP_URL: "ftp://mcp.ko.io/mcp" })).toThrow(/http\(s\)/);
+  });
+
+  it("defaults connectTimeoutMs to 10000", () => {
+    expect(DEFAULT_CONNECT_TIMEOUT_MS).toBe(10_000);
+    expect(loadConfig({}).connectTimeoutMs).toBe(DEFAULT_CONNECT_TIMEOUT_MS);
+  });
+
+  it("honors KO_MCP_CONNECT_TIMEOUT_MS override", () => {
+    expect(loadConfig({ KO_MCP_CONNECT_TIMEOUT_MS: "2500" }).connectTimeoutMs).toBe(2500);
+  });
+
+  it("rejects non-positive or non-integer connect timeouts", () => {
+    expect(() => loadConfig({ KO_MCP_CONNECT_TIMEOUT_MS: "0" })).toThrow(/positive integer/);
+    expect(() => loadConfig({ KO_MCP_CONNECT_TIMEOUT_MS: "abc" })).toThrow(/positive integer/);
+    expect(() => loadConfig({ KO_MCP_CONNECT_TIMEOUT_MS: "1.5" })).toThrow(/positive integer/);
   });
 });
 

@@ -37,9 +37,18 @@ def test_paginate_stops_on_empty_page() -> None:
     assert calls == [1]
 
 
-def test_paginate_max_pages_safety_valve() -> None:
+def test_paginate_detects_page_ignoring_endpoint() -> None:
     def endless(*args: Any, page: int = 1, per_page: int = 2, **kwargs: Any) -> ApiResult:
         return ApiResult([1, 2], {})
 
+    # identical first row on consecutive pages → endpoint ignores `page`, stop
     rows = list(paginate(endless, per_page=2, max_pages=5))
-    assert len(rows) == 10
+    assert rows == [1, 2]
+
+
+def test_paginate_max_pages_safety_valve() -> None:
+    def varied(*args: Any, page: int = 1, per_page: int = 2, **kwargs: Any) -> ApiResult:
+        return ApiResult([page * 10, page * 10 + 1], {"per_page": 2})
+
+    rows = list(paginate(varied, per_page=2, max_pages=5))
+    assert len(rows) == 10  # 5 pages, then the valve stops it

@@ -2,9 +2,8 @@
 
 ## Reporting a vulnerability
 
-Please email **security@ko.io** with a description and reproduction steps.
-Do not open a public issue for security reports. We aim to acknowledge within
-48 hours.
+Please email **admin@ko.io** with a description and reproduction steps.
+Do not open a public issue for security reports.
 
 ## Scope
 
