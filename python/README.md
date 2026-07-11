@@ -1,4 +1,4 @@
-# ko-sec
+# ko-edgar
 
 Official Python SDK for [ko.io](https://ko.io) — source-traced SEC & market
 data for AI agents and quants. 13F institutional holdings (85M+ rows,
@@ -6,7 +6,7 @@ data for AI agents and quants. 13F institutional holdings (85M+ rows,
 indicators, and a white-labeled EDGAR filings gateway.
 
 ```bash
-pip install ko-sec
+pip install ko-edgar
 ```
 
 ## Quickstart
@@ -14,7 +14,7 @@ pip install ko-sec
 Works out of the box in keyless demo mode — no signup required:
 
 ```python
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 ko = KoClient()  # demo mode; or KoClient(api_key="ko_live_...")
 
@@ -41,7 +41,7 @@ ko = KoClient(api_key="ko_live_...")   # or set KO_API_KEY env var
 ## Async
 
 ```python
-from ko_sec import AsyncKoClient
+from ko_edgar import AsyncKoClient
 
 async with AsyncKoClient() as ko:
     result = await ko.stocks.activity("NVDA", quarters=8)
@@ -50,7 +50,7 @@ async with AsyncKoClient() as ko:
 ## Pagination
 
 ```python
-from ko_sec import KoClient, paginate
+from ko_edgar import KoClient, paginate
 
 ko = KoClient()
 for trade in paginate(ko.congress.trades, ticker="NVDA", per_page=100):
@@ -64,7 +64,7 @@ Every method returns an `ApiResult`: iterate it for rows, or use
 you when the plan's row cap trimmed the response.
 
 ```python
-from ko_sec import KoClient, PlanRequiredError, RateLimitError
+from ko_edgar import KoClient, PlanRequiredError, RateLimitError
 
 ko = KoClient()
 try:

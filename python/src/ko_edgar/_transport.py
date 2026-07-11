@@ -17,7 +17,7 @@ DEFAULT_BASE_URL = "https://api.ko.io"
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_MAX_RETRIES = 2
 _RETRYABLE_STATUSES = frozenset({502, 503, 504})
-_USER_AGENT = f"ko-sec-python/{__version__}"
+_USER_AGENT = f"ko-edgar-python/{__version__}"
 
 
 def resolve_config(

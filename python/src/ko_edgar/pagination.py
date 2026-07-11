@@ -1,6 +1,6 @@
 """Pagination helper.
 
->>> from ko_sec import KoClient, paginate
+>>> from ko_edgar import KoClient, paginate
 >>> ko = KoClient()
 >>> for trade in paginate(ko.congress.trades, ticker="NVDA", per_page=100):
 ...     ...  # iterates across pages until exhausted

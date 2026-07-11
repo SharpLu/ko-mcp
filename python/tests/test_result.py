@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ko_sec import ApiResult
+from ko_edgar import ApiResult
 
 
 def test_rows_plain_list() -> None:

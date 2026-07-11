@@ -8,7 +8,7 @@ family-level view, so you see the real portfolio — not fragments.
     python cookbook/02_berkshire_portfolio.py
 """
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 BERKSHIRE_CIK = "1067983"
 

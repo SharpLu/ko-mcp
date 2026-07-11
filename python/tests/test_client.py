@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 from .conftest import envelope, json_response
 
@@ -42,7 +42,7 @@ def test_base_url_from_env(monkeypatch: pytest.MonkeyPatch, make_client) -> None
 def test_user_agent_header(make_client) -> None:
     client, handler = make_client([json_response(envelope([]))])
     client.search("x")
-    assert handler.requests[0].headers["User-Agent"].startswith("ko-sec-python/")
+    assert handler.requests[0].headers["User-Agent"].startswith("ko-edgar-python/")
 
 
 def test_none_params_dropped_and_bools_serialized(make_client) -> None:

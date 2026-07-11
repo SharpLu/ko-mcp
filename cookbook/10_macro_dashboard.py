@@ -7,7 +7,7 @@ instead of crashing.
     KO_API_KEY=ko_live_... python cookbook/10_macro_dashboard.py
 """
 
-from ko_sec import KoClient, PlanRequiredError
+from ko_edgar import KoClient, PlanRequiredError
 
 
 def main() -> None:

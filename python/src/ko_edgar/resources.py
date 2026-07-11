@@ -1,4 +1,4 @@
-"""Synchronous resource namespaces for :class:`ko_sec.KoClient`."""
+"""Synchronous resource namespaces for :class:`ko_edgar.KoClient`."""
 
 from __future__ import annotations
 

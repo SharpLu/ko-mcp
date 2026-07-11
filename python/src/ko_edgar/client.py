@@ -1,6 +1,6 @@
 """ko.io API clients.
 
->>> from ko_sec import KoClient
+>>> from ko_edgar import KoClient
 >>> ko = KoClient()                       # demo mode, no key needed
 >>> ko = KoClient(api_key="ko_live_...")  # your plan and quota
 >>> for holding in ko.institutions.holdings("1067983"):

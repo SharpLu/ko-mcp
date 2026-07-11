@@ -40,7 +40,7 @@ class RecordingHandler:
 
 @pytest.fixture
 def make_client() -> Callable[..., Any]:
-    from ko_sec import KoClient
+    from ko_edgar import KoClient
 
     def factory(responses: list[httpx.Response], api_key: str | None = None, **kwargs: Any):
         handler = RecordingHandler(responses)
@@ -54,7 +54,7 @@ def make_client() -> Callable[..., Any]:
 
 @pytest.fixture
 def make_async_client() -> Callable[..., Any]:
-    from ko_sec import AsyncKoClient
+    from ko_edgar import AsyncKoClient
 
     def factory(responses: list[httpx.Response], api_key: str | None = None, **kwargs: Any):
         handler = RecordingHandler(responses)

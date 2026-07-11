@@ -5,8 +5,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from ko_sec import AuthenticationError, KoClient, RateLimitError, paginate
-from ko_sec.result import ApiResult
+from ko_edgar import AuthenticationError, KoClient, RateLimitError, paginate
+from ko_edgar.result import ApiResult
 
 from .conftest import envelope, json_response
 

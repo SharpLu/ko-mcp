@@ -7,13 +7,13 @@ recent quarters.
 
 Run it (no API key needed — demo mode):
 
-    pip install ko-sec
+    pip install ko-edgar
     python cookbook/01_who_is_buying_nvda.py
 
 Set KO_API_KEY for your own quota (free at https://ko.io/console).
 """
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 TICKER = "NVDA"
 

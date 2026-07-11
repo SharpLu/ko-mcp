@@ -7,7 +7,7 @@ data most BTC dashboards don't have because it requires parsing 13F.
     python cookbook/05_btc_etf_institutional_exposure.py
 """
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 
 def main() -> None:

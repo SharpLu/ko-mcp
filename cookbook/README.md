@@ -1,7 +1,7 @@
 # Cookbook
 
 Ten runnable answers to real investing questions. Every example works in
-keyless demo mode — `pip install ko-sec` and run. Set `KO_API_KEY` for your
+keyless demo mode — `pip install ko-edgar` and run. Set `KO_API_KEY` for your
 own quota (free at [ko.io/console](https://ko.io/console)).
 
 | # | Question | Data used |
@@ -18,7 +18,7 @@ own quota (free at [ko.io/console](https://ko.io/console)).
 | [10](10_macro_dashboard.py) | One-screen macro dashboard | Treasury/Fed/OFR (Pro) |
 
 ```bash
-pip install ko-sec
+pip install ko-edgar
 python cookbook/01_who_is_buying_nvda.py
 ```
 

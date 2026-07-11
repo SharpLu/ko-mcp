@@ -6,7 +6,7 @@
 to 100M+ source-traced SEC records. Every answer traces to a real filing.**
 
 [![CI](https://github.com/SharpLu/ko-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/SharpLu/ko-mcp/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/ko-sec)](https://pypi.org/project/ko-sec/)
+[![PyPI](https://img.shields.io/pypi/v/ko-edgar)](https://pypi.org/project/ko-edgar/)
 [![npm](https://img.shields.io/npm/v/%40ko-io%2Fsdk)](https://www.npmjs.com/package/@ko-io/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -37,11 +37,11 @@ curl "https://api.ko.io/api/v1/institutions?search=berkshire&demo=true"
 **In Python**:
 
 ```bash
-pip install ko-sec
+pip install ko-edgar
 ```
 
 ```python
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 ko = KoClient()  # demo mode; KoClient(api_key="ko_live_...") for your quota
 for h in ko.stocks.holders("NVDA"):
@@ -69,7 +69,7 @@ Free keys are 200 calls/day, forever, no credit card → [ko.io/console](https:/
 |-----------|------------|
 | [`server/`](server) | **The hosted MCP server** (mcp.ko.io) — Cloudflare Worker, 24 tools, deployed from this repo |
 | [`docs/clients/`](docs/clients) | Verified setup guides for every MCP client |
-| [`python/`](python) | `ko-sec` — official Python SDK (sync + async, typed) |
+| [`python/`](python) | `ko-edgar` — official Python SDK (sync + async, typed) |
 | [`typescript/sdk/`](typescript/sdk) | `@ko-io/sdk` — official TypeScript SDK (Node 18+, browsers, edge) |
 | [`typescript/mcp-proxy/`](typescript/mcp-proxy) | `@ko-io/mcp-sec-data` — stdio bridge for clients without remote-HTTP MCP support |
 | [`cookbook/`](cookbook) | 10 runnable answers to real investing questions |
@@ -82,7 +82,7 @@ to `api.ko.io` with your API key, so your quota and plan follow you. The data
 pipelines behind the API run as a managed service (dual-region, 3-replica
 ClickHouse, 26 pipelines refreshing on each source's publication schedule).
 
-> **Note**: `ko-sec`, `@ko-io/sdk`, and `@ko-io/mcp-sec-data` publish to
+> **Note**: `ko-edgar`, `@ko-io/sdk`, and `@ko-io/mcp-sec-data` publish to
 > PyPI/npm at public launch. Until then, install from source
 > (`pip install -e python/`). The hosted MCP endpoint and REST API work today.
 

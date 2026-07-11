@@ -9,7 +9,7 @@ ticker in one pass.
 
 import sys
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 
 def main() -> None:

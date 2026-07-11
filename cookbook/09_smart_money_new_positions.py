@@ -7,7 +7,7 @@ well-followed funds and collects their newest buys.
     python cookbook/09_smart_money_new_positions.py
 """
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 FUNDS = {
     "1067983": "Berkshire Hathaway",

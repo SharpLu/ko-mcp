@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ko_sec import (
+from ko_edgar import (
     AuthenticationError,
     BadRequestError,
     KoError,

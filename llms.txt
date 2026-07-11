@@ -73,7 +73,7 @@ Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "messa
 
 ## SDKs
 
-- Python: pip install ko-sec — from ko_sec import KoClient; KoClient().stocks.holders("NVDA")
+- Python: pip install ko-edgar — from ko_edgar import KoClient; KoClient().stocks.holders("NVDA")
 - TypeScript: npm install @ko-io/sdk — new KoClient().congress.trades({sort: "recent"})
 - OpenAPI spec: https://ko.io/openapi.yaml
 

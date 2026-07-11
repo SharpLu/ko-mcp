@@ -29,7 +29,7 @@ def ko(path: str, **params) -> dict:
 ko("institutions", search="berkshire")
 ```
 
-Or use the official SDKs: [`ko-sec` (Python)](../../python) ·
+Or use the official SDKs: [`ko-edgar` (Python)](../../python) ·
 [`@ko-io/sdk` (TypeScript)](../../typescript/sdk).
 
 ## Demo mode

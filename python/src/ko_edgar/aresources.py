@@ -1,6 +1,6 @@
-"""Async resource namespaces for :class:`ko_sec.AsyncKoClient`.
+"""Async resource namespaces for :class:`ko_edgar.AsyncKoClient`.
 
-Method-for-method mirror of :mod:`ko_sec.resources`; see that module for
+Method-for-method mirror of :mod:`ko_edgar.resources`; see that module for
 full docstrings. All methods are coroutines.
 """
 

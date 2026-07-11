@@ -10,7 +10,7 @@ distinct open-market buyers.
 
 from collections import defaultdict
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 
 def main() -> None:

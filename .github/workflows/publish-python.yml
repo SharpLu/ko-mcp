@@ -1,8 +1,8 @@
-name: Publish ko-sec (PyPI)
+name: Publish ko-edgar (PyPI)
 
 # Publishes the Python SDK to PyPI when a GitHub Release is published.
 # Uses PyPI Trusted Publishing (OIDC) — no long-lived token stored anywhere.
-# One-time setup: on pypi.org add a "pending publisher" for project `ko-sec`,
+# One-time setup: on pypi.org add a "pending publisher" for project `ko-edgar`,
 # owner `SharpLu`, repo `ko-mcp`, workflow `publish-python.yml`, environment `pypi`.
 
 on:

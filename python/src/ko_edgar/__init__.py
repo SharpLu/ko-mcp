@@ -1,4 +1,4 @@
-"""ko-sec — official Python SDK for the ko.io financial data API.
+"""ko_edgar — official Python SDK for the ko.io financial data API.
 
 Source-traced SEC & market data for AI agents and quants: 13F institutional
 holdings, insider trades, Congress trading, crypto ETF exposure, macro
@@ -6,7 +6,7 @@ indicators, and the EDGAR filings gateway.
 
 Quickstart (keyless demo mode)::
 
-    from ko_sec import KoClient
+    from ko_edgar import KoClient
 
     ko = KoClient()
     for inst in ko.institutions.list(search="berkshire"):

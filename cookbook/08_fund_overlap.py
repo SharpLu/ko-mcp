@@ -11,7 +11,7 @@ Defaults: Berkshire Hathaway (1067983) vs Bridgewater (1350694).
 
 import sys
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 
 def top_holdings(ko: KoClient, cik: str, n: int = 50) -> dict:

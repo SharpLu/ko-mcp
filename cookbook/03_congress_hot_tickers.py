@@ -9,7 +9,7 @@ shows who is behind the volume.
 
 from collections import Counter, defaultdict
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 
 def main() -> None:

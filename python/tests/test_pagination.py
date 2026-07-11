@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ko_sec import paginate
-from ko_sec.result import ApiResult
+from ko_edgar import paginate
+from ko_edgar.result import ApiResult
 
 
 def make_method(pages: list[list[Any]], total: int):

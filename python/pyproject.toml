@@ -3,7 +3,7 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ko-sec"
+name = "ko-edgar"
 version = "0.1.0"
 description = "Official Python SDK for ko.io — source-traced SEC & market data for AI agents and quants"
 readme = "README.md"
@@ -44,7 +44,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ko_sec"]
+packages = ["src/ko_edgar"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

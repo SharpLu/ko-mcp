@@ -9,7 +9,7 @@ trade). This lists recent notices for a ticker.
 
 import sys
 
-from ko_sec import KoClient
+from ko_edgar import KoClient
 
 
 def main() -> None:
