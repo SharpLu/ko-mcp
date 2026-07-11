@@ -82,9 +82,9 @@ to `api.ko.io` with your API key, so your quota and plan follow you. The data
 pipelines behind the API run as a managed service (dual-region, 3-replica
 ClickHouse, 26 pipelines refreshing on each source's publication schedule).
 
-> **Note**: `ko-edgar`, `@ko-io/sdk`, and `@ko-io/mcp-sec-data` publish to
-> PyPI/npm at public launch. Until then, install from source
-> (`pip install -e python/`). The hosted MCP endpoint and REST API work today.
+> **Note**: `ko-edgar` is live on PyPI (`pip install ko-edgar`). The npm packages
+> `@ko-io/sdk` and `@ko-io/mcp-sec-data` publish shortly. The hosted MCP endpoint
+> and REST API work today.
 
 ## Connect your client
 
