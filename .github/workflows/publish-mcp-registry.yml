@@ -30,5 +30,14 @@ jobs:
       - name: Authenticate to MCP Registry (GitHub OIDC)
         run: ./mcp-publisher login github-oidc
 
+      # The retired ko-mcp-worker entry still claims the mcp.ko.io/mcp remote
+      # URL (registry is separate from GitHub; the repo was deleted but the
+      # registry record persists). Delete it so ko-mcp can claim the URL.
+      # Same io.github.SharpLu namespace, so OIDC authorizes this. One-time —
+      # continue-on-error once it's already gone.
+      - name: Retire the old ko-mcp-worker registry entry
+        continue-on-error: true
+        run: ./mcp-publisher status --status deleted --all-versions --message "Merged into io.github.SharpLu/ko-mcp" io.github.SharpLu/ko-mcp-worker
+
       - name: Publish server to MCP Registry
         run: ./mcp-publisher publish
