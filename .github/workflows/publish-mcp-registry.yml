@@ -37,7 +37,8 @@ jobs:
       # continue-on-error once it's already gone.
       - name: Retire the old ko-mcp-worker registry entry
         continue-on-error: true
-        run: ./mcp-publisher status --status deleted --all-versions --message "Merged into io.github.SharpLu/ko-mcp" io.github.SharpLu/ko-mcp-worker
+        # `status` prompts "Continue? [y/N]" — pipe a yes for non-interactive CI.
+        run: echo y | ./mcp-publisher status --status deleted --all-versions --message "Merged into io.github.SharpLu/ko-mcp" io.github.SharpLu/ko-mcp-worker
 
       - name: Publish server to MCP Registry
         run: ./mcp-publisher publish
