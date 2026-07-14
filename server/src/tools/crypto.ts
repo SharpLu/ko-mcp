@@ -2,15 +2,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
 import { resolveInstitution } from "../resolve.js";
-import { fmtMoney, fmtShares } from "../format.js";
+import { fmtMoney, fmtShares, num } from "../format.js";
 
 // Institutional exposure to US spot crypto ETFs (BTC complex: IBIT, FBTC, GBTC,
 // ...), derived from 13F filings. Proxies ko-api /api/v1/crypto/*. USD-exact,
 // equity shares only (no BTC-equivalent / price / on-chain).
-const num = (v: unknown): number => {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
 const qoq = (v: unknown): string => {
   const n = num(v);
   return `${n >= 0 ? "+" : ""}${fmtMoney(n)}`;

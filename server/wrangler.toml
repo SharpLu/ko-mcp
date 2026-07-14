@@ -12,3 +12,9 @@ routes = [
 
 [vars]
 KO_API_URL = "https://api.ko.io"
+
+# Capture Worker logs (console + uncaught exceptions) so MCP-side errors are
+# observable in the Cloudflare dashboard. Full sampling — this Worker is low-QPS.
+[observability]
+enabled = true
+head_sampling_rate = 1

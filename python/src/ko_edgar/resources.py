@@ -312,17 +312,3 @@ class Filings(_Resource):
     def share(self, cik: str, accession: str, file: str | None = None) -> ApiResult:
         """Mint a signed, keyless, browser-openable link to a document. **Paid**"""
         return self._get(*ep.filings_share(cik, accession, file))
-
-
-def build_namespaces(get: Getter) -> dict[str, _Resource]:
-    return {
-        "institutions": Institutions(get),
-        "stocks": Stocks(get),
-        "insiders": Insiders(get),
-        "congress": Congress(get),
-        "crypto": Crypto(get),
-        "form144": Form144(get),
-        "short": Short(get),
-        "macro": Macro(get),
-        "filings": Filings(get),
-    }
