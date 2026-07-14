@@ -119,6 +119,8 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
       if (include_excerpt) {
         try {
           const mdUrl = new URL(`${base}${file ? `?file=${encodeURIComponent(file)}&` : "?"}format=markdown`, config.baseUrl);
+          // No key -> demo mode (mirror ko-fetch); without it the excerpt 401s.
+          if (!config.apiKey) mdUrl.searchParams.set("demo", "true");
           const res = await fetch(mdUrl.toString(), {
             headers: config.apiKey
               ? { Authorization: `Bearer ${config.apiKey}`, "User-Agent": "ko-mcp-worker/1.0" }

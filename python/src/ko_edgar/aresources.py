@@ -246,17 +246,3 @@ class AsyncFilings(_AsyncResource):
 
     async def share(self, cik: str, accession: str, file: str | None = None) -> ApiResult:
         return await self._get(*ep.filings_share(cik, accession, file))
-
-
-def build_async_namespaces(get: AsyncGetter) -> dict[str, _AsyncResource]:
-    return {
-        "institutions": AsyncInstitutions(get),
-        "stocks": AsyncStocks(get),
-        "insiders": AsyncInsiders(get),
-        "congress": AsyncCongress(get),
-        "crypto": AsyncCrypto(get),
-        "form144": AsyncForm144(get),
-        "short": AsyncShort(get),
-        "macro": AsyncMacro(get),
-        "filings": AsyncFilings(get),
-    }

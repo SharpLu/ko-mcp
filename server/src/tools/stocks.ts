@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
-import { fmtMoney, fmtShares, fmtPct, truncate } from "../format.js";
+import { fmtMoney, fmtShares, fmtPct, truncate, num } from "../format.js";
 
 export function registerStockTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
@@ -68,13 +68,24 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       limit: z.number().int().min(1).max(50).optional().default(20).describe("Results per page"),
     },
     async ({ ticker, page, limit }) => {
-      const data = await koFetch<HoldersResponse>(
+      const data = await koFetch<HoldersResponse | HolderRow[]>(
         config,
         `/api/v1/stock-holders/${encodeURIComponent(ticker.toUpperCase())}`,
         { type: "holders", page, limit }
       );
 
-      if (!data || !data.data) {
+      // ko-fetch strips the top-level { data } envelope. Today ko-api's
+      // stock-holders route double-nests ({ data: { data:[...], totalCount,
+      // quarterDate, ... }, meta }) so ko-fetch hands back an OBJECT. If it ever
+      // returns the standard { data:[...], meta } shape, ko-fetch hands back a
+      // bare ARRAY. Support both so a shape change doesn't silently 0-out the tool.
+      const isArray = Array.isArray(data);
+      const rows: HolderRow[] = isArray ? data : (data?.data ?? []);
+      const totalCount = isArray ? data.length : data?.totalCount;
+      const quarterDate = isArray ? undefined : data?.quarterDate;
+      const totalPages = isArray ? undefined : data?.totalPages;
+
+      if (rows.length === 0) {
         return {
           content: [
             {
@@ -86,24 +97,23 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       }
 
       const lines: string[] = [
-        `## Institutional Holders of ${ticker.toUpperCase()} — Q${data.quarterDate}`,
-        `**Total institutions:** ${data.totalCount}\n`,
+        `## Institutional Holders of ${ticker.toUpperCase()}${quarterDate ? ` — Q${quarterDate}` : ""}`,
+        `**Total institutions:** ${totalCount ?? rows.length}\n`,
         "| # | Institution | Value | Shares | Weight | Change | Action |",
         "|---|------------|-------|--------|--------|--------|--------|",
       ];
 
-      for (const [i, h] of data.data.entries()) {
-        const num = (page - 1) * limit + i + 1;
-        const changeStr = h.share_change
-          ? `${h.share_change > 0 ? "+" : ""}${fmtShares(h.share_change)}`
-          : "—";
+      for (const [i, h] of rows.entries()) {
+        const rank = (page - 1) * limit + i + 1;
+        const change = num(h.share_change);
+        const changeStr = change ? `${change > 0 ? "+" : ""}${fmtShares(change)}` : "—";
         lines.push(
-          `| ${num} | **${h.name}** | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% | ${changeStr} | ${h.action} |`
+          `| ${rank} | **${h.name}** | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% | ${changeStr} | ${h.action} |`
         );
       }
 
-      if (data.totalPages && page < data.totalPages) {
-        lines.push(`\n*Page ${page}/${data.totalPages} — use page=${page + 1} for more.*`);
+      if (totalPages && page < totalPages) {
+        lines.push(`\n*Page ${page}/${totalPages} — use page=${page + 1} for more.*`);
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
@@ -154,7 +164,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         `**Latest Quarter (${data.summary.quarterDate}):**`,
         `- Institutions increased: ${data.summary.institutionsIncreased} | Decreased: ${data.summary.institutionsDecreased}`,
         `- New positions: ${data.summary.institutionsNew} | Exited: ${data.summary.institutionsExited}`,
-        `- Net shares: ${fmtShares(data.summary.netShares)} | Net value: ${fmtMoney(data.summary.netValue)}`,
+        `- Net shares: ${fmtShares(num(data.summary.netShares))} | Net value: ${fmtMoney(num(data.summary.netValue))}`,
         "",
         "### Quarterly Trend\n",
         "| Quarter | Increased | Decreased | New | Exited | Net Shares | Net Value |",
@@ -163,7 +173,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
 
       for (const t of data.trend) {
         lines.push(
-          `| ${t.quarter} | ${t.institutionsIncreased} | ${t.institutionsDecreased} | ${t.institutionsNew} | ${t.institutionsExited} | ${fmtShares(t.netShares)} | ${fmtMoney(t.netValue)} |`
+          `| ${t.quarter} | ${t.institutionsIncreased} | ${t.institutionsDecreased} | ${t.institutionsNew} | ${t.institutionsExited} | ${fmtShares(num(t.netShares))} | ${fmtMoney(num(t.netValue))} |`
         );
       }
 
@@ -289,13 +299,14 @@ interface HoldersResponse {
   quarterDate: string;
 }
 
+// Int64/UInt64 columns arrive from ko-api as STRINGS (coerce with num()).
 interface HolderRow {
   cik: string;
   name: string;
   slug: string;
-  shares_held: number;
-  holding_value: number;
-  share_change: number;
+  shares_held: number | string;
+  holding_value: number | string;
+  share_change: number | string;
   action: string;
   portfolio_weight_pct: number | null;
 }
@@ -307,12 +318,12 @@ interface ActivitySummary {
   institutionsNew: number;
   institutionsExited: number;
   institutionsTotal: number;
-  sharesAdded: number;
-  sharesRemoved: number;
-  netShares: number;
-  valueAdded: number;
-  valueRemoved: number;
-  netValue: number;
+  sharesAdded: number | string;
+  sharesRemoved: number | string;
+  netShares: number | string;
+  valueAdded: number | string;
+  valueRemoved: number | string;
+  netValue: number | string;
 }
 
 interface ActivityTrend {
@@ -321,8 +332,8 @@ interface ActivityTrend {
   institutionsDecreased: number;
   institutionsNew: number;
   institutionsExited: number;
-  netShares: number;
-  netValue: number;
+  netShares: number | string;
+  netValue: number | string;
 }
 
 interface PriceRow {

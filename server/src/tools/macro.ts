@@ -298,15 +298,6 @@ interface FedRateRow {
   treasury_30y: number | null;
 }
 
-interface ShortVolumeRow {
-  date: string;
-  ticker?: string;
-  short_volume: number | null;
-  total_volume: number | null;
-  short_ratio: number | null;
-  market: string | null;
-}
-
 interface EconomicRow {
   date: string;
   series_id?: string;
