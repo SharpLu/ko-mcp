@@ -6,7 +6,7 @@ import { fmtMoney } from "../format.js";
 export function registerSearchTool(server: McpServer, config: KoConfig) {
   server.tool(
     "search",
-    "Search across institutions, stocks, and insider traders in the ko.io SEC database. Use this first when you have a name but need the CIK number, ticker, or slug to use with other tools.",
+    "Search across institutions, stocks, and insider traders in the ko.io SEC database. Institutions match by firm name OR manager name ('Seth Klarman' -> Baupost, 'Ackman' -> Pershing Square; person hits carry matched_person). Use this first when you have a name but need the CIK number, ticker, or slug to use with other tools.",
     {
       query: z
         .string()
@@ -41,11 +41,14 @@ export function registerSearchTool(server: McpServer, config: KoConfig) {
 
       if (data.institutions?.length) {
         lines.push("### Institutions\n");
-        lines.push("| Name | CIK | Slug | Category |");
-        lines.push("|------|-----|------|----------|");
+        lines.push("| Name | Matched Person | CIK | Slug | Category |");
+        lines.push("|------|----------------|-----|------|----------|");
         for (const r of data.institutions) {
+          const person = r.matched_person?.name
+            ? `${r.matched_person.name}${r.matched_person.role ? ` (${r.matched_person.role})` : ""}`
+            : "—";
           lines.push(
-            `| **${r.name}** | ${r.cik} | ${r.slug || "—"} | ${r.category || "—"} |`
+            `| **${r.name}** | ${person} | ${r.cik} | ${r.slug || "—"} | ${r.category || "—"} |`
           );
         }
         lines.push("");
@@ -106,6 +109,7 @@ interface SearchInstitution {
   aum: number | null;
   rank: number | null;
   category: string | null;
+  matched_person?: { name: string; role: string } | null;
 }
 
 interface SearchStock {

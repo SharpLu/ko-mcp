@@ -83,7 +83,7 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
     "list_institutions",
     "List top institutional investors (hedge funds, mutual funds, etc.) tracked in the SEC 13F database. Supports search by name and pagination.",
     {
-      search: z.string().max(200).optional().describe("Search by institution or founder name"),
+      search: z.string().max(200).optional().describe("Search by institution name, CIK, or manager name (e.g. 'Klarman' -> Baupost)"),
       page: z.number().int().min(1).optional().default(1).describe("Page number"),
       limit: z.number().int().min(1).max(50).optional().default(20).describe("Results per page"),
     },
