@@ -73,6 +73,37 @@ jobs:
     if: always() && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
+      - name: Send Discord notification (#deploys)
+        continue-on-error: true
+        env:
+          STATUS: ${{ needs.deploy.result }}
+          REPO: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+          SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HOOK: ${{ secrets.DISCORD_WEBHOOK_DEPLOYS }}
+        run: |
+          set -uo pipefail
+          [ -n "${HOOK:-}" ] || { echo "::warning::DISCORD_WEBHOOK_DEPLOYS missing; skipping"; exit 0; }
+          case "$STATUS" in
+            success) COLOR=3066993;  LABEL="SUCCESS" ;;
+            failure) COLOR=15158332; LABEL="FAILED" ;;
+            cancelled) COLOR=15105570; LABEL="CANCELLED" ;;
+            *) COLOR=9807270; LABEL="$STATUS" ;;
+          esac
+          MSG_LINE=$(printf '%s' "$COMMIT_MSG" | head -1 | cut -c1-100)
+          HTTP_CODE=$(curl -sS -o /tmp/dc.out -w "%{http_code}" -H 'Content-Type: application/json' \
+            -d "$(jq -n --arg t "CI ${LABEL} -- ${REPO}" \
+                      --arg d "**Workflow:** ${WORKFLOW}
+          **Branch:** ${BRANCH:-?}
+          **Commit:** \`${SHA:0:7}\` ${MSG_LINE}
+          [Logs](${RUN_URL})" --argjson c "$COLOR" \
+                  '{embeds:[{title:$t, description:$d, color:$c}]}')" "$HOOK")
+          echo "Discord HTTP $HTTP_CODE"
+          exit 0
+
       - name: Send Telegram notification
         continue-on-error: true
         env:
