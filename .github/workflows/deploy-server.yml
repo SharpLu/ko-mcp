@@ -47,10 +47,10 @@ jobs:
           test "$TOOLS" -ge 24
 
   # ---------------------------------------------------------------------------
-  # Telegram notification (inline, best-effort)
+  # Discord notification (inline, best-effort)
   #
   # 2026-07-14 incident: this job previously called the CROSS-REPO reusable
-  # workflow `SharpLu/airflow-project/.github/workflows/notify-telegram.yml@main`.
+  # workflow `SharpLu/airflow-project/.github/workflows/notify.yml@main`.
   # A server/** merge triggered this workflow and it FAILED at SETUP -- 0 jobs
   # ran, GitHub reported "This run likely failed because of a workflow file
   # issue", and the run could not be retried. That signature is the classic
@@ -61,14 +61,14 @@ jobs:
   # inputs + secrets airflow-project's own deploy.yml passes), so this was NOT a
   # with:/secrets: mismatch; only the cross-repo resolution differed.
   #
-  # Fix: inline the Telegram send as a normal job with plain steps (pattern
-  # copied from notify-telegram.yml's body: HTML parse mode, escape <>&, jq
+  # Fix: inline the Discord send as a normal job with plain steps (pattern
+  # copied from notify.yml's body: HTML parse mode, escape <>&, jq
   # payload). The deploy no longer depends on cross-repo workflow resolution, so
   # it can never be blocked at setup by it again. The send is best-effort
   # (continue-on-error + exit 0), never failing the overall run.
   # ---------------------------------------------------------------------------
   notify:
-    name: Telegram notification
+    name: Discord notification
     needs: deploy
     if: always() && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -104,61 +104,3 @@ jobs:
           echo "Discord HTTP $HTTP_CODE"
           exit 0
 
-      - name: Send Telegram notification
-        continue-on-error: true
-        env:
-          STATUS: ${{ needs.deploy.result }}
-          REPO: ${{ github.repository }}
-          WORKFLOW: ${{ github.workflow }}
-          SHA: ${{ github.sha }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          BRANCH: ${{ github.ref_name }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          BOT: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          set -uo pipefail
-
-          if [ -z "${BOT:-}" ] || [ -z "${CHAT:-}" ]; then
-            echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID missing; skipping notification"
-            exit 0
-          fi
-
-          case "$STATUS" in
-            success) ICON="🟢" ; LABEL="SUCCESS" ;;
-            failure) ICON="🔴" ; LABEL="FAILED" ;;
-            cancelled) ICON="🟡" ; LABEL="CANCELLED" ;;
-            *) ICON="⚪" ; LABEL="$STATUS" ;;
-          esac
-
-          SHORT_SHA="${SHA:0:7}"
-
-          # HTML mode: escape only <, >, & per Telegram HTML spec. Robust against
-          # commit messages with backticks / asterisks / brackets that break
-          # parse_mode=Markdown.
-          esc() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
-
-          MSG_LINE_RAW=$(printf '%s' "$COMMIT_MSG" | head -1 | cut -c1-100)
-          MSG_LINE=$(esc "$MSG_LINE_RAW")
-          REPO_E=$(esc "$REPO")
-          WORKFLOW_E=$(esc "$WORKFLOW")
-          BRANCH_E=$(esc "${BRANCH:-?}")
-
-          TEXT="${ICON} <b>CI ${LABEL}</b> -- <code>${REPO_E}</code>
-          <b>Workflow:</b> ${WORKFLOW_E}
-          <b>Branch:</b> ${BRANCH_E}
-          <b>Commit:</b> <code>${SHORT_SHA}</code>
-          ${MSG_LINE}
-          <a href=\"${RUN_URL}\">Logs</a>"
-
-          HTTP_CODE=$(curl -sS -o /tmp/tg.out -w "%{http_code}" \
-            -X POST "https://api.telegram.org/bot${BOT}/sendMessage" \
-            -H 'Content-Type: application/json' \
-            -d "$(jq -n --arg c "$CHAT" --arg t "$TEXT" \
-                '{chat_id: $c, text: $t, parse_mode: "HTML", disable_web_page_preview: true}')") || true
-
-          echo "Telegram HTTP ${HTTP_CODE:-none}"
-          head -c 500 /tmp/tg.out 2>/dev/null || true
-          echo ""
-          # Best-effort: never fail CI on a Telegram outage / API change.
-          exit 0
