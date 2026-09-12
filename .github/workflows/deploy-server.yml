@@ -47,7 +47,14 @@ jobs:
       # Docs, including when re-recording a fixture is legitimate and when a
       # diff is a regression: server/docs/GOLDEN_CONTRACT.md
       # -----------------------------------------------------------------------
+      # timeout-minutes is a BACKSTOP, not the fix. The gate itself does ~70s of
+      # work; the 2026-09-12 incident was a process that finished in 7 seconds
+      # and then never exited, holding the deploy lane for 25.9 minutes until a
+      # human cancelled it. The process-group kill and the explicit exit(0) in
+      # scripts/ are the fix. This line is what makes the NEXT non-exit a loud
+      # 6-minute failure instead of a silent 6-hour job.
       - name: Golden contract gate (pre-deploy, local build)
+        timeout-minutes: 6
         run: npm run golden:gate
 
       - name: Upload Worker version
