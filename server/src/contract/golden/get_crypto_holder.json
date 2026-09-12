@@ -1,0 +1,140 @@
+{
+  "tool": "get_crypto_holder",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "institution": "1512857"
+      },
+      "why": "A CIK. The recorded body has no \"*Interpreted ... as ...*\" preamble and names Brevan Howard Capital Management LP, which the name \"Brevan Howard\" does NOT resolve to (it resolves to Brevan Howard Investment Management Ltd, CIK 2080817, which holds no crypto ETF) -- so the recording used the CIK. The resolveInstitution name path is therefore NOT covered by this tool here; get_institution_holdings does not cover it either.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Brevan Howard Capital Management LP — Spot Crypto-ETF Holdings",
+              "TEXT **Latest quarter:** <DATE>",
+              "TEXT **Total crypto-ETF USD:** <MONEY> (QoQ <MONEY>)",
+              "TEXT **Rank:** <VAL> of <VAL> holders · **Portfolio weight:** <PCT>",
+              "BLANK",
+              "THEAD ETF | Name | Shares | USD Held | QoQ | Action",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "ETF",
+                  "Name",
+                  "Shares",
+                  "USD Held",
+                  "QoQ",
+                  "Action"
+                ],
+                "dataRows": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "institution": "9999999"
+      },
+      "why": "A CIK with no crypto-ETF exposure -> 404. A never-issued CIK is used rather than a real institution that happens to hold none today, because the second kind can start holding one.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (404): Not found: No spot crypto-ETF exposure for this institution"
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {},
+      "why": "Required `institution` missing.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool get_crypto_holder: [",
+              "ZOD   {",
+              "ZOD     \"code\": \"invalid_type\",",
+              "ZOD     \"expected\": \"string\",",
+              "ZOD     \"received\": \"undefined\",",
+              "ZOD     \"path\": [",
+              "ZOD       \"institution\"",
+              "ZOD     ],",
+              "ZOD     \"message\": \"Required\"",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}

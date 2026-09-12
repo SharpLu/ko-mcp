@@ -1,0 +1,169 @@
+{
+  "tool": "search",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "query": "Berkshire"
+      },
+      "why": "Three sections (Institutions / Stocks / Insiders). A section vanishing is the break this case exists to catch.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Search Results for \"Berkshire\"",
+              "BLANK",
+              "H3 Institutions",
+              "BLANK",
+              "THEAD Name | Matched Person | CIK | Slug | Category",
+              "TBODY",
+              "BLANK",
+              "H3 Stocks",
+              "BLANK",
+              "THEAD Ticker | Company | Sector | Industry | Market Cap",
+              "TBODY",
+              "BLANK",
+              "H3 Insiders",
+              "BLANK",
+              "THEAD Name | Ticker | Type",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Name",
+                  "Matched Person",
+                  "CIK",
+                  "Slug",
+                  "Category"
+                ],
+                "dataRows": 3
+              },
+              {
+                "columns": [
+                  "Ticker",
+                  "Company",
+                  "Sector",
+                  "Industry",
+                  "Market Cap"
+                ],
+                "dataRows": 3
+              },
+              {
+                "columns": [
+                  "Name",
+                  "Ticker",
+                  "Type"
+                ],
+                "dataRows": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "query": "zzzqqqnotarealentityxyz"
+      },
+      "why": "Soft sentence, no sections.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT No results found for \"zzzqqqnotarealentityxyz\"."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "query": "z"
+      },
+      "why": "Below the 2-character minimum.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool search: [",
+              "ZOD   {",
+              "ZOD     \"code\": \"too_small\",",
+              "ZOD     \"minimum\": 2,",
+              "ZOD     \"type\": \"string\",",
+              "ZOD     \"inclusive\": true,",
+              "ZOD     \"exact\": false,",
+              "ZOD     \"message\": \"String must contain at least 2 character(s)\",",
+              "ZOD     \"path\": [",
+              "ZOD       \"query\"",
+              "ZOD     ]",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}

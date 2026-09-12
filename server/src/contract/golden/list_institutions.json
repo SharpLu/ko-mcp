@@ -1,0 +1,172 @@
+{
+  "tool": "list_institutions",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "limit": 5
+      },
+      "why": "The institutions page. limit is asked for and ignored upstream (#126).",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Institutional Investors (Page <VAL>",
+              "BLANK",
+              "THEAD # | Name | CIK | Rank | Category | Portfolio Value | Stocks",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "#",
+                  "Name",
+                  "CIK",
+                  "Rank",
+                  "Category",
+                  "Portfolio Value",
+                  "Stocks"
+                ],
+                "dataRows": 50
+              }
+            ]
+          }
+        ]
+      },
+      "knownDefect": {
+        "issue": "ko-bastion#126",
+        "summary": "The tool sends `limit`; the upstream ko-api route reads only `per_page`, so the argument is dropped and the page is always the 50-row default. The row count is NOT part of the pinned skeleton; this probe exists so that fixing #126 fails the gate instead of passing it silently.",
+        "probe": {
+          "kind": "dataRowCount",
+          "equals": 50
+        }
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "search": "zzzqqqnotarealinstitution"
+      },
+      "why": "A search matching nothing renders a headed empty table (audit warning 5).",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Institutional Investors (Page <VAL>",
+              "BLANK",
+              "THEAD # | Name | CIK | Rank | Category | Portfolio Value | Stocks",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "#",
+                  "Name",
+                  "CIK",
+                  "Rank",
+                  "Category",
+                  "Portfolio Value",
+                  "Stocks"
+                ],
+                "dataRows": 0
+              }
+            ]
+          }
+        ]
+      },
+      "knownDefect": {
+        "issue": "KO_MCP_TOOL_MATRIX_20260912.md section 3, warning 5 (no issue filed)",
+        "summary": "An empty result is rendered as a table header with no rows, unlike the soft \"no results\" sentence the other 22 tools use. A model reads a well-formed empty table as a real answer. Annotated, not pinned: when this is changed to a soft-empty sentence the probe stops holding and the case is re-pinned.",
+        "probe": {
+          "kind": "headerWithoutRows"
+        }
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "limit": 999
+      },
+      "why": "Above the schema clamp (max 50) -- zod -32602 carrying the bound itself.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool list_institutions: [",
+              "ZOD   {",
+              "ZOD     \"code\": \"too_big\",",
+              "ZOD     \"maximum\": 50,",
+              "ZOD     \"type\": \"number\",",
+              "ZOD     \"inclusive\": true,",
+              "ZOD     \"exact\": false,",
+              "ZOD     \"message\": \"Number must be less than or equal to 50\",",
+              "ZOD     \"path\": [",
+              "ZOD       \"limit\"",
+              "ZOD     ]",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}

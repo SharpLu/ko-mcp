@@ -1,0 +1,144 @@
+{
+  "tool": "sec_list_filings",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "cik": "320193",
+        "limit": 5
+      },
+      "why": "EDGAR filing list; limit honoured.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 SEC Filings — CIK <VAL>",
+              "TEXT <VAL> filings · Source: SEC EDGAR*",
+              "BLANK",
+              "THEAD Filed | Form | Accession | Primary Document",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Filed",
+                  "Form",
+                  "Accession",
+                  "Primary Document"
+                ],
+                "dataRows": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "cik": "320193",
+        "form_type": "ZZZ"
+      },
+      "why": "A form type nobody files: headed empty table plus a soft sentence.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 SEC Filings — CIK <VAL>",
+              "TEXT <VAL> filings · Source: SEC EDGAR*",
+              "BLANK",
+              "THEAD Filed | Form | Accession | Primary Document",
+              "TBODY",
+              "BLANK",
+              "TEXT No filings found."
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Filed",
+                  "Form",
+                  "Accession",
+                  "Primary Document"
+                ],
+                "dataRows": 0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "cik": "99999999999"
+      },
+      "why": "A CIK EDGAR has never issued -- 404. This is also the case that shows koFetch passing the upstream SEC URL through despite its own comment saying it does not (audit warning 6); the URL normalises to <URL>, so the gate pins the error CLASS and not the leak.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (404): Not found: SEC did not publish: <URL>"
+            ],
+            "tables": []
+          }
+        ]
+      }
+    }
+  ]
+}

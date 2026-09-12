@@ -1,0 +1,132 @@
+{
+  "tool": "get_stock_holders",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "ticker": "AAPL",
+        "limit": 5
+      },
+      "why": "The holders page. limit IS honoured here (upstream reads per_page || limit).",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Institutional Holders of AAPL — <VAL>",
+              "TEXT **Total institutions:** <VAL>",
+              "BLANK",
+              "THEAD # | Institution | Value | Shares | Weight | Change | Action",
+              "TBODY",
+              "BLANK",
+              "TEXT *Page <VAL> — use <VAL> for more.*"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "#",
+                  "Institution",
+                  "Value",
+                  "Shares",
+                  "Weight",
+                  "Change",
+                  "Action"
+                ],
+                "dataRows": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "ticker": "AAPL",
+        "page": 99999
+      },
+      "why": "A page past the end: the soft sentence, isError false.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT No institutional holders found for AAPL. Check the ticker symbol."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "ticker": "ZZZQQ"
+      },
+      "why": "Unknown ticker. Note this tool answers softly rather than with isError -- pinning that is the point: an error shape that silently becomes a success envelope is exactly what a model cannot see.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT No institutional holders found for ZZZQQ. Check the ticker symbol."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    }
+  ]
+}

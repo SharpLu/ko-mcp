@@ -1,0 +1,140 @@
+{
+  "tool": "sec_get_filing_index",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "cik": "320193",
+        "accession_no": "0000320193-25-000079"
+      },
+      "why": "The file index of an immutable EDGAR filing.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Filing <ACCESSION> — CIK <VAL>",
+              "TEXT <VAL> files · Source: SEC EDGAR*",
+              "BLANK",
+              "THEAD File | Type | Size",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "File",
+                  "Type",
+                  "Size"
+                ],
+                "dataRows": 93
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "cik": "320193",
+        "accession_no": "0000000000-00-000000"
+      },
+      "why": "A well-formed accession that does not exist -> 404. Pinned from the SECOND recording of this input; the first is the 60.2s/502 that ko-bastion#127 describes and is excluded above.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (404): Not found: SEC did not publish: <URL>"
+            ],
+            "tables": []
+          }
+        ]
+      },
+      "recordedAs": "empty2"
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "cik": "320193"
+      },
+      "why": "Required `accession_no` missing.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool sec_get_filing_index: [",
+              "ZOD   {",
+              "ZOD     \"code\": \"invalid_type\",",
+              "ZOD     \"expected\": \"string\",",
+              "ZOD     \"received\": \"undefined\",",
+              "ZOD     \"path\": [",
+              "ZOD       \"accession_no\"",
+              "ZOD     ],",
+              "ZOD     \"message\": \"Required\"",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}

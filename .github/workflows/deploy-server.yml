@@ -25,6 +25,31 @@ jobs:
       - run: npm ci
       - run: npm run type-check
       - run: npm test
+
+      # -----------------------------------------------------------------------
+      # Golden contract gate -- BLOCKING, and deliberately BEFORE the upload.
+      #
+      # `tools/list >= 24` in the Verify step counts names. It is satisfied by a
+      # Worker that renders every table with a header and no body, which is what
+      # happens when ko-api renames a field upstream. This step replays 71
+      # recorded tool calls against the Worker built from THIS commit and fails
+      # if the response CONTRACT moved -- envelope shape, isError, content-block
+      # type, headings, table columns, section order, error class. Values are
+      # never compared, so a data refresh is a no-op.
+      #
+      # It runs pre-deploy on purpose. ko-api#231's gate probed a public URL and
+      # graded the PREVIOUS build out of the edge cache; this one boots
+      # `wrangler dev` on an ephemeral loopback port (no Cloudflare credentials
+      # needed) and refuses any non-loopback base outright, so there is no
+      # published artefact it could confuse with this one -- and red here means
+      # nothing was uploaded at all.
+      #
+      # Docs, including when re-recording a fixture is legitimate and when a
+      # diff is a regression: server/docs/GOLDEN_CONTRACT.md
+      # -----------------------------------------------------------------------
+      - name: Golden contract gate (pre-deploy, local build)
+        run: npm run golden:gate
+
       - name: Upload Worker version
         id: upload
         run: |

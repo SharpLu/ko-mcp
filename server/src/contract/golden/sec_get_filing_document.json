@@ -1,0 +1,138 @@
+{
+  "tool": "sec_get_filing_document",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "cik": "320193",
+        "accession_no": "0000320193-25-000079"
+      },
+      "why": "The free-tier path: an UNSIGNED link and \"(excerpt unavailable: 403)\" inside a SUCCESS envelope (audit warning 7). Pinned because the shape is the contract a model sees, and the 403 in it is one of only two digits normalisation keeps.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 SEC Filing Document",
+              "TEXT **CIK** <VAL> · **Accession** `<ACCESSION>` · primary document",
+              "TEXT **Source:** SEC EDGAR · served by ko.io",
+              "BLANK",
+              "TEXT **View:** <URL> *(unsigned link — requires an API key to open)*",
+              "BLANK",
+              "TEXT *(excerpt unavailable: 403)*"
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "cik": "320193",
+        "accession_no": "0000320193-25-000079",
+        "file": "nosuchfile.htm"
+      },
+      "why": "A file that is not in the filing -- still a success envelope with a link.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 SEC Filing Document",
+              "TEXT **CIK** <VAL> · **Accession** `<ACCESSION>` · **File** `nosuchfile.htm`",
+              "TEXT **Source:** SEC EDGAR · served by ko.io",
+              "BLANK",
+              "TEXT **View:** <URL> *(unsigned link — requires an API key to open)*",
+              "BLANK",
+              "TEXT *(excerpt unavailable: 403)*"
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "cik": "320193"
+      },
+      "why": "Required `accession_no` missing.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool sec_get_filing_document: [",
+              "ZOD   {",
+              "ZOD     \"code\": \"invalid_type\",",
+              "ZOD     \"expected\": \"string\",",
+              "ZOD     \"received\": \"undefined\",",
+              "ZOD     \"path\": [",
+              "ZOD       \"accession_no\"",
+              "ZOD     ],",
+              "ZOD     \"message\": \"Required\"",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}
