@@ -12,7 +12,7 @@
 
 | 目录 | 是什么 | 发布到 | 版本 |
 |------|--------|--------|------|
-| `server/` | **mcp.ko.io** 的 Cloudflare Worker 本体（唯一 MCP 入口，**24 tools**，Streamable HTTP） | CF Worker `ko-mcp-server` | server.json + package.json = 1.0.0 |
+| `server/` | **mcp.ko.io** 的 Cloudflare Worker 本体（唯一 MCP 入口，**24 tools**，Streamable HTTP） | CF Worker `ko-mcp-server` | server.json + package.json + src/index.ts = 1.1.0 |
 | `python/` | `ko-edgar` PyPI SDK（httpx，同步+异步） | PyPI `ko-edgar` | 0.1.0 |
 | `typescript/sdk/` | `@ko-io/sdk`（TS REST 客户端） | npm | 0.1.0 |
 | `typescript/mcp-proxy/` | `@ko-io/mcp-sec-data`（stdio→mcp.ko.io 代理，**动态转发 tool 列表**） | npm | 0.1.0 |
@@ -26,7 +26,8 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 - **部署**：
   - **server** = push `server/**` 到 main → `.github/workflows/deploy-server.yml`（`wrangler versions deploy 100%` + 部署后 `tools/list >= 24` 健康门）。没有手动部署这回事。
     健康门失败 = **自动 rollback**：部署前先抓当前 serving 版本 id 并把 rollback 命令打进日志，失败后 `wrangler rollback <id>`（**不是** `wrangler versions rollback`，该子命令不存在）→ 重新跑健康门 → Discord `#deploys`。坏版本永不删除。运维细节见 `docs/deploy-rollback.md`。
-  - **SDK（python + 2 个 npm 包）** = 发 GitHub Release 才 publish（`publish-python.yml` / `publish-npm.yml`，各自带 test 门：`pytest` / `npm test`）。
+  - **SDK（python + 2 个 npm 包）** = 发 GitHub Release 才 publish（`publish-python.yml` / `publish-npm.yml`，各自带 test 门：`pytest` / `npm test`）。`publish-mcp-registry.yml` 由 tag `v*` 触发。
+  - **CI 跑在 GitHub-hosted `ubuntu-latest`**（`ci.yml` 三个 job + `deploy-server.yml` 全部如此）。**ko-mcp 是 public repo，Actions 分钟数免费**，私仓那次 Actions 账单中断从未波及它——这正是 PR #12 revert 掉 PR #8（迁 A3 自建 runner）的理由。别再把本仓的 gate 往自建 runner 上搬。
 - **`KO_API_URL = https://api.ko.io` 是正确的**——`api.ko.io` 本身就是地理路由 Worker（`api-geo-router`），不是某个 origin。**不要改成 origin IP / origin-api-eu 之类**。
 - **ko-api envelope**：ko-api 把响应包成 `{ data, meta }`；`koFetch` 自动剥掉顶层 `data`。**Int64/UInt64 列以字符串到达**（net_value / shares_held / holding_value…）。
 - 没有 SSH / 无法打 live 的环境：把需要 prod 验证的 curl 写出来交给用户，**不得跳过验证环节**。
@@ -44,7 +45,7 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 | 5 | ko-api response **两种形态都要能吃**：`koFetch` 剥掉顶层 `{data}` 后，可能拿到 `{data:[...],meta}`（→ 裸数组）或双层嵌套（→ 对象）。读列表的 tool 要 `Array.isArray()` 分支，否则 shape 一变就静默"No results found" | #192 stock-holders FINAL 事故的同类 serving 脆弱性 | `stocks.test.ts` |
 | 6 | **单测禁触网**：单元测试一律 `vi.mock("../ko-fetch.js")` / `vi.stubGlobal("fetch", …)`，不连真 CH/ko-api。live 探测归 deploy 后的健康门 | dev 机活服务让坏测试假绿 | `no-network` 守卫（如已挂） |
 | 7 | **验证必须真跑**：SDK / worker 改动 `npm test`（server）/`pytest`（python）绿；新/改 tool 的 ko-api 路径**部署后 curl 过**。眼看 ≠ verified——从没 curl 过的 tool 路径上线后可能全 500 | #191 教训（ko-api） | PR 模板"验证证据"必填 |
-| 8 | **版本 lockstep**：`server/server.json` + `server/package.json` 一起动（registry id `io.github.SharpLu/ko-mcp`）。三个 SDK 包各自独立，但应保持同一版本号齐步走 | registry / 发布一致性 | 人工 / PR review |
+| 8 | **版本 lockstep 三处**：`server/server.json` + `server/package.json` + **`server/src/index.ts` 的 `new McpServer({version})`** 一起动（registry id `io.github.SharpLu/ko-mcp`）。第三处最容易漏——它才是 `initialize` 回给客户端的版本号（2026-09-12 审计实测：前两处 1.0.0、线上自报 1.1.0）。三个 SDK 包各自独立，但应保持同一版本号齐步走 | registry / 发布一致性 | 人工 / PR review |
 | 9 | **黄金契约不许钉 bug**：`src/contract/golden/` 里任何一条已知缺陷的用例必须带 `knownDefect` + probe（断言"缺陷仍在"），或在 `EXCLUDED` 里写明理由。把今天的错答案钉成契约 = 这道门会挡住它自己的修复。修好缺陷时在**同一个 PR** 里删注解 + `npm run golden:capture` 重钉 | M1 黄金契约门（ko-api#231 / #236 的同形教训） | `golden.test.ts`（注解/排除/原值三道断言）+ `golden-gate.mjs`（缺陷被修 = 红） |
 
 ## 4. 任务怎么做（新 tool 五步）
@@ -64,7 +65,7 @@ Claude Code 用户可用 `/new-tool` skill（同一内容的快捷入口）。
 - [ ] 触碰上游契约时：`npm test -- src/__tests__/registry` 全绿；改了 ko-api 侧 route/参数则 `KO_API_REPO=../ko-api npm run registry:refresh-pin` 重钉并在 PR 里贴 diff
 - [ ] 黄金契约：新/改 tool 进 `src/contract/cases.mjs` 并重钉 fixture；已知缺陷带 `knownDefect` probe 或写明排除理由（铁律 #9）
 - [ ] 新/改 tool 的 ko-api 路径已 curl 实测（铁律 #3/#7），证据贴 PR
-- [ ] 版本齐步（server.json + package.json；SDK 三包同版本）（铁律 #8）
+- [ ] 版本齐步（server.json + package.json + src/index.ts 的 `McpServer({version})`；SDK 三包同版本）（铁律 #8）
 - [ ] 教训回写：普适 → 本文件 §3 加一行；能机器化 → 加守卫测试
 
 ## 6. 常用验证命令
@@ -94,11 +95,18 @@ curl -s -X POST https://mcp.ko.io/mcp -H 'content-type: application/json' \
 | 本文件 | 铁律 + 入口 | 每个 session 开始读 |
 | `CLAUDE.md` | 指向本文件的薄壳 | 别往里加规则 |
 | `server/README.md` | worker / tool 说明 | 新 tool 同步 |
+| `README.md`（根） | 面向用户的门面：24 tool 清单 / 数据表 / 套餐表 | 数字改动要同步 |
+| `llms.txt` | 机器可读的 tool + REST 端点地图 | 新 tool 同步 |
+| `docs/clients/*.md`（7 份） | 各 MCP 客户端接入配置 | server 名一律 `ko-sec-data` |
+| `cookbook/*.py`（10 个） | 可直接跑的 SDK 示例（01–09 免 key，10 需 Pro） | 改 SDK 要真跑一遍 |
 | `server/src/registry/tools.ts` | 24 个 tool → ko-api route/参数/plan 的唯一声明 | 新/改 tool 必改；异常表只许缩小 |
 | `server/src/registry/upstream/` | 按 blob SHA 钉住的 ko-api 快照（`pin.json` 是钉子） | 只能由 `registry:refresh-pin` 生成，不手改 |
 | `server/docs/GOLDEN_CONTRACT.md` | 黄金契约门：钉什么/不钉什么、两条防陈旧性质、已知缺陷注解、重录规程 | 改 tool 渲染前先读 §7 |
 | `.github/workflows/deploy-server.yml` | server 部署：部署前黄金契约门 → 捕获 rollback 目标 → upload → deploy → 健康门 + 自动 rollback | 逻辑在 `server/scripts/deploy-guard.mjs`，YAML 只是调用 |
 | `docs/deploy-rollback.md` | rollback runbook（自动化本身坏了怎么办） | wrangler 4.100.0 两个坑写在里面 |
+| `server/scripts/mcp-contract-scan.mjs` | 对 live mcp.ko.io 的全 tool 合约扫描（铁律 #3/#7 的工具化） | 手动跑，无 CI 引用 |
+| `server/Dockerfile` | Glama.ai 目录收录用的本地 miniflare 容器 | 非生产路径，别删 |
+| `.github/workflows/ci.yml` | python / typescript / server 三个 gate（ubuntu-latest） | |
 | `.github/workflows/publish-{python,npm}.yml` | SDK 发布（带 test 门） | |
 | `../ko-api/AGENTS.md` | serving 端点侧规范 | tool 代理到的路径以那边为准 |
 | `../CLAUDE.md`（KO 根） | 运维手册（服务器/集群/域名单一真相） | 基础设施问题先读它 |

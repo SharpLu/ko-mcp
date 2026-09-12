@@ -4,12 +4,26 @@ Thanks for your interest in improving the ko.io connector kit!
 
 ## What lives here
 
-This repository contains the **client-side** tooling for [ko.io](https://ko.io):
-the Python SDK (`ko-edgar`), the TypeScript SDK (`@ko-io/sdk`), the stdio MCP
-proxy (`@ko-io/mcp-sec-data`), per-client setup guides, and the cookbook. The hosted MCP
-server and data pipelines are not part of this repo.
+This repository contains everything that faces an MCP client or SDK user:
+`server/` — the Cloudflare Worker behind the hosted MCP endpoint
+`https://mcp.ko.io/mcp` (24 tools, deployed from this repo) — plus the Python
+SDK (`ko-edgar`), the TypeScript SDK (`@ko-io/sdk`), the stdio MCP proxy
+(`@ko-io/mcp-sec-data`), per-client setup guides, and the cookbook. Only the
+data pipelines behind `api.ko.io` live elsewhere.
 
 ## Development setup
+
+### MCP server (Cloudflare Worker)
+
+```bash
+cd server
+npm ci
+npm run type-check
+npm test          # vitest; unit tests never touch the network
+```
+
+Adding, renaming or removing a tool means updating `EXPECTED_TOOLS` in
+`server/src/__tests__/tools-proxy.test.ts` — the tool-count gate fails otherwise.
 
 ### Python SDK
 
@@ -40,6 +54,6 @@ npm test
 
 ## Reporting issues
 
-- SDK / proxy bugs → GitHub issues here.
+- MCP server / SDK / proxy bugs → GitHub issues here.
 - Data questions or API bugs → feedback console at <https://ko.io/console/feedback>.
 - Security issues → see [SECURITY.md](SECURITY.md).

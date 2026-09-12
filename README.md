@@ -76,15 +76,17 @@ Free keys are 200 calls/day, forever, no credit card → [ko.io/console](https:/
 | [`llms.txt`](llms.txt) | Machine-readable map of every tool and endpoint |
 
 The MCP server in [`server/`](server) is the exact code running at
-`https://mcp.ko.io/mcp` — every push deploys it. You can also self-host it on
-your own Cloudflare account (`cd server && npx wrangler deploy`); it proxies
-to `api.ko.io` with your API key, so your quota and plan follow you. The data
-pipelines behind the API run as a managed service (dual-region, 3-replica
-ClickHouse, 26 pipelines refreshing on each source's publication schedule).
+`https://mcp.ko.io/mcp` — every push to `main` that touches `server/` deploys
+it. You can also self-host it on your own Cloudflare account (`cd server`,
+drop the `routes` block in `wrangler.toml` — it is pinned to the `ko.io` zone —
+then `npx wrangler deploy`); it proxies to `api.ko.io` with your API key, so
+your quota and plan follow you. The data pipelines behind the API run as a
+managed service (dual-region, 3-replica ClickHouse, 27 pipelines refreshing on
+each source's publication schedule).
 
-> **Note**: `ko-edgar` is live on PyPI (`pip install ko-edgar`). The npm packages
-> `@ko-io/sdk` and `@ko-io/mcp-sec-data` publish shortly. The hosted MCP endpoint
-> and REST API work today.
+> **Note**: all three client packages are published — `ko-edgar` on PyPI, and
+> `@ko-io/sdk` and `@ko-io/mcp-sec-data` on npm. The hosted MCP endpoint and
+> REST API work today.
 
 ## Connect your client
 
@@ -105,7 +107,7 @@ URL, or send `Authorization: Bearer YOUR_KEY`.
 
 | Dataset | Coverage | Free tier |
 |---------|----------|-----------|
-| 13F institutional holdings | 85M+ rows, 2013 → today, family-consolidated | ✅ |
+| 13F institutional holdings | 88M+ rows, 2013 → today, family-consolidated | ✅ |
 | Insider trades (Forms 3/4/5) | 11M+ transactions, open-market classified | ✅ |
 | Congress trading | STOCK Act disclosures, both chambers | ✅ |
 | Crypto ETF exposure | Institutional spot-BTC-ETF holdings from 13F | ✅ |

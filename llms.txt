@@ -42,7 +42,7 @@ Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "messa
 - get_crypto_holder(institution): one institution's crypto exposure
 - sec_list_filings(cik, form_type, from, to, limit): EDGAR filings list
 - sec_get_filing_index(cik, accession_no): files inside a filing
-- sec_get_filing_document(cik, accession_no, file, include_excerpt): document + signed link
+- sec_get_filing_document(cik, accession_no, file, include_excerpt): document + signed link [Pro]
 - get_ftd_data(ticker, days): SEC fails-to-deliver
 - get_treasury_yields(days) [Pro]
 - get_fed_rates(days) [Pro]

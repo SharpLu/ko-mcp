@@ -47,6 +47,7 @@ Set `KO_API_KEY=ko_live_...` in the environment to use your quota.
 ## Troubleshooting
 
 - `disconnected` → check corporate proxy allows `https://mcp.ko.io`.
-- `403 ... requires a paid plan` → the 4 macro tools are Pro+; core SEC tools
-  (13F, insiders, Congress, stocks, crypto, FTD) work on Free.
+- `403 ... requires a paid plan` → the 4 macro tools and `sec_get_filing_document`
+  are Pro+; core SEC tools (13F, insiders, Congress, stocks, crypto, FTD, and
+  the filings list/index) work on Free.
 - Quota resets at 00:00 UTC. Check usage at <https://ko.io/console>.
