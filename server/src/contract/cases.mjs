@@ -33,6 +33,11 @@ export const APPLE_CIK = '320193';
 export const APPLE_10K = '0000320193-25-000079';
 export const BERKSHIRE_CIK = '1067983';
 export const BREVAN_HOWARD_CIK = '1512857';
+/**
+ * A syntactically valid accession number EDGAR has never issued, so the miss is
+ * a property of the identifier and not of what SEC published today.
+ */
+export const NO_SUCH_ACCESSION = '0000000000-00-000000';
 
 /**
  * Cases deliberately NOT pinned, each with the reason it is not pinned.
@@ -53,18 +58,6 @@ export const EXCLUDED = {
     'it would pin a data state that flips the moment SEC publishes one, and the gate would go red on a ' +
     'change in the world rather than a change in the contract. The populated-table contract for this tool ' +
     'is carried by the `truncation` case instead, which asks for the full 1825-day window.',
-  'sec_get_filing_index.empty':
-    'NOT PINNABLE: the error CLASS this input produces is nondeterministic upstream. The same well-formed ' +
-    'but nonexistent accession returned a 404 in one M0 recording and a 502-after-60.2s in another, and on ' +
-    '2026-09-12 it blocked a main deploy by moving 404 -> 502 between the local run and CI (run 34711440107, ' +
-    'the gate step, with Upload and Deploy correctly skipped). Re-pinning to the 502 would only invert the ' +
-    'flake; keeping the 404 makes a green gate a statement about which way the coin landed. That is the ' +
-    'ko-api#236 `meta.cached` disease -- a contract graded on an environmental condition rather than on ' +
-    'code -- reappearing inside this gate\'s own fixtures, so it is excluded rather than tolerated. ' +
-    'ROOT CAUSE ko-bastion#127: koFetch has no timeout, so an EDGAR miss sometimes blocks past the 30s ' +
-    'budget the upstream route declares and surfaces as a 5xx instead of the 404 the input deserves. ' +
-    'WHEN #127 SHIPS this case becomes deterministic and should be re-pinned -- the `error` and `normal` ' +
-    'cases for this tool stay pinned meanwhile, so the tool is not uncovered.',
 };
 
 /**
@@ -251,6 +244,15 @@ export const CASES = [
     cases: [
       { name: 'normal', arguments: { cik: APPLE_CIK, accession_no: APPLE_10K },
         why: 'The file index of an immutable EDGAR filing.' },
+      { name: 'empty', arguments: { cik: APPLE_CIK, accession_no: NO_SUCH_ACCESSION },
+        why: 'RE-PINNED 2026-09-12 when ko-bastion#127 shipped. This case was excluded because its error ' +
+             'CLASS was nondeterministic: the same well-formed but nonexistent accession returned a 404 in ' +
+             'one M0 recording and a 502-after-60.2s in another, and on 2026-09-12 it blocked a main deploy ' +
+             'by moving 404 -> 502 between the local run and CI (run 34711440107). The cause was that ' +
+             'koFetch waited without a bound, so a stalled EDGAR miss surfaced as somebody else\'s 5xx ' +
+             'instead of the 404 the input deserves. koFetch is now bounded at 20s, under the 30s the ' +
+             'upstream route declares, and a stall raises KoTimeoutError -- named, ours, and never a ' +
+             '`ko.io API error (5xx)` line that this file could mistake for a contract.' },
       { name: 'error', arguments: { cik: APPLE_CIK }, why: 'Required `accession_no` missing.' },
     ],
   },

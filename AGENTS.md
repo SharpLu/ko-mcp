@@ -43,10 +43,11 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 | 3 | 每个 tool 代理到一条 **LIVE ko-api 路径**。契约门只查 tool **注册**（是否调 `/api/` 路径），**不查 liveness**——ko-api 端点改动会静默打断 tool。新增/改动 tool 的路径必须对着 ko-api 路由核对并 curl 过 | 契约门覆盖面局限 | 人工（§6 curl） |
 | 4 | **别硬编码 tool 列表**：`mcp-proxy` 动态转发 mcp.ko.io 的 `tools/list`。`KO_API_URL = api.ko.io` 是地理路由（正确），也别在代理里写死路径 | 架构约定 | 人工 / PR review |
 | 5 | ko-api response **两种形态都要能吃**：`koFetch` 剥掉顶层 `{data}` 后，可能拿到 `{data:[...],meta}`（→ 裸数组）或双层嵌套（→ 对象）。读列表的 tool 要 `Array.isArray()` 分支，否则 shape 一变就静默"No results found" | #192 stock-holders FINAL 事故的同类 serving 脆弱性 | `stocks.test.ts` |
-| 6 | **单测禁触网**：单元测试一律 `vi.mock("../ko-fetch.js")` / `vi.stubGlobal("fetch", …)`，不连真 CH/ko-api。live 探测归 deploy 后的健康门 | dev 机活服务让坏测试假绿 | `no-network` 守卫（如已挂） |
+| 6 | **单测禁触网**：单元测试一律 `vi.mock("../ko-fetch.js")` / `vi.stubGlobal("fetch", …)`，不连真 CH/ko-api。live 探测归 deploy 后的健康门。**模块 mock 必须 `...(await vi.importActual(...))` 打底再覆盖那一个导出**——手写导出清单的工厂会让新导出静默变 `undefined`（#127 的 `KO_FETCH_TIMEOUT_MS` 就这样在 `filings.ts` 里读成 undefined，令一条已声明的上游腿从 registry 行为门里凭空消失） | dev 机活服务让坏测试假绿；#127 的残缺 mock | `no-network` 守卫（如已挂） |
 | 7 | **验证必须真跑**：SDK / worker 改动 `npm test`（server）/`pytest`（python）绿；新/改 tool 的 ko-api 路径**部署后 curl 过**。眼看 ≠ verified——从没 curl 过的 tool 路径上线后可能全 500 | #191 教训（ko-api） | PR 模板"验证证据"必填 |
 | 8 | **版本 lockstep 三处**：`server/server.json` + `server/package.json` + **`server/src/index.ts` 的 `new McpServer({version})`** 一起动（registry id `io.github.SharpLu/ko-mcp`）。第三处最容易漏——它才是 `initialize` 回给客户端的版本号（2026-09-12 审计实测：前两处 1.0.0、线上自报 1.1.0）。三个 SDK 包各自独立，但应保持同一版本号齐步走 | registry / 发布一致性 | 人工 / PR review |
 | 9 | **黄金契约不许钉 bug**：`src/contract/golden/` 里任何一条已知缺陷的用例必须带 `knownDefect` + probe（断言"缺陷仍在"），或在 `EXCLUDED` 里写明理由。把今天的错答案钉成契约 = 这道门会挡住它自己的修复。修好缺陷时在**同一个 PR** 里删注解 + `npm run golden:capture` 重钉 | M1 黄金契约门（ko-api#231 / #236 的同形教训） | `golden.test.ts`（注解/排除/原值三道断言）+ `golden-gate.mjs`（缺陷被修 = 红） |
+| 10 | **出站 fetch 必须有界，且界要小于上游**：每个 `fetch`（含 tool 层的裸 fetch）带 `AbortSignal.timeout()`，默认 `KO_FETCH_TIMEOUT_MS`=20s，**必须小于上游 route 声明的 `timeoutMs`(30s)**——代理要先于被代理者失败，否则拿回来的是别人的 5xx。超时抛独立的 `KoTimeoutError`（"我们不等了"），绝不能和 `ko.io API error (5xx)`（"上游坏了"）同形。配套：**hang 测试必须真 hang**——mock 立即 reject 的 "no hang" 测试对零超时实现同样绿（#127 的假绿正是如此），要用只听 signal、自己永不 settle 的 fetch | #127：单次调用实测阻塞 60,222 ms；同一输入跑出 404 / 502 两种错误类，卡死过一次 main 部署 | `registry-defects.test.ts`（AbortSignal + 上界断言）+ `mcp-errors.test.ts`（真 hang，2s 内红） |
 
 ## 4. 任务怎么做（新 tool 五步）
 

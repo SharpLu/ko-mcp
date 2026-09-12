@@ -7,6 +7,14 @@
  *       case in src/contract/cases.mjs TWICE, and write a fixture only when the
  *       two probes agree. This is the normal refresh.
  *
+ *   node scripts/golden-capture.mjs --tool <name> [--tool <name> ...]
+ *       Re-pin ONLY the named tools, from the build, leaving every other
+ *       fixture on disk untouched. Added 2026-09-12 with ko-bastion#127: that
+ *       PR re-pins one case, and without a filter the only way to do it was a
+ *       full sweep, which rewrites all 24 files' `provenance` from `recordings`
+ *       to `build` and buries a one-case change in a 24-file diff. A reviewer
+ *       who cannot see what moved cannot judge whether it should have.
+ *
  *   node scripts/golden-capture.mjs --from-recordings <dir>
  *       Derive the fixtures from a directory of verbatim JSON-RPC response
  *       bodies named <tool>.<case>.json. Used once, to seed these fixtures from
@@ -51,6 +59,16 @@ const argv = process.argv.slice(2);
 const fromIdx = argv.indexOf('--from-recordings');
 const RECORDINGS = fromIdx >= 0 ? argv[fromIdx + 1] : null;
 
+/** `--tool x --tool y` -> re-pin only those. Empty means every tool. */
+const ONLY = argv.flatMap((a, i) => (a === '--tool' ? [argv[i + 1]] : []));
+for (const t of ONLY) {
+  if (!CASES.some((c) => c.tool === t)) {
+    console.error(`--tool ${t}: not a tool in src/contract/cases.mjs`);
+    process.exit(1);
+  }
+}
+const SELECTED = ONLY.length ? CASES.filter((c) => ONLY.includes(c.tool)) : CASES;
+
 mkdirSync(OUT, { recursive: true });
 
 function fixtureFile(tool) {
@@ -59,7 +77,7 @@ function fixtureFile(tool) {
 
 async function captureFromRecordings(dir) {
   const written = [];
-  for (const spec of CASES) {
+  for (const spec of SELECTED) {
     const cases = [];
     for (const c of spec.cases) {
       const file = join(dir, `${spec.tool}.${c.recordedAs || c.name}.json`);
@@ -83,7 +101,7 @@ async function captureFromBuild() {
   console.log(`local worker up at ${worker.base}`);
   const written = [];
   try {
-    for (const spec of CASES) {
+    for (const spec of SELECTED) {
       const cases = [];
       for (const c of spec.cases) {
         // TWO independent probes. ko-api#236 pinned `meta.cached`, a field that
@@ -153,6 +171,7 @@ function write(spec, cases, provenance) {
 
 const written = RECORDINGS ? await captureFromRecordings(RECORDINGS) : await captureFromBuild();
 
-console.log(`\nwrote ${written.length} fixtures / ${CASE_COUNT} cases to src/contract/golden/`);
+const scope = ONLY.length ? `only ${ONLY.join(', ')} -- every other fixture left untouched` : `all ${CASE_COUNT} cases`;
+console.log(`\nwrote ${written.length} fixtures to src/contract/golden/ (${scope})`);
 console.log(`excluded cases (see src/contract/cases.mjs for the reasons): ${Object.keys(EXCLUDED).length}`);
 for (const id of Object.keys(EXCLUDED)) console.log(`  - ${id}`);

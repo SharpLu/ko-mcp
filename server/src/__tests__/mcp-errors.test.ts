@@ -18,11 +18,55 @@ let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => { fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock); });
 afterEach(() => vi.unstubAllGlobals());
 
-describe("koFetch network / timeout transparency", () => {
-  it("propagates a network/timeout rejection (readable, no hang)", async () => {
-    fetchMock.mockRejectedValue(new Error("The operation timed out"));
+/**
+ * A fetch that behaves like the real one: it NEVER settles on its own, and it
+ * rejects only when the caller's AbortSignal fires, with that signal's reason.
+ *
+ * This is the whole negative control. The test this replaces mocked an INSTANT
+ * rejection and called itself "no hang" -- so it passed against a koFetch with
+ * no timeout at all, which is exactly the code ko-bastion#127 describes. Against
+ * an unbounded koFetch no signal is ever passed here, nothing rejects, and the
+ * test hangs until vitest kills it. Against the bounded one, AbortSignal.timeout
+ * fires and koFetch converts it into KoTimeoutError.
+ */
+const neverSettles = (_url: string, init?: { signal?: AbortSignal }) =>
+  new Promise<never>((_resolve, reject) => {
+    const signal = init?.signal;
+    if (!signal) return;                       // unbounded caller -> hang, like production did
+    if (signal.aborted) return reject(signal.reason);
+    signal.addEventListener("abort", () => reject(signal.reason));
+  });
+
+describe("koFetch is bounded (ko-bastion#127)", () => {
+  it("a fetch that never answers is cut off by our own budget, not left to hang", async () => {
+    fetchMock.mockImplementation(neverSettles);
+    const { koFetch, KoTimeoutError } = await import("../ko-fetch.js");
+    const err = await koFetch({ baseUrl: "https://api.ko.io", apiKey: "" }, "/x", {}, { timeoutMs: 50 })
+      .then(() => null, (e: unknown) => e);
+    expect(err).toBeInstanceOf(KoTimeoutError);
+  }, 2000); // a hang fails here in 2s instead of running to the suite default
+
+  it("the timeout reads as OUR limit, never as an upstream 5xx", async () => {
+    fetchMock.mockImplementation(neverSettles);
     const { koFetch } = await import("../ko-fetch.js");
-    await expect(koFetch({ baseUrl: "https://api.ko.io", apiKey: "" }, "/x")).rejects.toThrow(/timed out/i);
+    const err = await koFetch({ baseUrl: "https://api.ko.io", apiKey: "" }, "/x", {}, { timeoutMs: 50 })
+      .then(() => null, (e: unknown) => e) as Error;
+    expect(err.message).toMatch(/ko\.io MCP timeout/);
+    expect(err.message).not.toMatch(/ko\.io API error/);   // that prefix means upstream ANSWERED
+    expect(err.message).toMatch(/not an upstream failure/);
+  }, 2000);
+
+  it("the default budget is under the 30s the upstream route declares", async () => {
+    const { KO_FETCH_TIMEOUT_MS } = await import("../ko-fetch.js");
+    expect(KO_FETCH_TIMEOUT_MS).toBeLessThan(30_000);
+    // ...and comfortably over the slowest healthy call ever measured (1,050ms).
+    expect(KO_FETCH_TIMEOUT_MS).toBeGreaterThan(5_000);
+  });
+
+  it("still propagates a plain network rejection unchanged", async () => {
+    fetchMock.mockRejectedValue(new Error("connection reset"));
+    const { koFetch } = await import("../ko-fetch.js");
+    await expect(koFetch({ baseUrl: "https://api.ko.io", apiKey: "" }, "/x")).rejects.toThrow(/connection reset/);
   });
 });
 
