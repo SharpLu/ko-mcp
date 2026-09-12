@@ -70,14 +70,15 @@ export const EXCLUDED = {
  * deliberate re-pin by whoever fixed it. The alternative, pinning today's wrong
  * answer, would make this gate block its own repair.
  */
-const DEFECT_126_LIMIT = (rows) => ({
-  issue: 'ko-bastion#126',
-  summary:
-    'The tool sends `limit`; the upstream ko-api route reads only `per_page`, so the argument is dropped ' +
-    'and the page is always the 50-row default. The row count is NOT part of the pinned skeleton; this ' +
-    'probe exists so that fixing #126 fails the gate instead of passing it silently.',
-  probe: { kind: 'dataRowCount', equals: rows },
-});
+// DEFECT_126_LIMIT was here, and it did its job. It annotated four cases whose
+// tool sent `limit` to a ko-api route that reads only `per_page`, so the page
+// was always the 50-row default however small a limit the caller asked for; its
+// `dataRowCount: 50` probe existed so that FIXING the bug would fail this gate
+// rather than pass it silently. On the #126 fix it did exactly that, naming all
+// four cases ("rendered 5 data rows; the defect renders exactly 50", and 100 for
+// get_ftd_data), which is why the annotation and its four call sites are gone
+// and the fixtures below now pin the CORRECTED rendering -- including the
+// disclosure lines that did not exist before.
 
 const DEFECT_125_SEARCH = {
   issue: 'ko-bastion#125',
@@ -120,8 +121,10 @@ export const CASES = [
   {
     tool: 'list_institutions',
     cases: [
-      { name: 'normal', arguments: { limit: 5 }, knownDefect: DEFECT_126_LIMIT(50),
-        why: 'The institutions page. limit is asked for and ignored upstream (#126).' },
+      { name: 'normal', arguments: { limit: 5 },
+        why: 'The institutions page. Five rows because five were asked for: the tool sends `per_page` now, ' +
+             'and the trailing "More results available" line is the full-page hint finally keying off a ' +
+             'page size that reached ko-api (#126).' },
       { name: 'empty', arguments: { search: 'zzzqqqnotarealinstitution' }, knownDefect: DEFECT_EMPTY_TABLE,
         why: 'A search matching nothing renders a headed empty table (audit warning 5).' },
       { name: 'error', arguments: { limit: 999 },
@@ -172,8 +175,10 @@ export const CASES = [
   {
     tool: 'get_insider_trades',
     cases: [
-      { name: 'normal', arguments: { ticker: 'AAPL', limit: 5 }, knownDefect: DEFECT_126_LIMIT(50),
-        why: 'Per-ticker insider table. limit dropped upstream (#126).' },
+      { name: 'normal', arguments: { ticker: 'AAPL', limit: 5 },
+        why: 'Per-ticker insider table, five rows for limit=5 (#126). This tool also carried a SECOND ' +
+             'truncation -- a hardcoded truncate(trades, 50) in the rendering -- so limit=200 rendered 50 ' +
+             'even once per_page landed; both are gone, and a full page now says so.' },
       { name: 'empty', arguments: { ticker: NO_SUCH_TICKER },
         why: 'Unknown ticker: a soft sentence in a SUCCESS envelope, no table, isError absent.' },
       { name: 'error', arguments: {}, why: 'Required `ticker` missing.' },
@@ -201,8 +206,10 @@ export const CASES = [
   {
     tool: 'get_congress_member',
     cases: [
-      { name: 'normal', arguments: { member: 'nancy-pelosi', limit: 5 }, knownDefect: DEFECT_126_LIMIT(50),
-        why: 'One member history. limit dropped upstream (#126).' },
+      { name: 'normal', arguments: { member: 'nancy-pelosi', limit: 5 },
+        why: 'One member history, five rows for limit=5 (#126). NOTE the sibling collection route ' +
+             '/api/v1/congress-trades is the one route in this surface that accepts `limit` ' +
+             '(`per_page ?? limit`), which is why get_congress_trades above was never affected.' },
       { name: 'empty', arguments: { member: 'nancy-pelosi', page: 9999 }, knownDefect: DEFECT_EMPTY_TABLE,
         why: 'Page past the end renders a headed empty table (audit warning 5).' },
       { name: 'error', arguments: {}, why: 'Required `member` missing.' },
@@ -318,11 +325,13 @@ export const CASES = [
     cases: [
       { name: 'empty', arguments: { ticker: NO_SUCH_TICKER }, why: 'Soft sentence, no table.' },
       { name: 'error', arguments: { ticker: 'GME', days: 9999 }, why: 'Above the days clamp (max 1825).' },
-      { name: 'truncation', arguments: { ticker: 'GME', days: 1825 }, knownDefect: DEFECT_126_LIMIT(50),
-        why: 'The tool sends no `per_page`, so ko-api caps the answer at its 50-row default and the ' +
-             'rendering says nothing about it -- 50 rows out of a total_count of 1,025, with no page ' +
-             'parameter to reach the rest (#126). Carries this tool\'s populated-table contract, since ' +
-             'the recorded `normal` case is excluded above.' },
+      { name: 'truncation', arguments: { ticker: 'GME', days: 1825 },
+        why: 'The 1,025-row window. This case used to demonstrate the defect -- the tool sent no ' +
+             '`per_page` at all, ko-api capped the answer at its 50-row default, and the rendering said ' +
+             'nothing about it -- and it now pins the OPPOSITE: a page the caller controls plus the ' +
+             'disclosure line that says the page is full and names the next one (#126). The line is what ' +
+             'is pinned; the row count still is not, because row counts are data. Also carries this ' +
+             'tool\'s populated-table contract, since the recorded `normal` case is excluded above.' },
     ],
   },
   {

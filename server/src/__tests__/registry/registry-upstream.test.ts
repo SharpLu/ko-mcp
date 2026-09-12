@@ -120,11 +120,16 @@ describe('registry gate (d): no tool sends a param nobody reads', () => {
     expect(stale, `Stale exceptions:\n${stale.join('\n')}`).toEqual([]);
   });
 
-  it('the exception table is the size the M0 audit + this gate found', () => {
-    expect(INERT_PARAMS.length).toBe(12);
-    // 4 tools whose `limit` is inert (the audit's finding) + the 2 shared
-    // resolve.ts legs that hit the same route.
-    expect(INERT_PARAMS.filter((e) => e.param === 'limit').length).toBe(6);
+  it('the exception table is the size it should be, and only shrinks', () => {
+    expect(INERT_PARAMS.length).toBe(8);
+    // Was 6 (the M0 audit's 4 rendered truncations + the 2 shared resolve.ts
+    // legs). ko-bastion#126 retired the 4; what is left is resolve.ts's internal
+    // candidate lookup, shared by the two tools that take a free-text name --
+    // bandwidth, not a rendered truncation, and shrinking it would change which
+    // institution a name resolves to. See its INERT_PARAMS entry.
+    expect(INERT_PARAMS.filter((e) => e.param === 'limit').length).toBe(2);
+    expect(INERT_PARAMS.filter((e) => e.issue === 'ko-bastion#126').map((e) => e.tool).sort())
+      .toEqual(['get_crypto_holder', 'get_institution_holdings']);
     // Params the tool ADVERTISES as filters that upstream never reads.
     expect(INERT_PARAMS.filter((e) => e.issue === 'ko-bastion#125').length).toBe(6);
   });
@@ -171,9 +176,12 @@ describe('registry gate (e): paginated routes get a row count', () => {
     expect(stale, `Stale exceptions:\n${stale.join('\n')}`).toEqual([]);
   });
 
-  it('exactly the three days-window macro tools are excused', () => {
-    expect(SILENT_TRUNCATIONS.map((s) => s.tool).sort())
-      .toEqual(['get_economic_indicators', 'get_financial_stress', 'get_ftd_data']);
+  it('nothing is excused: every tool on a paginated route sends a row count', () => {
+    // ko-bastion#126. The three days-window macro tools that used to be excused
+    // here (get_ftd_data, get_economic_indicators, get_financial_stress) now
+    // send page + per_page. An empty table means the gate above is enforcing the
+    // rule with no carve-outs, which is the only state worth having.
+    expect(SILENT_TRUNCATIONS.map((s) => s.tool)).toEqual([]);
   });
 });
 

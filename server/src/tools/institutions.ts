@@ -88,11 +88,15 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
       limit: z.number().int().min(1).max(50).optional().default(20).describe("Results per page"),
     },
     async ({ search, page, limit }) => {
-      // koFetch returns the array directly
+      // koFetch returns the array directly.
+      // PAGE SIZE IS `per_page`, NOT `limit` (ko-bastion#126): /api/v1/institutions
+      // reads only `per_page` and silently falls back to its own 50-row default
+      // for anything else, so sending `limit` here rendered 50 rows however small
+      // a page the caller asked for. get_institution_holdings above is the pattern.
       const institutions = await koFetch<InstitutionRow[]>(
         config,
         "/api/v1/institutions",
-        { search, page, limit }
+        { search, page, per_page: limit }
       );
 
       const lines: string[] = [];

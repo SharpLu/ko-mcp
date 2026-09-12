@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
-import { fmtMoney, fmtShares, truncate } from "../format.js";
+import { fmtMoney, fmtShares } from "../format.js";
 
 export function registerInsiderTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
@@ -16,14 +16,17 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
         .string()
         .optional()
         .describe("Filter by specific executive CIK (from list_insider_traders)"),
-      limit: z.number().int().min(1).max(200).optional().default(50).describe("Max trades to return"),
+      page: z.number().int().min(1).optional().default(1).describe("Page number"),
+      limit: z.number().int().min(1).max(200).optional().default(50).describe("Trades per page, 1-200"),
     },
-    async ({ ticker, executive_cik, limit }) => {
-      // koFetch returns the array directly
+    async ({ ticker, executive_cik, page, limit }) => {
+      // koFetch returns the array directly.
+      // PAGE SIZE IS `per_page`, NOT `limit` (ko-bastion#126): /api/v1/executive-trades/:ticker
+      // reads only `per_page` and falls back to its own 50-row default otherwise.
       const trades = await koFetch<TradeRow[]>(
         config,
         `/api/v1/executive-trades/${encodeURIComponent(ticker.toUpperCase())}`,
-        { limit, executive_cik }
+        { page, per_page: limit, executive_cik }
       );
 
       const lines: string[] = [
@@ -35,7 +38,11 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
         lines.push("| Date | Executive | Title | Action | Shares | Value | Price |");
         lines.push("|------|-----------|-------|--------|--------|-------|-------|");
 
-        for (const t of truncate(trades, 50) as TradeRow[]) {
+        // No second, render-side cap. A hardcoded truncate(trades, 50) here meant
+        // that even once `per_page` reached ko-api, limit=200 still rendered 50
+        // rows -- the same ko-bastion#126 symptom one layer down. The page size
+        // the caller asked for is the page size they get; a full page says so.
+        for (const t of trades) {
           const title = t.officer_title || (t.is_director ? "Director" : "—");
           const ceoTag = t.is_ceo ? " (CEO)" : "";
           lines.push(
@@ -43,10 +50,8 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
           );
         }
 
-        if (trades.length > 50) {
-          lines.push(
-            `\n*Showing 50 of ${trades.length} trades.*`
-          );
+        if (trades.length === limit) {
+          lines.push(`\n*Full page of ${limit} rows — more may exist; use page=${page + 1}.*`);
         }
       } else {
         lines.push("\nNo insider trades found.");
@@ -90,11 +95,14 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
       limit: z.number().int().min(1).max(50).optional().default(20),
     },
     async ({ search, role, page, limit }) => {
-      // koFetch returns the array directly
+      // koFetch returns the array directly.
+      // PAGE SIZE IS `per_page`, NOT `limit` (ko-bastion#126): /api/v1/insider-trades
+      // reads only `per_page` and falls back to its own 50-row default otherwise.
+      // (`search` is a SEPARATE defect, ko-bastion#125 -- untouched here.)
       const traders = await koFetch<InsiderTraderRow[]>(
         config,
         "/api/v1/insider-trades",
-        { search, role, page, limit }
+        { search, role, page, per_page: limit }
       );
 
       const lines: string[] = [

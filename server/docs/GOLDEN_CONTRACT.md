@@ -106,7 +106,7 @@ skeleton records which lines exist and in what order.
 | fixture files | 24, one per tool, in `src/contract/golden/` |
 | replayed cases | 71 |
 | excluded cases | 2, each with a written reason (below) |
-| annotated known defects | 7 cases across 3 defects |
+| annotated known defects | 3 cases across 2 defects (was 7 across 3; ko-bastion#126 retired 4 of them by being fixed -- §4) |
 | offline tests added | 37 (suite total 77 -> 114) |
 | plan-gated tools pinning a 403 rather than data | 4 |
 
@@ -116,6 +116,17 @@ The M0 audit (`KO_MCP_TOOL_MATRIX_20260912.md`) found four live defects, so the
 recordings this gate was seeded from contain **wrong output**. Pinning it would
 freeze the bug into the contract and the gate would then block its own repair.
 
+**One of the four is now fixed, and the mechanism is what fixed it honestly.**
+ko-bastion#126 (a `limit` no upstream route read, plus three tools that sent no
+row-count param at all) held four of the seven annotations. The fix made all four
+probes stop holding, and the gate went red naming each one -- `rendered 5 data
+rows; the defect renders exactly 50`, and `rendered 100` for `get_ftd_data` --
+which is precisely the forced, deliberate re-pin this section was built for. The
+four annotations and the `DEFECT_126_LIMIT` factory are gone, the five affected
+fixtures were re-captured in that same PR, and `npm test` now asserts that **no
+fixture cites #126 any more**: the absence is enforced the same way the presence
+used to be.
+
 The mechanism: the skeleton is defect-neutral by construction (row counts
 collapse, values are erased), and the defect lives in a `knownDefect.probe` that
 asserts **the bug is still there**. Fix the bug and the gate goes red naming the
@@ -124,10 +135,6 @@ issue, forcing a deliberate re-pin. A silent re-pin is unreachable.
 | case | issue | probe | what a red means |
 |---|---|---|---|
 | `list_insider_traders.normal` | ko-bastion#125 | `identicalToCase: empty` -- `search=Musk` and `search=zzzqqq` still come back byte-identical | `search` now reaches ko-api; re-pin both cases and close #125 |
-| `list_institutions.normal` | ko-bastion#126 | `dataRowCount: 50` despite `limit: 5` | `limit` is honoured; re-pin |
-| `get_insider_trades.normal` | ko-bastion#126 | same | same |
-| `get_congress_member.normal` | ko-bastion#126 | same | same |
-| `get_ftd_data.truncation` | ko-bastion#126 | `dataRowCount: 50` for a 1825-day window whose `total_count` is 1,025 | the window tools send `per_page`, or the truncation is disclosed; re-pin |
 | `list_institutions.empty` | audit §3 warning 5 (no issue filed) | `headerWithoutRows` | the empty result became a soft sentence; re-pin |
 | `get_congress_member.empty` | audit §3 warning 5 (no issue filed) | `headerWithoutRows` | same |
 
@@ -258,7 +265,7 @@ Two consequences worth writing down:
 conditional. The honest thing is to enumerate this surface's equivalent rather
 than claim there is none.
 
-Four pinned cases contain a pagination hint that four tools emit **only when
+Eight pinned cases contain a pagination hint that eight tools emit **only when
 there is a next page** (`rows.length === limit`, or a computed page count > 1):
 
 | case | line | why the condition cannot flip |
@@ -267,14 +274,37 @@ there is a next page** (`rows.length === limit`, or a computed page count > 1):
 | `get_stock_holders.normal` | same | asks for 5 of AAPL's 6,127 institutional holders |
 | `get_crypto_holders.normal` | same | asks for 5 of IBIT's 1,481 holders |
 | `get_congress_trades.normal` | same | asks for 5 of the whole STOCK Act feed |
+| `list_institutions.normal` | `*More results available -- use page=N+1*` | asks for 5 of ~6,000 tracked institutions |
+| `get_insider_trades.normal` | `*Full page of N rows -- more may exist; use page=N+1.*` | asks for 5 of AAPL's Form 4 history |
+| `get_congress_member.normal` | `*Showing N trades -- use page=N+1 for more.*` | asks for 5 of Pelosi's multi-year disclosure history |
+| `get_ftd_data.truncation` | `*Full page of N rows -- more may exist; use page=N+1.*` | takes the default 100 of a 1,825-day window with `total_count` 1,025 |
 
-Every one asks for 5 rows out of a set in the thousands. For the line to
-disappear the underlying set would have to fall below 5 rows, which is itself an
-incident worth a red build. The double-probe at capture cannot catch a
-conditional this slow-moving -- it catches cold-vs-warm, not month-over-month --
-so this table, and the arithmetic in it, is the control.
+The bottom four arrived with the ko-bastion#126 fix: before it, the page size
+never reached ko-api, so `rows.length === limit` was false by accident and the
+hint could not fire -- these tools rendered a full 50-row page and said nothing.
+The hint firing is the fix.
 
-If a fifth such line ever appears, it belongs here before the fixture is
+`list_insider_traders` is the one tool where the #126 fix does NOT add a line,
+and the reason is worth recording because it moved twice in one afternoon. Its
+two cases differ only in `search`, and while `search` was inert (ko-bastion#125)
+both returned the same full 20-row page, so the hint fired on both. ko-api #260
+shipped the #125 filter mid-session; `search=Musk` and `search=zzzqqq` now match
+nobody, both cases render an empty table, and the hint correctly does not fire.
+Its fixture is therefore UNCHANGED by the #126 PR -- the page size now reaches
+ko-api, but there is no page to speak of. Note the side effect: #125's
+`identicalToCase` probe still passes, because two empty answers are also
+byte-identical. The row count is what actually signals that #125 shipped.
+
+Every row asks for far fewer rows than the set holds. For a line to disappear the
+underlying set would have to fall below the requested page size, which is itself
+an incident worth a red build. `get_ftd_data.truncation` is the tightest margin
+(100 of 1,025) and the only one where the set is finite and historical rather
+than growing; SEC never unpublishes fails-to-deliver, so it only grows. The
+double-probe at capture cannot catch a conditional this slow-moving -- it catches
+cold-vs-warm, not month-over-month -- so this table, and the arithmetic in it, is
+the control.
+
+If a ninth such line ever appears, it belongs here before the fixture is
 committed.
 
 ## 9. What this gate does not prove
@@ -289,6 +319,10 @@ committed.
   so every case goes to ko-api as `?demo=true`.
 - **That the pinned rendering is *correct*.** It pins what the tools render
   today; §4 is the explicit list of places where today's rendering is known to
-  be wrong.
+  be wrong. Note what §4 does NOT claim: `get_ftd_data.truncation` now pins a
+  disclosure line that says a page is full, not a total. koFetch discards
+  ko-api's `meta` when it unwraps `{ data, meta }`, so `total_count` never
+  reaches this Worker and an honest "showing 100 of 1,025" is not available here
+  yet. That is ko-bastion#127's file.
 - **ko-api's own behaviour.** ko-api has its own 488-case gate for that. This
   one watches the seam between the two.

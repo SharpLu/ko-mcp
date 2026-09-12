@@ -357,8 +357,11 @@ function diffLines(expected, actual, at) {
  */
 export function checkDefect(probe, caseName, live, texts) {
   switch (probe.kind) {
-    // #126: `limit` is dropped upstream, so the page is always the 50-row
-    // default however small a limit the caller asked for.
+    // A page size that is not honoured: the probe pins the row count the DEFECT
+    // produces, so the fix fails the gate. Used by ko-bastion#126 (a `limit` no
+    // upstream route read, so every page was the 50-row default) until that was
+    // fixed; kept because it is the general shape of "the caller asked for N and
+    // got M", which is invisible in a skeleton that deliberately drops counts.
     case 'dataRowCount': {
       const rows = live.blocks.flatMap((b) => b.tables.map((t) => t.dataRows));
       if (rows.length === 0) return 'expected a table to count rows in, got none (the rendering changed)';

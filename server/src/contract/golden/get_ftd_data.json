@@ -3,9 +3,9 @@
   "planGated": false,
   "capturedAt": "2026-09-12",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:50885",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -95,7 +95,7 @@
         "ticker": "GME",
         "days": 1825
       },
-      "why": "The tool sends no `per_page`, so ko-api caps the answer at its 50-row default and the rendering says nothing about it -- 50 rows out of a total_count of 1,025, with no page parameter to reach the rest (#126). Carries this tool's populated-table contract, since the recorded `normal` case is excluded above.",
+      "why": "The 1,025-row window. This case used to demonstrate the defect -- the tool sent no `per_page` at all, ko-api capped the answer at its 50-row default, and the rendering said nothing about it -- and it now pins the OPPOSITE: a page the caller controls plus the disclosure line that says the page is full and names the next one (#126). The line is what is pinned; the row count still is not, because row counts are data. Also carries this tool's populated-table contract, since the recorded `normal` case is excluded above.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -119,7 +119,9 @@
               "H2 SEC Failures-to-Deliver — GME",
               "BLANK",
               "THEAD Date | Ticker | Quantity | Price",
-              "TBODY"
+              "TBODY",
+              "BLANK",
+              "TEXT *Full page of <VAL> rows — more may exist; use <VAL>"
             ],
             "tables": [
               {
@@ -129,19 +131,11 @@
                   "Quantity",
                   "Price"
                 ],
-                "dataRows": 50
+                "dataRows": 100
               }
             ]
           }
         ]
-      },
-      "knownDefect": {
-        "issue": "ko-bastion#126",
-        "summary": "The tool sends `limit`; the upstream ko-api route reads only `per_page`, so the argument is dropped and the page is always the 50-row default. The row count is NOT part of the pinned skeleton; this probe exists so that fixing #126 fails the gate instead of passing it silently.",
-        "probe": {
-          "kind": "dataRowCount",
-          "equals": 50
-        }
       }
     }
   ]

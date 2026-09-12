@@ -3,6 +3,55 @@ import { z } from "zod";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
 import { fmtShares } from "../format.js";
 
+// ---------------------------------------------------------------------------
+// Paging for the `days`-window tools (ko-bastion#126, silent-truncation half)
+//
+// Three of the five macro routes paginate: /sec/ftd, /economic/indicators and
+// /stress/ofr all read `page` + `per_page` and cap a page at their own 50-row
+// default when neither is sent. These tools sent neither, so a caller asking for
+// `days: 1825` was handed the first 50 settlement dates, rendered as a complete
+// table, with nothing in the output saying a page boundary had been crossed and
+// no parameter that could reach the rest -- get_ftd_data{GME, days:1825} showed
+// 50 rows of a 1,025-row answer. A model reads that as the whole window.
+//
+// The other two (/treasury/yields, /fed/rates) do NOT paginate: they run
+// `LIMIT {days}`, so `days` already governs the row count there and those two
+// tools are deliberately left alone.
+//
+// Page size, not a global cap: `limit` is what the caller asks for, `per_page`
+// is what ko-api reads, and a page that comes back full says so and names the
+// next page. ko-api clamps per_page at 500, which is why `limit` stops there.
+// ---------------------------------------------------------------------------
+const PAGE_SCHEMA = {
+  page: z.number().int().min(1).optional().default(1).describe("Page number (default 1)"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(500)
+    .optional()
+    .default(100)
+    .describe(
+      "Rows per page, 1-500 (default 100). A long `days` window can hold more rows than one page; " +
+      "the answer says when the page is full and names the next one."
+    ),
+};
+
+/**
+ * Disclosure line for a full page, or null.
+ *
+ * Deliberately claims only what this Worker can actually know. The honest
+ * "showing N of M" needs `meta.total_count`, and koFetch discards `meta` when it
+ * unwraps ko-api's `{ data, meta }` envelope; ko-fetch.ts is being changed under
+ * ko-bastion#127 in a separate PR, so this one does not touch it. A page that
+ * came back exactly full is evidence of a boundary and nothing more -- which is
+ * what this says. Upgrade to a true total when koFetch surfaces meta.
+ */
+function pageNote(rows: number, limit: number, page: number): string | null {
+  if (rows !== limit) return null;
+  return `\n*Full page of ${limit} rows — more may exist; use page=${page + 1}.*`;
+}
+
 export function registerMacroTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // Tool: get_treasury_yields
@@ -143,12 +192,13 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         .optional()
         .default(365)
         .describe("Number of days of history (default 365)"),
+      ...PAGE_SCHEMA,
     },
-    async ({ category, days }) => {
+    async ({ category, days, page, limit }) => {
       const rows = await koFetch<EconomicRow[]>(
         config,
         "/api/v1/economic/indicators",
-        { category: category === "all" ? undefined : category, days }
+        { category: category === "all" ? undefined : category, days, page, per_page: limit }
       );
 
       if (!rows || rows.length === 0) {
@@ -167,6 +217,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
           `| ${r.date} | ${r.series_name || r.series_id || "N/A"} | ${r.value ?? "N/A"} | ${r.category || "N/A"} |`
         );
       }
+
+      const more = pageNote(rows.length, limit, page);
+      if (more) lines.push(more);
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }
@@ -188,12 +241,13 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         .optional()
         .default(90)
         .describe("Number of days of history (default 90)"),
+      ...PAGE_SCHEMA,
     },
-    async ({ ticker, days }) => {
+    async ({ ticker, days, page, limit }) => {
       const rows = await koFetch<FtdRow[]>(
         config,
         "/api/v1/sec/ftd",
-        { ticker: ticker.toUpperCase(), days }
+        { ticker: ticker.toUpperCase(), days, page, per_page: limit }
       );
 
       if (!rows || rows.length === 0) {
@@ -215,6 +269,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         );
       }
 
+      const more = pageNote(rows.length, limit, page);
+      if (more) lines.push(more);
+
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }
   );
@@ -234,12 +291,13 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         .optional()
         .default(365)
         .describe("Number of days of history (default 365)"),
+      ...PAGE_SCHEMA,
     },
-    async ({ days }) => {
+    async ({ days, page, limit }) => {
       const rows = await koFetch<StressRow[]>(
         config,
         "/api/v1/stress/ofr",
-        { days }
+        { days, page, per_page: limit }
       );
 
       if (!rows || rows.length === 0) {
@@ -258,6 +316,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
           `| ${r.date} | ${r.series_name || r.series || "FSI"} | ${r.value?.toFixed(3) ?? "N/A"} |`
         );
       }
+
+      const more = pageNote(rows.length, limit, page);
+      if (more) lines.push(more);
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }

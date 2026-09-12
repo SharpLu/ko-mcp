@@ -84,11 +84,16 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
     async ({ member, page, limit }) => {
       const memberSlug = encodeURIComponent(member.toLowerCase().trim());
 
-      // koFetch returns the array directly
+      // koFetch returns the array directly.
+      // PAGE SIZE IS `per_page`, NOT `limit` (ko-bastion#126): the :member route
+      // reads only `per_page` and falls back to its own 50-row default otherwise.
+      // NOTE the sibling /api/v1/congress-trades collection route above is the one
+      // route in this surface that DOES accept `limit` (`per_page ?? limit`), which
+      // is why get_congress_trades was never affected and is not touched here.
       const trades = await koFetch<CongressTrade[]>(
         config,
         `/api/v1/congress-trades/${memberSlug}`,
-        { type: "trades", page, limit }
+        { type: "trades", page, per_page: limit }
       );
 
       const lines: string[] = [
