@@ -35,8 +35,8 @@
         "blocks": [
           {
             "lines": [
-              "H2 Filing <ACCESSION> — CIK <VAL>",
-              "TEXT <VAL> files · Source: SEC EDGAR*",
+              "H2 Filing <ACCESSION> \u2014 CIK <VAL>",
+              "TEXT <VAL> files \u00b7 Source: SEC EDGAR*",
               "BLANK",
               "THEAD File | Type | Size",
               "TBODY"
@@ -54,42 +54,6 @@
           }
         ]
       }
-    },
-    {
-      "name": "empty",
-      "arguments": {
-        "cik": "320193",
-        "accession_no": "0000000000-00-000000"
-      },
-      "why": "A well-formed accession that does not exist -> 404. Pinned from the SECOND recording of this input; the first is the 60.2s/502 that ko-bastion#127 describes and is excluded above.",
-      "contract": {
-        "envelope": {
-          "id": "number",
-          "jsonrpc": "string",
-          "result": {
-            "content": {
-              "_array": {
-                "text": "string",
-                "type": "string"
-              }
-            },
-            "isError": "boolean"
-          }
-        },
-        "isError": true,
-        "contentTypes": [
-          "text"
-        ],
-        "blocks": [
-          {
-            "lines": [
-              "TEXT ko.io API error (404): Not found: SEC did not publish: <URL>"
-            ],
-            "tables": []
-          }
-        ]
-      },
-      "recordedAs": "empty2"
     },
     {
       "name": "error",
