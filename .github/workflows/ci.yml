@@ -8,6 +8,8 @@ on:
 jobs:
   python:
     name: Python SDK (${{ matrix.python-version }})
+    # Stays hosted in wave 1: this job already fans out to 3 python versions, and one
+    # ephemeral runner per repo would serialise them. See `server` below.
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -31,6 +33,8 @@ jobs:
 
   typescript:
     name: TypeScript (${{ matrix.package }})
+    # Stays hosted in wave 1: this job already fans out to 2 TS packages, and one
+    # ephemeral runner per repo would serialise them. See `server` below.
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -52,7 +56,28 @@ jobs:
 
   server:
     name: MCP Server (mcp.ko.io worker)
-    runs-on: ubuntu-latest
+    # ko-bastion#115 wave 1. Primary leg on the A3 self-hosted ARM runner so an
+    # Actions BILLING failure cannot stop this gate -- on 2026-09-12 the spending
+    # limit tripped and every job in SharpLu/* died at job start, all day.
+    #
+    # The ubuntu-latest leg is a CONTROL, not a failover: continue-on-error means it
+    # can never block a merge, and its only job is to surface a disagreement between
+    # the two environments. fail-fast: false stops either leg cancelling the other.
+    #
+    # `server` goes first in this repo because it is the only SINGLE job here. The
+    # other two already carry matrices (3 python versions, 2 TS packages), and A3
+    # runs ONE ephemeral runner per repo -- a runner takes one job and deregisters --
+    # so adding a leg there turns 3 parallel hosted jobs into 6 serial ones. That is
+    # a capacity decision, not a correctness one, and it belongs in wave 2 with a
+    # measured runtime rather than in the change that introduces the runner.
+    strategy:
+      fail-fast: false
+      matrix:
+        leg:
+          - { on: '["self-hosted","linux","arm64","ko"]', primary: true }
+          - { on: '["ubuntu-latest"]',                    primary: false }
+    runs-on: ${{ fromJSON(matrix.leg.on) }}
+    continue-on-error: ${{ !matrix.leg.primary }}
     defaults:
       run:
         working-directory: server
