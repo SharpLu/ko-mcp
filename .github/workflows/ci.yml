@@ -8,9 +8,16 @@ on:
 jobs:
   python:
     name: Python SDK (${{ matrix.python-version }})
-    # Stays hosted in wave 1: this job already fans out to 3 python versions, and one
-    # ephemeral runner per repo would serialise them. See `server` below.
-    runs-on: ubuntu-latest
+    # ko-bastion#115: self-hosted, so an Actions BILLING failure cannot stop this
+    # gate -- on 2026-09-12 the spending limit tripped and every job in SharpLu/*
+    # died at job start, all day.
+    #
+    # A3 runs ONE ephemeral runner per repo, so these three versions run SERIALLY
+    # rather than in parallel. That is the price of the independence and it is paid
+    # knowingly: each leg is a pip install plus ruff/mypy/pytest, ~1 minute. The
+    # control leg lives on `server` alone -- one comparison of the two environments
+    # is enough to catch a divergence, and six is just six times the queue.
+    runs-on: [self-hosted, linux, arm64, ko]
     strategy:
       matrix:
         python-version: ["3.9", "3.11", "3.13"]
@@ -33,9 +40,9 @@ jobs:
 
   typescript:
     name: TypeScript (${{ matrix.package }})
-    # Stays hosted in wave 1: this job already fans out to 2 TS packages, and one
-    # ephemeral runner per repo would serialise them. See `server` below.
-    runs-on: ubuntu-latest
+    # Self-hosted for the same reason as `python` above, and serial for the same
+    # reason. node 20 on aarch64 is a first-class setup-node target.
+    runs-on: [self-hosted, linux, arm64, ko]
     strategy:
       matrix:
         package: [sdk, mcp-proxy]
@@ -64,12 +71,11 @@ jobs:
     # can never block a merge, and its only job is to surface a disagreement between
     # the two environments. fail-fast: false stops either leg cancelling the other.
     #
-    # `server` goes first in this repo because it is the only SINGLE job here. The
-    # other two already carry matrices (3 python versions, 2 TS packages), and A3
-    # runs ONE ephemeral runner per repo -- a runner takes one job and deregisters --
-    # so adding a leg there turns 3 parallel hosted jobs into 6 serial ones. That is
-    # a capacity decision, not a correctness one, and it belongs in wave 2 with a
-    # measured runtime rather than in the change that introduces the runner.
+    # `server` carries the control leg, and it is the only job here that does. The
+    # other two jobs already fan out over a matrix, so a second dimension would both
+    # double their queue on a single serial runner and produce two jobs with the same
+    # display name. One honest comparison of the two environments is the point; six
+    # copies of it are not.
     strategy:
       fail-fast: false
       matrix:

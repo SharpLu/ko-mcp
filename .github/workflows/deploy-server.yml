@@ -10,7 +10,22 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # ko-bastion#115. On 2026-09-12 the account's Actions spending limit tripped and
+    # every workflow in SharpLu/* failed at job START with zero steps, for the whole
+    # day. A deploy path that can be stopped by a billing state nobody on the team
+    # can change is not a deploy path, so this runs on the A3 self-hosted ARM runner,
+    # whose minutes are not metered.
+    #
+    # Single leg, deliberately. The gates in ci.yml carry a `ubuntu-latest` control
+    # leg that is allowed to fail; a DEPLOY cannot. A second leg here would either
+    # deploy twice or be a leg whose failure means nothing -- which is just a deploy
+    # that silently did not happen. If the runner is down, this queues, and
+    # ko-bastion's dead-man monitor says so in #alerts within 5 minutes.
+    #
+    # Everything below is node, npx, curl and python3: no docker. That matters --
+    # `gh-runner` is deliberately NOT in the docker group on a box that holds the
+    # production Keeper #3 witness (ko-bastion/servers/runner/README.md).
+    runs-on: [self-hosted, linux, arm64, ko]
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -71,7 +86,10 @@ jobs:
     name: Discord notification
     needs: deploy
     if: always() && github.event_name == 'push'
-    runs-on: ubuntu-latest
+    # Also self-hosted: a notification that only arrives when Actions billing is
+    # healthy is a notification that goes missing exactly when it is needed. curl,
+    # jq and python3 are all present on A3.
+    runs-on: [self-hosted, linux, arm64, ko]
     steps:
       - name: Send Discord notification (#deploys)
         continue-on-error: true
