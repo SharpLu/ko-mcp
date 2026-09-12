@@ -125,3 +125,9 @@ if (defectsFixed.length) {
 
 if (bad) process.exit(1);
 console.log('\ngolden gate: contract intact.');
+// Exit EXPLICITLY. Falling off the end waits for the event loop to drain, and
+// on 2026-09-12 a surviving wrangler child kept this process alive for 25.9
+// minutes after this very line printed -- a deploy step that had already done
+// its job and reported success, blocking the lane with no signal at all.
+// Every failure path above calls process.exit; success must too.
+process.exit(0);

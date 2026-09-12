@@ -35,6 +35,14 @@ export async function startLocalWorker({ cwd = process.cwd(), readyTimeoutMs = 1
   const base = `http://127.0.0.1:${port}`;
   const log = [];
 
+  // detached: the process TREE is what has to die, not the process.
+  // `npx wrangler dev` is npx -> wrangler -> workerd (+ esbuild). Signalling the
+  // direct child reaps npx and leaves workerd holding the port and the pipes.
+  // On 2026-09-12 that kept a CI deploy step alive for 25.9 minutes AFTER the
+  // gate had printed "contract intact" in 7 seconds; the runner's own cleanup
+  // reported `Terminate orphan process: pid (2635) (npm run golden:gate)`.
+  // detached puts the child in its own process group so a negative pid signals
+  // the whole group.
   const child = spawn(
     'npx',
     ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(port)],
@@ -42,16 +50,29 @@ export async function startLocalWorker({ cwd = process.cwd(), readyTimeoutMs = 1
       cwd,
       env: { ...process.env, CI: 'true', WRANGLER_SEND_METRICS: 'false', FORCE_COLOR: '0' },
       stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     },
   );
   child.stdout.on('data', (d) => log.push(String(d)));
   child.stderr.on('data', (d) => log.push(String(d)));
+  // The parent must not be kept alive by this handle if stop() is ever missed.
+  child.unref();
 
   let stopped = false;
+  const signalGroup = (sig) => {
+    // Negative pid = the whole process group. Fall back to the direct child if
+    // the platform refuses (no process group, or it is already gone).
+    try { process.kill(-child.pid, sig); return; } catch { /* fall through */ }
+    try { child.kill(sig); } catch { /* already gone */ }
+  };
   const stop = () => {
     if (stopped) return;
     stopped = true;
-    try { child.kill('SIGTERM'); } catch { /* already gone */ }
+    signalGroup('SIGTERM');
+    // Escalate: a wrangler that ignores SIGTERM must not outlive the gate.
+    // unref'd so this timer alone can never hold the event loop open.
+    const hard = setTimeout(() => signalGroup('SIGKILL'), 5000);
+    if (typeof hard.unref === 'function') hard.unref();
   };
   child.on('exit', (code) => {
     if (!stopped) log.push(`\nwrangler dev exited early with code ${code}\n`);
