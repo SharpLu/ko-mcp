@@ -8,7 +8,16 @@ on:
 jobs:
   python:
     name: Python SDK (${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    # ko-bastion#115: self-hosted, so an Actions BILLING failure cannot stop this
+    # gate -- on 2026-09-12 the spending limit tripped and every job in SharpLu/*
+    # died at job start, all day.
+    #
+    # A3 runs ONE ephemeral runner per repo, so these three versions run SERIALLY
+    # rather than in parallel. That is the price of the independence and it is paid
+    # knowingly: each leg is a pip install plus ruff/mypy/pytest, ~1 minute. The
+    # control leg lives on `server` alone -- one comparison of the two environments
+    # is enough to catch a divergence, and six is just six times the queue.
+    runs-on: [self-hosted, linux, arm64, ko]
     strategy:
       matrix:
         python-version: ["3.9", "3.11", "3.13"]
@@ -31,7 +40,9 @@ jobs:
 
   typescript:
     name: TypeScript (${{ matrix.package }})
-    runs-on: ubuntu-latest
+    # Self-hosted for the same reason as `python` above, and serial for the same
+    # reason. node 20 on aarch64 is a first-class setup-node target.
+    runs-on: [self-hosted, linux, arm64, ko]
     strategy:
       matrix:
         package: [sdk, mcp-proxy]
@@ -52,7 +63,27 @@ jobs:
 
   server:
     name: MCP Server (mcp.ko.io worker)
-    runs-on: ubuntu-latest
+    # ko-bastion#115 wave 1. Primary leg on the A3 self-hosted ARM runner so an
+    # Actions BILLING failure cannot stop this gate -- on 2026-09-12 the spending
+    # limit tripped and every job in SharpLu/* died at job start, all day.
+    #
+    # The ubuntu-latest leg is a CONTROL, not a failover: continue-on-error means it
+    # can never block a merge, and its only job is to surface a disagreement between
+    # the two environments. fail-fast: false stops either leg cancelling the other.
+    #
+    # `server` carries the control leg, and it is the only job here that does. The
+    # other two jobs already fan out over a matrix, so a second dimension would both
+    # double their queue on a single serial runner and produce two jobs with the same
+    # display name. One honest comparison of the two environments is the point; six
+    # copies of it are not.
+    strategy:
+      fail-fast: false
+      matrix:
+        leg:
+          - { on: '["self-hosted","linux","arm64","ko"]', primary: true }
+          - { on: '["ubuntu-latest"]',                    primary: false }
+    runs-on: ${{ fromJSON(matrix.leg.on) }}
+    continue-on-error: ${{ !matrix.leg.primary }}
     defaults:
       run:
         working-directory: server
