@@ -25,6 +25,7 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 - **分支纪律**：永远 `git fetch && git switch -c <type>/<slug> origin/main`。一分支 = 一任务 = 一 PR，squash merge。
 - **部署**：
   - **server** = push `server/**` 到 main → `.github/workflows/deploy-server.yml`（`wrangler versions deploy 100%` + 部署后 `tools/list >= 24` 健康门）。没有手动部署这回事。
+    健康门失败 = **自动 rollback**：部署前先抓当前 serving 版本 id 并把 rollback 命令打进日志，失败后 `wrangler rollback <id>`（**不是** `wrangler versions rollback`，该子命令不存在）→ 重新跑健康门 → Discord `#deploys`。坏版本永不删除。运维细节见 `docs/deploy-rollback.md`。
   - **SDK（python + 2 个 npm 包）** = 发 GitHub Release 才 publish（`publish-python.yml` / `publish-npm.yml`，各自带 test 门：`pytest` / `npm test`）。
 - **`KO_API_URL = https://api.ko.io` 是正确的**——`api.ko.io` 本身就是地理路由 Worker（`api-geo-router`），不是某个 origin。**不要改成 origin IP / origin-api-eu 之类**。
 - **ko-api envelope**：ko-api 把响应包成 `{ data, meta }`；`koFetch` 自动剥掉顶层 `data`。**Int64/UInt64 列以字符串到达**（net_value / shares_held / holding_value…）。
@@ -96,7 +97,8 @@ curl -s -X POST https://mcp.ko.io/mcp -H 'content-type: application/json' \
 | `server/src/registry/tools.ts` | 24 个 tool → ko-api route/参数/plan 的唯一声明 | 新/改 tool 必改；异常表只许缩小 |
 | `server/src/registry/upstream/` | 按 blob SHA 钉住的 ko-api 快照（`pin.json` 是钉子） | 只能由 `registry:refresh-pin` 生成，不手改 |
 | `server/docs/GOLDEN_CONTRACT.md` | 黄金契约门：钉什么/不钉什么、两条防陈旧性质、已知缺陷注解、重录规程 | 改 tool 渲染前先读 §7 |
-| `.github/workflows/deploy-server.yml` | server 部署 + 部署前黄金契约门 + 健康门 | |
+| `.github/workflows/deploy-server.yml` | server 部署：部署前黄金契约门 → 捕获 rollback 目标 → upload → deploy → 健康门 + 自动 rollback | 逻辑在 `server/scripts/deploy-guard.mjs`，YAML 只是调用 |
+| `docs/deploy-rollback.md` | rollback runbook（自动化本身坏了怎么办） | wrangler 4.100.0 两个坑写在里面 |
 | `.github/workflows/publish-{python,npm}.yml` | SDK 发布（带 test 门） | |
 | `../ko-api/AGENTS.md` | serving 端点侧规范 | tool 代理到的路径以那边为准 |
 | `../CLAUDE.md`（KO 根） | 运维手册（服务器/集群/域名单一真相） | 基础设施问题先读它 |
