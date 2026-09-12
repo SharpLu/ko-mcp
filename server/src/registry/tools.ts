@@ -114,7 +114,7 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
     plan: 'free',
     planReason: 'apiKey; no free blockedPrefix',
     upstreamRoutes: [
-      { path: '/api/v1/institutions', method: 'GET', params: ['search', 'page', 'limit'], transport: 'koFetch', role: 'primary' },
+      { path: '/api/v1/institutions', method: 'GET', params: ['search', 'page', 'per_page'], transport: 'koFetch', role: 'primary' },
     ],
   },
 
@@ -182,12 +182,12 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
   {
     tool: 'get_insider_trades',
     file: 'src/tools/insiders.ts',
-    inputs: ['ticker', 'executive_cik', 'limit'],
-    paginationInputs: ['limit'],
+    inputs: ['ticker', 'executive_cik', 'page', 'limit'],
+    paginationInputs: ['page', 'limit'],
     plan: 'free',
     planReason: 'apiKey; no free blockedPrefix',
     upstreamRoutes: [
-      { path: '/api/v1/executive-trades/:ticker', method: 'GET', params: ['limit', 'executive_cik'], transport: 'koFetch', role: 'primary' },
+      { path: '/api/v1/executive-trades/:ticker', method: 'GET', params: ['page', 'per_page', 'executive_cik'], transport: 'koFetch', role: 'primary' },
     ],
   },
   {
@@ -198,7 +198,7 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
     plan: 'free',
     planReason: 'apiKey; no free blockedPrefix',
     upstreamRoutes: [
-      { path: '/api/v1/insider-trades', method: 'GET', params: ['search', 'role', 'page', 'limit'], transport: 'koFetch', role: 'primary' },
+      { path: '/api/v1/insider-trades', method: 'GET', params: ['search', 'role', 'page', 'per_page'], transport: 'koFetch', role: 'primary' },
     ],
   },
 
@@ -226,7 +226,7 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
     plan: 'free',
     planReason: 'apiKey; no free blockedPrefix',
     upstreamRoutes: [
-      { path: '/api/v1/congress-trades/:member', method: 'GET', params: ['type', 'page', 'limit'], transport: 'koFetch', role: 'primary' },
+      { path: '/api/v1/congress-trades/:member', method: 'GET', params: ['type', 'page', 'per_page'], transport: 'koFetch', role: 'primary' },
     ],
   },
 
@@ -325,34 +325,34 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
   {
     tool: 'get_economic_indicators',
     file: 'src/tools/macro.ts',
-    inputs: ['category', 'days'],
-    paginationInputs: [],
+    inputs: ['category', 'days', 'page', 'limit'],
+    paginationInputs: ['page', 'limit'],
     plan: 'paid',
     planReason: 'PLAN_GATES.free.blockedPrefixes contains /api/v1/economic',
     upstreamRoutes: [
-      { path: '/api/v1/economic/indicators', method: 'GET', params: ['category', 'days'], transport: 'koFetch', role: 'primary' },
+      { path: '/api/v1/economic/indicators', method: 'GET', params: ['category', 'days', 'page', 'per_page'], transport: 'koFetch', role: 'primary' },
     ],
   },
   {
     tool: 'get_ftd_data',
     file: 'src/tools/macro.ts',
-    inputs: ['ticker', 'days'],
-    paginationInputs: [],
+    inputs: ['ticker', 'days', 'page', 'limit'],
+    paginationInputs: ['page', 'limit'],
     plan: 'free',
     planReason: 'apiKey; /api/v1/sec is NOT a free blockedPrefix (only /sec/13dg, /sec/form-d, /sec/buybacks are)',
     upstreamRoutes: [
-      { path: '/api/v1/sec/ftd', method: 'GET', params: ['ticker', 'days'], transport: 'koFetch', role: 'primary' },
+      { path: '/api/v1/sec/ftd', method: 'GET', params: ['ticker', 'days', 'page', 'per_page'], transport: 'koFetch', role: 'primary' },
     ],
   },
   {
     tool: 'get_financial_stress',
     file: 'src/tools/macro.ts',
-    inputs: ['days'],
-    paginationInputs: [],
+    inputs: ['days', 'page', 'limit'],
+    paginationInputs: ['page', 'limit'],
     plan: 'paid',
     planReason: 'PLAN_GATES.free.blockedPrefixes contains /api/v1/stress',
     upstreamRoutes: [
-      { path: '/api/v1/stress/ofr', method: 'GET', params: ['days'], transport: 'koFetch', role: 'primary' },
+      { path: '/api/v1/stress/ofr', method: 'GET', params: ['days', 'page', 'per_page'], transport: 'koFetch', role: 'primary' },
     ],
   },
 
@@ -429,29 +429,20 @@ export interface InertParam {
  */
 export const INERT_PARAMS: readonly InertParam[] = [
   // -- inert row counts (ko-bastion#126) -----------------------------------
-  {
-    tool: 'list_institutions', path: '/api/v1/institutions', param: 'limit', issue: 'ko-bastion#126',
-    why: 'route reads only per_page -> always 50 rows, and the "next page" hint keys off rows.length === limit, so it lies in both directions',
-  },
+  //
+  // The four PRIMARY legs that used to be here -- list_institutions,
+  // get_insider_trades, list_insider_traders, get_congress_member -- now send
+  // `per_page`, which is the name their routes read, so their entries are gone.
+  // What is left is the one leg that is NOT a rendered truncation: resolve.ts's
+  // internal candidate lookup, shared by the two tools that accept a free-text
+  // institution name.
   {
     tool: 'get_institution_holdings', path: '/api/v1/institutions', param: 'limit', issue: 'ko-bastion#126',
-    why: 'resolve.ts asks for 5 candidates and gets 50; it then uses matches[0], so the cost is bandwidth, not correctness',
+    why: 'resolve.ts asks for 5 candidates and gets 50; it then uses matches[0], so the cost is bandwidth, not correctness. NOT fixed with the rest: /api/v1/institutions orders by portfolio_value DESC, so honouring the 5 would SHRINK the candidate set and could change which institution a free-text name resolves to. That is a behaviour change needing its own evidence, and no fixture covers the name path today',
   },
   {
     tool: 'get_crypto_holder', path: '/api/v1/institutions', param: 'limit', issue: 'ko-bastion#126',
     why: 'same resolve.ts leg as get_institution_holdings',
-  },
-  {
-    tool: 'get_insider_trades', path: '/api/v1/executive-trades/:ticker', param: 'limit', issue: 'ko-bastion#126',
-    why: 'route reads only per_page -> always 50 rows; the tool then renders "Showing 50 of 50"',
-  },
-  {
-    tool: 'list_insider_traders', path: '/api/v1/insider-trades', param: 'limit', issue: 'ko-bastion#126',
-    why: 'route reads only per_page -> always 50 rows',
-  },
-  {
-    tool: 'get_congress_member', path: '/api/v1/congress-trades/:member', param: 'limit', issue: 'ko-bastion#126',
-    why: 'route reads only per_page -> always 50 rows',
   },
 
   // -- false filters (ko-bastion#125 class) --------------------------------
@@ -502,18 +493,15 @@ export interface SilentTruncation {
  * covered by INERT_PARAMS instead, so a defect appears in exactly one table.
  */
 export const SILENT_TRUNCATIONS: readonly SilentTruncation[] = [
-  {
-    tool: 'get_ftd_data', path: '/api/v1/sec/ftd', issue: 'ko-bastion#126',
-    why: 'measured: {GME, days:1825} renders 50 rows out of total_count 1025, with no notice and no page input',
-  },
-  {
-    tool: 'get_economic_indicators', path: '/api/v1/economic/indicators', issue: 'ko-bastion#126',
-    why: 'same shape as get_ftd_data; inferred from the handler, not measured (the route is Pro-gated and this audit had no paid key)',
-  },
-  {
-    tool: 'get_financial_stress', path: '/api/v1/stress/ofr', issue: 'ko-bastion#126',
-    why: 'same shape as get_ftd_data; inferred from the handler, not measured (Pro-gated)',
-  },
+  // EMPTY, and that is the assertion. The three entries that lived here --
+  // get_ftd_data, get_economic_indicators, get_financial_stress -- each called a
+  // paginated route with no row-count param at all and were handed the upstream
+  // 50-row default (measured: {GME, days:1825} rendered 50 rows of a
+  // total_count of 1,025, with no notice and no page input). All three now take
+  // `page` + `limit` and send `page` + `per_page`, and each says so when a page
+  // comes back full. Gate (e) keeps this table empty: a tool that starts calling
+  // a paginated route without a row count fails there rather than landing a new
+  // entry here.
 ];
 
 export interface BehaviouralDefect {

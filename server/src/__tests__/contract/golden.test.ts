@@ -259,7 +259,12 @@ describe("known defects are annotated, never pinned", () => {
   const annotated = allCases.filter(({ c }) => c.knownDefect);
 
   it("every annotation names an issue or an audit section and gives a real reason", () => {
-    expect(annotated.length).toBeGreaterThanOrEqual(7);
+    // Was 7 at capture. ko-bastion#126 retired 4 of them -- the three inert-`limit`
+    // cases and get_ftd_data's silent-truncation case -- by fixing the bug and
+    // re-pinning the corrected rendering, which is the only way an annotation is
+    // ever allowed to leave this set. The floor only moves DOWN, and only in the
+    // PR that fixes the defect it was describing.
+    expect(annotated.length).toBeGreaterThanOrEqual(3);
     const bad: string[] = [];
     for (const { fixture, c } of annotated) {
       const d = c.knownDefect!;
@@ -270,11 +275,16 @@ describe("known defects are annotated, never pinned", () => {
     expect(bad, bad.join("\n")).toEqual([]);
   });
 
-  it("all four audited defects are represented", () => {
+  it("the still-open audited defects are represented, and the fixed one is not", () => {
     const issues = new Set(annotated.map(({ c }) => c.knownDefect!.issue));
     expect([...issues].some((i) => i.includes("#125"))).toBe(true); // search silently dropped
-    expect([...issues].some((i) => i.includes("#126"))).toBe(true); // limit inert / days truncation
     expect([...issues].some((i) => i.includes("warning 5"))).toBe(true); // headed empty table
+    // ko-bastion#126 (inert `limit` / silent days-window truncation) is FIXED, so
+    // no fixture may still claim it is live. Asserting its ABSENCE is the same
+    // trick the annotations themselves use, pointed the other way: a fixture that
+    // starts annotating #126 again is either a regression someone papered over or
+    // a stale annotation, and both should fail here rather than read as normal.
+    expect([...issues].some((i) => i.includes("#126"))).toBe(false);
     // ko-bastion#127 (no timeout) was never annotated -- it has no signature in
     // a response body, only in latency -- and its case was excluded instead.
     // Now that koFetch is bounded, the case is PINNED rather than excluded, and
