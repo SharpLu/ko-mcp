@@ -53,13 +53,18 @@ export const EXCLUDED = {
     'it would pin a data state that flips the moment SEC publishes one, and the gate would go red on a ' +
     'change in the world rather than a change in the contract. The populated-table contract for this tool ' +
     'is carried by the `truncation` case instead, which asks for the full 1825-day window.',
-  'sec_get_filing_index.empty-first-recording':
-    'The M0 recording for this case is a 502 reached after 60.2 seconds (ko-bastion#127: koFetch has no ' +
-    'timeout, so an EDGAR miss blocks the caller past the 30s budget the upstream route declares). A 5xx ' +
-    'must never become a golden contract -- it pins an outage -- and a 60s case would dominate the gate ' +
-    'budget. The SECOND recording of the same input, `empty2`, is the 404 that this input is supposed to ' +
-    'produce, and that is the body the `empty` case below pins (see its recordedAs field). What is ' +
-    'excluded here is the first recording, not the case.',
+  'sec_get_filing_index.empty':
+    'NOT PINNABLE: the error CLASS this input produces is nondeterministic upstream. The same well-formed ' +
+    'but nonexistent accession returned a 404 in one M0 recording and a 502-after-60.2s in another, and on ' +
+    '2026-09-12 it blocked a main deploy by moving 404 -> 502 between the local run and CI (run 34711440107, ' +
+    'the gate step, with Upload and Deploy correctly skipped). Re-pinning to the 502 would only invert the ' +
+    'flake; keeping the 404 makes a green gate a statement about which way the coin landed. That is the ' +
+    'ko-api#236 `meta.cached` disease -- a contract graded on an environmental condition rather than on ' +
+    'code -- reappearing inside this gate\'s own fixtures, so it is excluded rather than tolerated. ' +
+    'ROOT CAUSE ko-bastion#127: koFetch has no timeout, so an EDGAR miss sometimes blocks past the 30s ' +
+    'budget the upstream route declares and surfaces as a 5xx instead of the 404 the input deserves. ' +
+    'WHEN #127 SHIPS this case becomes deterministic and should be re-pinned -- the `error` and `normal` ' +
+    'cases for this tool stay pinned meanwhile, so the tool is not uncovered.',
 };
 
 /**
@@ -246,10 +251,6 @@ export const CASES = [
     cases: [
       { name: 'normal', arguments: { cik: APPLE_CIK, accession_no: APPLE_10K },
         why: 'The file index of an immutable EDGAR filing.' },
-      { name: 'empty', arguments: { cik: APPLE_CIK, accession_no: '0000000000-00-000000' },
-        recordedAs: 'empty2',
-        why: 'A well-formed accession that does not exist -> 404. Pinned from the SECOND recording of this ' +
-             'input; the first is the 60.2s/502 that ko-bastion#127 describes and is excluded above.' },
       { name: 'error', arguments: { cik: APPLE_CIK }, why: 'Required `accession_no` missing.' },
     ],
   },
