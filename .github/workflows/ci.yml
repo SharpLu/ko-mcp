@@ -67,3 +67,50 @@ jobs:
         run: npm run type-check
       - name: Test
         run: npm test
+
+  # Added by the M2 tool-registry PR. Kept as its own job so it can fail on its
+  # own terms: the `server` job answers "does the worker build and pass tests",
+  # this one answers "does what the tools send still match what ko-api reads".
+  registry:
+    name: Tool registry + ko-api pin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Optional: a real ko-api checkout turns the drift check from a warning
+      # into a blocking comparison. ko-api is private and this repo's CI has no
+      # guaranteed credential for it, so the step must not be required to exist.
+      - name: Check out ko-api (optional, enables the drift check)
+        id: ko_api
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: SharpLu/ko-api
+          path: ko-api-upstream
+          token: ${{ secrets.KO_API_READ_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        working-directory: server
+        run: npm ci
+
+      # Offline and blocking: pin integrity (snapshot bytes hash to the recorded
+      # blob SHA), pin age, tool completeness, behaviour, route existence, param
+      # contract, truncation contract, plan gating, known-defect assertions.
+      - name: Registry gates
+        working-directory: server
+        run: npm test -- src/__tests__/registry
+
+      - name: ko-api pin drift
+        working-directory: server
+        run: |
+          if [ -d "$GITHUB_WORKSPACE/ko-api-upstream/.git" ]; then
+            KO_API_REPO="$GITHUB_WORKSPACE/ko-api-upstream" npm run registry:check-upstream
+          else
+            echo "::warning title=ko-api pin not verified::No ko-api checkout (set the KO_API_READ_TOKEN secret). Drift against ko-api origin/main was NOT checked in this run; the offline pin-age gate above is the only staleness signal."
+            npm run registry:check-upstream -- --allow-missing-repo
+          fi

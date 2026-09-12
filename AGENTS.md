@@ -51,14 +51,15 @@ Claude Code 用户可用 `/new-tool` skill（同一内容的快捷入口）。
 
 1. **核对 ko-api 路径**：tool 要代理的 `/api/v1/...` 在 ko-api 存在且 live——**先 curl 一次**（`https://api.ko.io/api/v1/... ?demo=true` 或带 key）。路径不对/没上线，别写 tool（铁律 #3）。
 2. **写 tool**：在 `server/src/tools/<area>.ts` 加 `server.tool(name, desc, schema, handler)`。金额/份额字段先 `num()` 再 `fmt*`（铁律 #2）；列表响应做 `Array.isArray()` 双形态分支（铁律 #5）。
-3. **更新 24-count 契约**：把新 tool 加进 `tools-proxy.test.ts` 的 `EXPECTED_TOOLS` 并改数字断言（铁律 #1）。
+3. **登记注册表 + 24-count 契约**：把新 tool 加进 `server/src/registry/tools.ts` 的 `TOOL_REGISTRY`（上游 route / 参数 / plan）和 `src/__tests__/registry/probes.ts` 的 `PROBES`，再加进 `tools-proxy.test.ts` 的 `EXPECTED_TOOLS` 并改数字断言（铁律 #1）。注册表的门会告诉你缺什么：**tool 发出而上游 handler 不读的参数 = 红门**（不是注释）。
 4. **写单测**：`vi.mock("../ko-fetch.js")`，断言代理路径 + 参数 + 渲染（`crypto.test.ts` / `stocks.test.ts` 是模板）。禁触网（铁律 #6）。
 5. **本地门 + 部署后实测**：`server` 目录 `npm run type-check && npm test` 全绿 → merge `server/**` → deploy-server.yml 跑 `tools/list>=24` 健康门 → 对 live mcp.ko.io 打一次该 tool（铁律 #7）。
 
 ## 5. Definition of Done（全部勾完才算完成）
 
 - [ ] 代码 + 测试同一个 PR；改动包各自的门全绿（`server`: `npm run type-check` + `npm test`；`python`: `ruff`+`mypy`+`pytest`；`typescript/*`: `npm run build`+`npm test`）
-- [ ] 新/改/删 tool：`tools-proxy.test.ts` 的 24-count 契约已同步（铁律 #1）
+- [ ] 新/改/删 tool：`src/registry/tools.ts` 注册表 + `probes.ts` 探针 + `tools-proxy.test.ts` 的 24-count 契约全部同步（铁律 #1）
+- [ ] 触碰上游契约时：`npm test -- src/__tests__/registry` 全绿；改了 ko-api 侧 route/参数则 `KO_API_REPO=../ko-api npm run registry:refresh-pin` 重钉并在 PR 里贴 diff
 - [ ] 新/改 tool 的 ko-api 路径已 curl 实测（铁律 #3/#7），证据贴 PR
 - [ ] 版本齐步（server.json + package.json；SDK 三包同版本）（铁律 #8）
 - [ ] 教训回写：普适 → 本文件 §3 加一行；能机器化 → 加守卫测试
@@ -90,6 +91,8 @@ curl -s -X POST https://mcp.ko.io/mcp -H 'content-type: application/json' \
 | 本文件 | 铁律 + 入口 | 每个 session 开始读 |
 | `CLAUDE.md` | 指向本文件的薄壳 | 别往里加规则 |
 | `server/README.md` | worker / tool 说明 | 新 tool 同步 |
+| `server/src/registry/tools.ts` | 24 个 tool → ko-api route/参数/plan 的唯一声明 | 新/改 tool 必改；异常表只许缩小 |
+| `server/src/registry/upstream/` | 按 blob SHA 钉住的 ko-api 快照（`pin.json` 是钉子） | 只能由 `registry:refresh-pin` 生成，不手改 |
 | `.github/workflows/deploy-server.yml` | server 部署 + 健康门 | |
 | `.github/workflows/publish-{python,npm}.yml` | SDK 发布（带 test 门） | |
 | `../ko-api/AGENTS.md` | serving 端点侧规范 | tool 代理到的路径以那边为准 |
