@@ -1,6 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../ko-fetch.js', () => ({ koFetch: vi.fn() }));
+// Mock ONLY the transport. Spreading importActual keeps the module's real
+// constants (KO_FETCH_TIMEOUT_MS) and classes (KoTimeoutError) in place: a
+// factory that lists exports by hand silently yields `undefined` for any new
+// one, which is how the ko-bastion#127 timeout constant first read as undefined
+// inside filings.ts and made a declared upstream leg vanish from this gate.
+vi.mock('../../ko-fetch.js', async () => ({
+  ...(await vi.importActual<typeof import('../../ko-fetch.js')>('../../ko-fetch.js')),
+  koFetch: vi.fn(),
+}));
 import { koFetch } from '../../ko-fetch.js';
 
 import koFetchSource from '../../ko-fetch.ts?raw';
@@ -41,20 +49,29 @@ describe('registry gate (g): declared defects still exist', () => {
       'error-passthrough-contradicts-comment',
       'filing-document-plan-undeclared',
       'headed-empty-table',
-      'no-timeout',
+      // 'no-timeout' retired when ko-bastion#127 shipped; the assertion below
+      // now guards the FIX rather than the defect.
     ]);
   });
 
-  it('no-timeout: ko-fetch.ts still has no timeout, retry or breaker', () => {
-    const d = defect('no-timeout');
-    const hits = ['AbortSignal', 'AbortController', 'setTimeout', 'timeout', 'retry']
-      .filter((needle) => new RegExp(needle, 'i').test(koFetchSource));
-    expect(
-      hits,
-      `ko-fetch.ts now mentions ${hits.join('/')}. If the fetch is bounded at last, delete the ` +
-      `"${d.id}" entry from BEHAVIOURAL_DEFECTS and close ${d.issue}. Measured before the fix: ` +
-      'a single call blocked 60,222 ms against an upstream route whose declared timeout is 30 s.',
-    ).toEqual([]);
+  /**
+   * The inverse of the gate that used to stand here (ko-bastion#127).
+   *
+   * Until 2026-09-12 this asserted the DEFECT: that ko-fetch.ts mentioned no
+   * AbortSignal, so fixing it would fail here and force the fixer to retire the
+   * entry. It has been retired, and the same assertion is now turned around to
+   * guard the fix -- a future edit that deletes the bound puts the 60,222 ms
+   * hang back and must fail here rather than pass quietly.
+   */
+  it('the fetch is bounded, and bounded below the upstream budget', async () => {
+    expect(BEHAVIOURAL_DEFECTS.find((d) => d.id === 'no-timeout')).toBeUndefined();
+    expect(koFetchSource).toMatch(/AbortSignal\.timeout\(/);
+    const { KO_FETCH_TIMEOUT_MS } = await vi.importActual<typeof import('../../ko-fetch.js')>('../../ko-fetch.js');
+    // The upstream ko-api `filings` route declares timeoutMs: 30000. Ours must
+    // fire first or we inherit its failure instead of naming our own.
+    expect(KO_FETCH_TIMEOUT_MS).toBeLessThan(30_000);
+    // ...and must clear the slowest healthy call ever measured, 1,050 ms.
+    expect(KO_FETCH_TIMEOUT_MS).toBeGreaterThan(1_050 * 5);
   });
 
   it('error-passthrough: the comment and the code still contradict each other', () => {

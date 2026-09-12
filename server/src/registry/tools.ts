@@ -526,12 +526,12 @@ export interface BehaviouralDefect {
 
 /** Known non-param defects, each asserted to still exist by gate (g). */
 export const BEHAVIOURAL_DEFECTS: readonly BehaviouralDefect[] = [
-  {
-    id: 'no-timeout',
-    issue: 'ko-bastion#127',
-    what: 'ko-fetch.ts calls fetch() with no AbortSignal, no retry, no breaker, while the pinned ko-api registry declares timeoutMs 20000-30000 for these routes. Measured worst case: 60,222 ms before a 502.',
-    stillTrue: 'src/ko-fetch.ts contains no AbortSignal / timeout / retry',
-  },
+  // RETIRED 2026-09-12 -- 'no-timeout' (ko-bastion#127). koFetch now bounds every
+  // call with AbortSignal.timeout(KO_FETCH_TIMEOUT_MS = 20s), under the 30s the
+  // upstream route declares, and raises KoTimeoutError instead of inheriting a
+  // 5xx. The measured 60,222 ms worst case is no longer reachable. Retry and
+  // breaker are still absent and deliberately so: a retry on a 20s budget doubles
+  // the client's wait, and there is nothing here to trip a breaker on yet.
   {
     id: 'error-passthrough-contradicts-comment',
     issue: null,

@@ -275,10 +275,11 @@ describe("known defects are annotated, never pinned", () => {
     expect([...issues].some((i) => i.includes("#125"))).toBe(true); // search silently dropped
     expect([...issues].some((i) => i.includes("#126"))).toBe(true); // limit inert / days truncation
     expect([...issues].some((i) => i.includes("warning 5"))).toBe(true); // headed empty table
-    // ko-bastion#127 (no timeout) is deliberately NOT annotated: it has no
-    // signature in a response body, only in latency. Its one recording, the
-    // 60.2s/502, is excluded rather than pinned.
-    expect(Object.keys(EXCLUDED)).toContain("sec_get_filing_index.empty");
+    // ko-bastion#127 (no timeout) was never annotated -- it has no signature in
+    // a response body, only in latency -- and its case was excluded instead.
+    // Now that koFetch is bounded, the case is PINNED rather than excluded, and
+    // this asserts the exclusion is gone so it cannot quietly come back.
+    expect(Object.keys(EXCLUDED)).not.toContain("sec_get_filing_index.empty");
   });
 
   it("a probe passes while the defect is present and FAILS once it is fixed", () => {
@@ -335,15 +336,16 @@ describe("exclusions", () => {
     expect(both, `excluded and pinned at the same time:\n${both.join("\n")}`).toEqual([]);
   });
 
-  it("there are exactly the three exclusions the audit accounts for", () => {
+  it("there are exactly the two structural exclusions left", () => {
+    // Was three. `sec_get_filing_index.empty` came back on 2026-09-12 when
+    // ko-bastion#127 bounded koFetch: the 404-vs-502 split it was excluded for
+    // was an unbounded wait, not a property of the input, and a bounded proxy
+    // answers 404 or names its own timeout -- never an inherited 5xx. The two
+    // that remain are structural (a tool with no empty input; a result that
+    // depends on what SEC published), not flakes waiting on a fix.
     expect(Object.keys(EXCLUDED).sort()).toEqual([
       "get_crypto_exposure.empty",
       "get_ftd_data.normal",
-      // Widened from `.empty-first-recording` to the whole case on 2026-09-12:
-      // the 404-vs-502 split is not a bad recording, it is a nondeterministic
-      // error class, and it blocked a main deploy (run 34711440107) by moving
-      // between the local run and CI. See the reason string in cases.mjs.
-      "sec_get_filing_index.empty",
     ]);
   });
 });

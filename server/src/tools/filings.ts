@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { koFetch, type KoConfig } from "../ko-fetch.js";
+import { koFetch, KO_FETCH_TIMEOUT_MS, type KoConfig } from "../ko-fetch.js";
 
 /**
  * SEC source-document gateway tools (ko-api#104).
@@ -121,10 +121,14 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
           const mdUrl = new URL(`${base}${file ? `?file=${encodeURIComponent(file)}&` : "?"}format=markdown`, config.baseUrl);
           // No key -> demo mode (mirror ko-fetch); without it the excerpt 401s.
           if (!config.apiKey) mdUrl.searchParams.set("demo", "true");
+          // The one raw fetch in the tool layer. It gets the same bound as
+          // koFetch (ko-bastion#127): an excerpt that never arrives must not be
+          // able to hold the whole tool call open past the upstream's budget.
           const res = await fetch(mdUrl.toString(), {
             headers: config.apiKey
               ? { Authorization: `Bearer ${config.apiKey}`, "User-Agent": "ko-mcp-worker/1.0" }
               : { "User-Agent": "ko-mcp-worker/1.0" },
+            signal: AbortSignal.timeout(KO_FETCH_TIMEOUT_MS),
           });
           if (res.ok) {
             const text = await res.text();

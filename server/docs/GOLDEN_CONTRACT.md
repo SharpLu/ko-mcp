@@ -105,7 +105,7 @@ skeleton records which lines exist and in what order.
 | tools covered | 24 / 24 (`tools/list` returns 24; the deploy check asserts `>= 24`) |
 | fixture files | 24, one per tool, in `src/contract/golden/` |
 | replayed cases | 71 |
-| excluded cases | 3, each with a written reason (below) |
+| excluded cases | 2, each with a written reason (below) |
 | annotated known defects | 7 cases across 3 defects |
 | offline tests added | 37 (suite total 77 -> 114) |
 | plan-gated tools pinning a 403 rather than data | 4 |
@@ -131,11 +131,15 @@ issue, forcing a deliberate re-pin. A silent re-pin is unreachable.
 | `list_institutions.empty` | audit §3 warning 5 (no issue filed) | `headerWithoutRows` | the empty result became a soft sentence; re-pin |
 | `get_congress_member.empty` | audit §3 warning 5 (no issue filed) | `headerWithoutRows` | same |
 
-**ko-bastion#127 (no timeout / no retry / no circuit breaker) is deliberately
-not annotated.** It has no signature in a response body, only in latency: the
-same input produced a 60.2 s 502 once and a 404 the next time. Its one recording
-is excluded rather than pinned (below). A latency budget belongs in the SLO wave,
-not here.
+**ko-bastion#127 (no timeout) was never annotated, and is now FIXED.** It had no
+signature in a response body, only in latency: the same input produced a 60.2 s
+502 once and a 404 the next time, so its case was excluded rather than pinned.
+`koFetch` is now bounded at `KO_FETCH_TIMEOUT_MS` = 20 s -- under the 30 s the
+upstream ko-api route declares, ~19x the slowest healthy call ever measured
+(1,050 ms) -- and a stall raises `KoTimeoutError`, which reads as OUR limit and
+never as a `ko.io API error (5xx)`. `sec_get_filing_index.empty` is pinned again
+as a result. Retry and circuit breaking remain out of scope and belong to the SLO
+wave.
 
 `npm test` enforces the annotations: every one must name an issue or an audit
 section, carry a summary of real length, and carry a probe -- an annotation
@@ -148,10 +152,18 @@ section exists to prevent.
 |---|---|
 | `get_crypto_exposure.empty` | **Cannot be constructed.** The tool's input schema is `{}` and it always returns the whole spot-ETF complex, so no input yields an empty result. A structural absence, not a coverage gap -- the same reason the M0 set has 75 files and not 76. |
 | `get_ftd_data.normal` | The recorded "normal" call (`{ticker: GME}`, default 90-day window) returned `No FTD data found for GME.` -- an **empty result**, because SEC had published no GME fails-to-deliver inside 90 days that day. Pinning it would pin a data state that flips the moment SEC publishes one, and the gate would go red on a change in the world. This tool's populated-table contract is carried by its `truncation` case instead. |
-| `sec_get_filing_index.empty-first-recording` | The first recording of this input is a **502 reached after 60.2 seconds** (ko-bastion#127). A 5xx must never become a golden contract -- it pins an outage -- and a 60 s case would dominate the gate's wall clock. The second recording of the same input is the 404 the input is supposed to produce, and that is what the `empty` case pins (see its `recordedAs` field). |
 
 `npm test` requires every exclusion to name a real tool, give a reason of real
-length, and *not* also appear as a pinned case.
+length, and *not* also appear as a pinned case. It also pins the exclusion list
+itself, so an exclusion cannot be added or dropped without saying why here.
+
+**Retired 2026-09-12: `sec_get_filing_index.empty`.** It was excluded because the
+error CLASS the input produced was nondeterministic -- a 404 in one M0 recording,
+a 502-after-60.2 s in another, and a 404 -> 502 move between a local run and CI
+that blocked a main deploy (run 34711440107). That was an unbounded wait, not a
+property of the input. With `koFetch` bounded (ko-bastion#127) the call either
+answers 404 or raises this proxy's own named timeout, so the case is pinned
+again.
 
 ## 6. The 4 plan-gated tools pin a GATE, not data
 
@@ -269,9 +281,10 @@ committed.
 
 - **The data path of the 4 plan-gated tools** (§6). Needs a paid key.
 - **`resolveInstitution` by name** (§8).
-- **Latency, timeouts and retries** -- ko-bastion#127. The gate has a 90 s
-  per-call ceiling so a hang cannot wedge CI, but it makes no assertion about
-  how long a call should take. That belongs to the SLO wave.
+- **Latency, retries and circuit breaking.** `koFetch` is bounded at 20 s since
+  ko-bastion#127, and the gate has a 90 s per-call ceiling so a hang cannot wedge
+  CI, but neither asserts how long a call SHOULD take. Per-tool p95, retry policy
+  and a breaker belong to the SLO wave.
 - **Anything beyond the free/demo tier.** The Worker under test carries no key,
   so every case goes to ko-api as `?demo=true`.
 - **That the pinned rendering is *correct*.** It pins what the tools render

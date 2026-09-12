@@ -3,9 +3,9 @@
   "planGated": false,
   "capturedAt": "2026-09-12",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:64236",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -35,8 +35,8 @@
         "blocks": [
           {
             "lines": [
-              "H2 Filing <ACCESSION> \u2014 CIK <VAL>",
-              "TEXT <VAL> files \u00b7 Source: SEC EDGAR*",
+              "H2 Filing <ACCESSION> — CIK <VAL>",
+              "TEXT <VAL> files · Source: SEC EDGAR*",
               "BLANK",
               "THEAD File | Type | Size",
               "TBODY"
@@ -51,6 +51,41 @@
                 "dataRows": 93
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "cik": "320193",
+        "accession_no": "0000000000-00-000000"
+      },
+      "why": "RE-PINNED 2026-09-12 when ko-bastion#127 shipped. This case was excluded because its error CLASS was nondeterministic: the same well-formed but nonexistent accession returned a 404 in one M0 recording and a 502-after-60.2s in another, and on 2026-09-12 it blocked a main deploy by moving 404 -> 502 between the local run and CI (run 34711440107). The cause was that koFetch waited without a bound, so a stalled EDGAR miss surfaced as somebody else's 5xx instead of the 404 the input deserves. koFetch is now bounded at 20s, under the 30s the upstream route declares, and a stall raises KoTimeoutError -- named, ours, and never a `ko.io API error (5xx)` line that this file could mistake for a contract.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (404): Not found: SEC did not publish: <URL>"
+            ],
+            "tables": []
           }
         ]
       }
