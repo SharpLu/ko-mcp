@@ -1,0 +1,363 @@
+{
+  "_comment": "DERIVED from ko-api at the commit in pin.json -- do not hand-edit; src/__tests__/registry/upstream-pin.test.ts hashes this file and compares it with pin.json.contractSha256. Regenerate with: npm run registry:refresh-pin.",
+  "koApiRepo": "SharpLu/ko-api",
+  "koApiCommit": "97718c4b07e6d69c63fae9983cafd093f7f4bd26",
+  "sourceRouteCount": 123,
+  "freeBlockedPrefixes": [
+    "/api/v1/treasury",
+    "/api/v1/fed",
+    "/api/v1/economic",
+    "/api/v1/cftc",
+    "/api/v1/fdic",
+    "/api/v1/stress",
+    "/api/v1/energy",
+    "/api/v1/bulk/",
+    "/api/v1/sec/13dg",
+    "/api/v1/sec/form-d",
+    "/api/v1/sec/buybacks"
+  ],
+  "routes": {
+    "GET /api/v1/institutions": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "category",
+        "page",
+        "per_page",
+        "search"
+      ]
+    },
+    "GET /api/v1/holdings/:cik": {
+      "auth": "apiKey",
+      "cache": "quarterly",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 30000,
+      "readParams": [
+        "action",
+        "consolidate_share_classes",
+        "include",
+        "page",
+        "per_page",
+        "quarter",
+        "raw_share_classes",
+        "scope",
+        "search",
+        "single_entity",
+        "ticker",
+        "trades_only",
+        "type"
+      ]
+    },
+    "GET /api/v1/stocks/:ticker": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": []
+    },
+    "GET /api/v1/stocks/:ticker/financials/historical": {
+      "auth": "apiKey",
+      "cache": "static",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": []
+    },
+    "GET /api/v1/stock-holders/:ticker": {
+      "auth": "apiKey",
+      "cache": "quarterly",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": [
+        "action",
+        "excludeCik",
+        "include_options",
+        "limit",
+        "page",
+        "per_page",
+        "quarter",
+        "quarters",
+        "type"
+      ]
+    },
+    "GET /api/v1/stock-price/:ticker": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "days",
+        "end_date",
+        "page",
+        "per_page",
+        "start_date"
+      ]
+    },
+    "GET /api/v1/executive-trades/:ticker": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "action",
+        "page",
+        "per_page"
+      ]
+    },
+    "GET /api/v1/insider-trades": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "include",
+        "page",
+        "per_page",
+        "period",
+        "role",
+        "ticker"
+      ]
+    },
+    "GET /api/v1/congress-trades": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "chamber",
+        "limit",
+        "page",
+        "per_page",
+        "search",
+        "sort",
+        "ticker"
+      ]
+    },
+    "GET /api/v1/congress-trades/:member": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "page",
+        "per_page"
+      ]
+    },
+    "GET /api/v1/search": {
+      "auth": "apiKey",
+      "cache": "realtime",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": [
+        "limit",
+        "q"
+      ]
+    },
+    "GET /api/v1/form144-notices": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "cik",
+        "page",
+        "per_page",
+        "ticker"
+      ]
+    },
+    "GET /api/v1/filings/:cik": {
+      "auth": "apiKey",
+      "cache": "none",
+      "pagination": null,
+      "timeoutMs": 30000,
+      "readParams": [
+        "form",
+        "from",
+        "limit",
+        "to"
+      ]
+    },
+    "GET /api/v1/filings/:cik/:accession": {
+      "auth": "apiKey",
+      "cache": "none",
+      "pagination": null,
+      "timeoutMs": 30000,
+      "readParams": []
+    },
+    "GET /api/v1/filings/:cik/:accession/share": {
+      "auth": "apiKeyPaid",
+      "cache": "private",
+      "pagination": null,
+      "timeoutMs": 30000,
+      "readParams": [
+        "file"
+      ]
+    },
+    "GET /api/v1/filings/:cik/:accession/file": {
+      "auth": "signedTokenOrApiKeyPaid",
+      "cache": "private",
+      "pagination": null,
+      "timeoutMs": 30000,
+      "readParams": [
+        "file",
+        "format"
+      ]
+    },
+    "GET /api/v1/treasury/yields": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": [
+        "days",
+        "from",
+        "to"
+      ]
+    },
+    "GET /api/v1/fed/rates": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": [
+        "days",
+        "series"
+      ]
+    },
+    "GET /api/v1/economic/indicators": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "category",
+        "days",
+        "page",
+        "per_page",
+        "series_id"
+      ]
+    },
+    "GET /api/v1/sec/ftd": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "days",
+        "page",
+        "per_page",
+        "ticker"
+      ]
+    },
+    "GET /api/v1/stress/ofr": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "days",
+        "page",
+        "per_page",
+        "series_name"
+      ]
+    },
+    "GET /api/v1/crypto/exposure-summary": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": []
+    },
+    "GET /api/v1/crypto/institutional-holders": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "page",
+        "per_page",
+        "product"
+      ]
+    },
+    "GET /api/v1/crypto/holder/:cik": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": []
+    }
+  }
+}

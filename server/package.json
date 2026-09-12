@@ -6,7 +6,9 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "registry:refresh-pin": "node scripts/refresh-upstream-pin.mjs",
+    "registry:check-upstream": "node scripts/check-upstream-pin.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
