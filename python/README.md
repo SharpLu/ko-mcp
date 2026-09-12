@@ -1,7 +1,7 @@
 # ko-edgar
 
 Official Python SDK for [ko.io](https://ko.io) — source-traced SEC & market
-data for AI agents and quants. 13F institutional holdings (85M+ rows,
+data for AI agents and quants. 13F institutional holdings (88M+ rows,
 2013→today), insider trades, Congress trading, crypto ETF exposure, macro
 indicators, and a white-labeled EDGAR filings gateway.
 

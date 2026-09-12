@@ -28,4 +28,5 @@ description: 新建或修改 ko-mcp 的 MCP tool（server/src/tools/）或触碰
    单测禁触网（`vi.mock("../ko-fetch.js")`）。眼看 ≠ verified——没 curl 过的路径别声称好使（铁律 #6/#7）。
 
 收尾必做：`tools-proxy.test.ts` 24-count 同步 + 验证证据贴 PR；版本齐步
-（`server.json` + `package.json`，SDK 三包同版本，铁律 #8）；普适教训回写 AGENTS.md §3。
+（`server.json` + `package.json` + **`server/src/index.ts` 的 `McpServer({version})`** 三处，
+SDK 三包同版本，铁律 #8）；普适教训回写 AGENTS.md §3。

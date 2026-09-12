@@ -20,7 +20,7 @@ $ <命令>
 ## 契约与版本
 
 - [ ] 新/改/删 tool：`server/src/__tests__/tools-proxy.test.ts` 的 24-count `EXPECTED_TOOLS` 已同步（铁律 #1）
-- [ ] 版本齐步：`server.json` + `server/package.json`；SDK 三包同版本（铁律 #8）
+- [ ] 版本齐步：`server.json` + `server/package.json` + `server/src/index.ts` 的 `McpServer({version})` 三处；SDK 三包同版本（铁律 #8）
 - [ ] 无 tool/版本影响（一句话说明理由）：
 
 ## 风险与回滚

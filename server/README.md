@@ -4,7 +4,7 @@
 One command to plug clean, citable US financial data into Claude, Cursor, or ChatGPT.
 
 ```bash
-claude mcp add ko-financial-data --transport http https://mcp.ko.io/mcp
+claude mcp add ko-sec-data --transport http https://mcp.ko.io/mcp
 ```
 
 No install, no API key to get started — it's a hosted remote MCP server (Streamable HTTP). **Free tier: 200 calls/day.**
@@ -15,7 +15,7 @@ No install, no API key to get started — it's a hosted remote MCP server (Strea
 
 Most "financial data" tools hand an LLM a blob of numbers with no provenance. KO is built for agents: every answer traces back to the original SEC filing, so your agent can **cite its source**. Model-agnostic — works with any MCP client.
 
-- **85M+ institutional holdings rows**, 13F data 2013 → today
+- **88M+ institutional holdings rows**, 13F data 2013 → today
 - **Insider trades** (Form 4), **congressional trades**, **spot Bitcoin-ETF ownership**
 - **Company financials**, **macro series** (Treasury, Fed, BLS, OFR)
 - **EDGAR source documents** — fetch the actual filing your answer came from
@@ -30,7 +30,7 @@ Once connected, just ask your assistant:
 4. *"List recent insider buying at NVDA and who the buyers were."*
 5. *"Get Apple's quarterly revenue and net income for the last 8 quarters."*
 
-> Live sample: institutions currently hold **$16B+** in US spot Bitcoin ETFs — BlackRock's IBIT alone is held by 1,400+ filers.
+> Live sample: institutions currently hold **$28B+** in US spot Bitcoin ETFs — BlackRock's IBIT alone is held by 1,400+ filers.
 
 ## Tools (24)
 
@@ -47,7 +47,7 @@ Once connected, just ask your assistant:
 
 | Client | How |
 |--------|-----|
-| **Claude Code** | `claude mcp add ko-financial-data --transport http https://mcp.ko.io/mcp` |
+| **Claude Code** | `claude mcp add ko-sec-data --transport http https://mcp.ko.io/mcp` |
 | **Claude Desktop / others** | Add a remote MCP server pointing at `https://mcp.ko.io/mcp` (Streamable HTTP) |
 | **Cursor** | Add an MCP server with URL `https://mcp.ko.io/mcp` |
 
@@ -60,7 +60,7 @@ Once connected, just ask your assistant:
 ## Links
 
 - Website: https://ko.io
-- API docs: https://api.ko.io
+- API docs: https://ko.io/docs
 - MCP endpoint: https://mcp.ko.io/mcp
 
 Data sourced from SEC EDGAR, US Treasury, Federal Reserve, BLS, and OFR.

@@ -27,8 +27,11 @@ def main() -> None:
     ko = KoClient()
 
     def name_of(cik: str) -> str:
-        rows = ko.institutions.get(cik).rows
-        return rows[0].get("name", cik) if rows else cik
+        # /institutions/{cik} returns ONE object, not a list. ApiResult.rows
+        # would unwrap its single array property (`people`) and hand back the
+        # key-people list -- read the envelope's `data` directly instead.
+        data = ko.institutions.get(cik).data
+        return data.get("name", cik) if isinstance(data, dict) else cik
 
     name_a = name_of(cik_a)
     name_b = name_of(cik_b)

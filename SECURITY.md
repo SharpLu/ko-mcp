@@ -7,7 +7,8 @@ Do not open a public issue for security reports.
 
 ## Scope
 
-- This repository: SDKs, MCP stdio proxy, cookbook.
+- This repository: the hosted MCP server's source (`server/`), the SDKs, the
+  MCP stdio proxy, and the cookbook.
 - The hosted service (api.ko.io, mcp.ko.io): also reportable via the same
   address.
 

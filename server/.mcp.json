@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "ko-financial-data": {
+    "ko-sec-data": {
       "url": "https://mcp.ko.io/mcp"
     }
   }
