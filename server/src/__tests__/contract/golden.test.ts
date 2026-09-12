@@ -264,7 +264,9 @@ describe("known defects are annotated, never pinned", () => {
     // re-pinning the corrected rendering, which is the only way an annotation is
     // ever allowed to leave this set. The floor only moves DOWN, and only in the
     // PR that fixes the defect it was describing.
-    expect(annotated.length).toBeGreaterThanOrEqual(3);
+    // 7 -> 3 (#126 retired four) -> 2 (#125 retired its last one). All that is
+    // left is the headed-empty-table warning, which has no issue filed.
+    expect(annotated.length).toBeGreaterThanOrEqual(2);
     const bad: string[] = [];
     for (const { fixture, c } of annotated) {
       const d = c.knownDefect!;
@@ -277,8 +279,12 @@ describe("known defects are annotated, never pinned", () => {
 
   it("the still-open audited defects are represented, and the fixed one is not", () => {
     const issues = new Set(annotated.map(({ c }) => c.knownDefect!.issue));
-    expect([...issues].some((i) => i.includes("#125"))).toBe(true); // search silently dropped
     expect([...issues].some((i) => i.includes("warning 5"))).toBe(true); // headed empty table
+    // ko-bastion#125 is FIXED (search + executive_cik bound by ko-api#260) or
+    // DELETED (party/state removed from the schema). Same absence assertion as
+    // #126 below: a fixture that starts claiming #125 again is a regression or a
+    // stale annotation, and both must fail here rather than read as normal.
+    expect([...issues].some((i) => i.includes("#125"))).toBe(false);
     // ko-bastion#126 (inert `limit` / silent days-window truncation) is FIXED, so
     // no fixture may still claim it is live. Asserting its ABSENCE is the same
     // trick the annotations themselves use, pointed the other way: a fixture that
@@ -314,16 +320,21 @@ describe("known defects are annotated, never pinned", () => {
     expect(checkDefect({ kind: "headerWithoutRows" }, "empty", soft, {})).toContain("no longer a headed empty table");
   });
 
-  it("the #125 pair is pinned to the same skeleton, and neither case pins the filtering that is missing", () => {
-    // Both cases render the same unfiltered feed today. The skeleton is
-    // identical because the RENDERING is identical, which is fine; what must
-    // never appear is a pinned row count or a pinned row.
+  it("the #125 pair now DIFFERS, which is what the fix looks like from here", () => {
+    // Before ko-api#260 these two cases rendered the same unfiltered feed, and
+    // that equality was the defect probe. The probe could not survive its own
+    // fix: after the repair both sides are byte-identical AGAIN, because both
+    // are now EMPTY -- an equality is invariant under "both sides became
+    // nothing". So the assertion is inverted rather than deleted.
+    //
+    // `normal` is search=Cook (24 rows live) precisely so the two cases cannot
+    // collapse back into sameness without someone noticing.
     const f = fixtures.find((x) => x.tool === "list_insider_traders")!;
     const normal = f.cases.find((c) => c.name === "normal")!;
     const empty = f.cases.find((c) => c.name === "empty")!;
-    expect(normal.knownDefect?.issue).toContain("#125");
-    expect(JSON.stringify(normal.contract.blocks)).toBe(JSON.stringify(empty.contract.blocks));
-    expect(JSON.stringify(f)).not.toContain("17,744"); // the total_count the audit measured
+    expect(normal.knownDefect).toBeUndefined();
+    expect(JSON.stringify(normal.contract.blocks)).not.toBe(JSON.stringify(empty.contract.blocks));
+    expect(JSON.stringify(f)).not.toContain("17,744"); // the unfiltered total the audit measured
   });
 });
 

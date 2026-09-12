@@ -8,20 +8,21 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   server.tool(
     "get_congress_trades",
-    "Search individual stock trades disclosed by U.S. Congress members (House and Senate) under the STOCK Act. Returns a markdown table of transactions: member name, chamber, ticker, buy/sell type, transaction date, disclosure date (the gap between the two reveals reporting delay), dollar amount range, and owner (self/spouse/joint). Use for questions like 'What did Nancy Pelosi trade recently?', 'Which members bought NVDA?', or 'Show the largest Senate trades this quarter'. Filter by chamber, party, state, ticker, or member name; sort by traded value, trade count, or recency. For one member's profile and complete trading history, use get_congress_member instead.",
+    "Search individual stock trades disclosed by U.S. Congress members (House and Senate) under the STOCK Act. Returns a markdown table of transactions: member name, chamber, ticker, buy/sell type, transaction date, disclosure date (the gap between the two reveals reporting delay), dollar amount range, and owner (self/spouse/joint). Use for questions like 'What did Nancy Pelosi trade recently?', 'Which members bought NVDA?', or 'Show the largest Senate trades this quarter'. Filter by chamber, ticker, or member name; sort by traded value, trade count, or recency. For one member's profile and complete trading history, use get_congress_member instead.",
     {
       chamber: z
         .enum(["house", "senate", "all"])
         .optional()
         .default("all")
         .describe("Congressional chamber: house, senate, or all (default all)"),
-      party: z
-        .enum(["D", "R", "I", "all"])
-        .optional()
-        .default("all")
-        .describe("Filter by party — D=Democrat, R=Republican, I=Independent"),
+      // party / state REMOVED 2026-09-12 (ko-bastion#125). They were advertised
+      // and silently discarded. The fix was not to implement them: party and
+      // state live on marts.dim_congress_members, where 215 of 350 members have
+      // BOTH columns blank -- 38.6% fill, 41.8% trade-weighted. A filter that
+      // can cover at most 41.8% of the data without saying so is the #126
+      // disease in a new place, so the ko-api implementation was written,
+      // measured and reverted. Re-add these only after the dimension is filled.
       ticker: z.string().max(200).optional().describe("Stock ticker symbol to filter by, e.g. NVDA or AAPL"),
-      state: z.string().max(200).optional().describe("Member 2-letter U.S. state code, e.g. CA or TX"),
       search: z.string().max(200).optional().describe("Full or partial member name, e.g. 'Pelosi' or 'Dan Crenshaw'"),
       sort: z
         .enum(["volume", "trades", "recent"])
@@ -33,12 +34,12 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
       limit: z.number().int().min(1).max(50).optional().default(20)
         .describe("Trades per page, 1-50 (default 20)"),
     },
-    async ({ chamber, party, ticker, state, search, sort, page, limit }) => {
+    async ({ chamber, ticker, search, sort, page, limit }) => {
       // koFetch returns the array directly
       const trades = await koFetch<CongressTrade[]>(
         config,
         "/api/v1/congress-trades",
-        { chamber, party, ticker, state, search, sort, page, limit }
+        { chamber, ticker, search, sort, page, limit }
       );
 
       const lines: string[] = [];

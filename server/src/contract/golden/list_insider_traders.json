@@ -3,17 +3,17 @@
   "planGated": false,
   "capturedAt": "2026-09-12",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:56624",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
       "name": "normal",
       "arguments": {
-        "search": "Musk"
+        "search": "Cook"
       },
-      "why": "The P0 case. `search` never reaches ko-api, so this is the unfiltered feed (#125).",
+      "why": "ko-bastion#125 FIXED (ko-api#260, live 2026-09-12): `search` now reaches ko-api and filters on reporting_person_name. The term was changed from \"Musk\" to \"Cook\" on purpose -- it returns 24 rows live, so this case exercises a WORKING filter. Pinning a term that returns nothing would have made the normal case indistinguishable from the empty one, which is exactly how the old defect probe went on passing after the bug was fixed.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -37,7 +37,9 @@
               "H2 Insider Traders — Page <VAL>",
               "BLANK",
               "THEAD Ticker | Company | Person | Title | Trade Date | Bought | Sold | Shares Owned",
-              "TBODY"
+              "TBODY",
+              "BLANK",
+              "TEXT *More results — use <VAL>"
             ],
             "tables": [
               {
@@ -51,19 +53,11 @@
                   "Sold",
                   "Shares Owned"
                 ],
-                "dataRows": 50
+                "dataRows": 20
               }
             ]
           }
         ]
-      },
-      "knownDefect": {
-        "issue": "ko-bastion#125",
-        "summary": "list_insider_traders declares and sends `search`, and the upstream /v1/insider-trades route does not read it. The model is handed an unfiltered site-wide feed under a \"Insider Traders\" heading -- the only defect in this surface that makes a model state something false. The probe asserts the P0 signature: `search=Musk` and `search=zzzqqq` still come back byte-identical. The day they differ, the gate goes red and both cases must be re-pinned.",
-        "probe": {
-          "kind": "identicalToCase",
-          "case": "empty"
-        }
       }
     },
     {
@@ -71,7 +65,7 @@
       "arguments": {
         "search": "zzzqqq"
       },
-      "why": "A search that matches nothing -- and returns the same unfiltered feed, byte for byte. That equality IS the defect probe on the normal case.",
+      "why": "A search that matches nothing. Before #260 this returned the unfiltered feed byte-for-byte identical to the normal case; now it is genuinely empty.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -109,7 +103,7 @@
                   "Sold",
                   "Shares Owned"
                 ],
-                "dataRows": 50
+                "dataRows": 0
               }
             ]
           }
