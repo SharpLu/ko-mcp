@@ -206,14 +206,14 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
   {
     tool: 'get_congress_trades',
     file: 'src/tools/congress.ts',
-    inputs: ['chamber', 'party', 'ticker', 'state', 'search', 'sort', 'page', 'limit'],
+    inputs: ['chamber', 'ticker', 'search', 'sort', 'page', 'limit'],
     paginationInputs: ['page', 'limit'],
     plan: 'free',
     planReason: 'apiKey; no free blockedPrefix',
     upstreamRoutes: [
       {
         path: '/api/v1/congress-trades', method: 'GET',
-        params: ['chamber', 'party', 'ticker', 'state', 'search', 'sort', 'page', 'limit'],
+        params: ['chamber', 'ticker', 'search', 'sort', 'page', 'limit'],
         transport: 'koFetch', role: 'primary',
       },
     ],
@@ -446,25 +446,28 @@ export const INERT_PARAMS: readonly InertParam[] = [
   },
 
   // -- false filters (ko-bastion#125 class) --------------------------------
-  {
-    tool: 'list_insider_traders', path: '/api/v1/insider-trades', param: 'search', issue: 'ko-bastion#125',
-    why: 'NO upstream handler reads it (the sibling /insider-trades/summary does, this route does not). search=Musk, search=zzzqqq and no search return byte-identical bodies (md5 8e94b34dfea1, 5,576 chars): the model is handed the unfiltered market-wide feed under a heading that implies it was searched',
-  },
-  {
-    tool: 'get_congress_trades', path: '/api/v1/congress-trades', param: 'party', issue: 'ko-bastion#125',
-    why: 'the tool description promises "filter by party"; the handler reads chamber/ticker/search/sort only, so every party value returns the same unfiltered rows',
-    firstSeen: 'M2 registry gate, 2026-09-12 -- not named in the #125 text',
-  },
-  {
-    tool: 'get_congress_trades', path: '/api/v1/congress-trades', param: 'state', issue: 'ko-bastion#125',
-    why: 'the tool description promises "filter by state"; same unread-param shape as party',
-    firstSeen: 'M2 registry gate, 2026-09-12 -- not named in the #125 text',
-  },
-  {
-    tool: 'get_insider_trades', path: '/api/v1/executive-trades/:ticker', param: 'executive_cik', issue: 'ko-bastion#125',
-    why: 'the input is described as "Filter by specific executive CIK"; the handler reads only page/per_page/action, so the filter silently does nothing and the caller sees every executive of that ticker',
-    firstSeen: 'M2 registry gate, 2026-09-12 -- not named in the #125 text',
-  },
+  //
+  // ALL FOUR RETIRED 2026-09-12. Two were fixed upstream, two were deleted:
+  //
+  //   search         -> ko-api#260 binds it on reporting_person_name.
+  //                     Live: search=Cook -> total_count 24 ("Cook Steven L."),
+  //                     search=zzzqqq -> 0, no search -> 17,744.
+  //   executive_cik  -> ko-api#260 binds it (digits only).
+  //                     Live: 1214128 -> 79 ("LEVINSON ARTHUR D"), 9999999 -> 0,
+  //                     no filter -> 1,348.
+  //   party, state   -> REMOVED from the tool schema instead of implemented.
+  //                     marts.dim_congress_members has 215 of 350 members with
+  //                     BOTH columns blank (38.6% fill; 41.8% trade-weighted).
+  //                     The join is perfect -- 350 vs 350, zero unmatched -- the
+  //                     dimension is empty. A filter covering at most 41.8%
+  //                     without saying so is ko-bastion#126 in a new place.
+  //
+  // A note for whoever adds the next entry here: the #125 defect PROBE
+  // (`identicalToCase: 'empty'`) went on passing after the bug was fixed,
+  // because two EMPTY answers are byte-identical just as two unfiltered ones
+  // were. A probe asserting "these two are the same" cannot tell which sameness
+  // it is looking at. Prefer a probe that asserts the defect's CONSEQUENCE
+  // (a row count, a specific value) over one that asserts an equality.
 
   // -- inert but harmless (no wrong claim reaches the model) ---------------
   {

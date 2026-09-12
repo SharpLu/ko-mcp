@@ -121,7 +121,12 @@ describe('registry gate (d): no tool sends a param nobody reads', () => {
   });
 
   it('the exception table is the size it should be, and only shrinks', () => {
-    expect(INERT_PARAMS.length).toBe(8);
+    // 8 -> 4: ko-bastion#125 retired four in one move on 2026-09-12 -- `search`
+    // and `executive_cik` were FIXED upstream (ko-api#260, verified live), and
+    // `party`/`state` were DELETED from the tool schema because the dimension
+    // behind them is 38.6% filled. Only `type`, `period_type` and the two
+    // resolve.ts `limit` legs remain. This number only ever shrinks.
+    expect(INERT_PARAMS.length).toBe(4);
     // Was 6 (the M0 audit's 4 rendered truncations + the 2 shared resolve.ts
     // legs). ko-bastion#126 retired the 4; what is left is resolve.ts's internal
     // candidate lookup, shared by the two tools that take a free-text name --
@@ -131,7 +136,13 @@ describe('registry gate (d): no tool sends a param nobody reads', () => {
     expect(INERT_PARAMS.filter((e) => e.issue === 'ko-bastion#126').map((e) => e.tool).sort())
       .toEqual(['get_crypto_holder', 'get_institution_holdings']);
     // Params the tool ADVERTISES as filters that upstream never reads.
-    expect(INERT_PARAMS.filter((e) => e.issue === 'ko-bastion#125').length).toBe(6);
+    // 6 -> 2. Four of the six #125 entries were retired on 2026-09-12:
+    // `search` and `executive_cik` fixed upstream by ko-api#260 (verified
+    // live), `party` and `state` deleted from the tool schema because the
+    // dimension behind them is 38.6% filled. What remains is the two that
+    // were always harmless: a hardcoded `type` nobody can set, and a
+    // `period_type` the tool applies client-side.
+    expect(INERT_PARAMS.filter((e) => e.issue === 'ko-bastion#125').length).toBe(2);
   });
 });
 

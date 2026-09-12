@@ -80,17 +80,6 @@ export const EXCLUDED = {
 // and the fixtures below now pin the CORRECTED rendering -- including the
 // disclosure lines that did not exist before.
 
-const DEFECT_125_SEARCH = {
-  issue: 'ko-bastion#125',
-  summary:
-    'list_insider_traders declares and sends `search`, and the upstream /v1/insider-trades route does not ' +
-    'read it. The model is handed an unfiltered site-wide feed under a "Insider Traders" heading -- the ' +
-    'only defect in this surface that makes a model state something false. The probe asserts the P0 ' +
-    'signature: `search=Musk` and `search=zzzqqq` still come back byte-identical. The day they differ, the ' +
-    'gate goes red and both cases must be re-pinned.',
-  probe: { kind: 'identicalToCase', case: 'empty' },
-};
-
 const DEFECT_EMPTY_TABLE = {
   issue: 'KO_MCP_TOOL_MATRIX_20260912.md section 3, warning 5 (no issue filed)',
   summary:
@@ -187,11 +176,15 @@ export const CASES = [
   {
     tool: 'list_insider_traders',
     cases: [
-      { name: 'normal', arguments: { search: 'Musk' }, knownDefect: DEFECT_125_SEARCH,
-        why: 'The P0 case. `search` never reaches ko-api, so this is the unfiltered feed (#125).' },
+      { name: 'normal', arguments: { search: 'Cook' },
+        why: 'ko-bastion#125 FIXED (ko-api#260, live 2026-09-12): `search` now reaches ko-api and ' +
+             'filters on reporting_person_name. The term was changed from "Musk" to "Cook" on purpose ' +
+             '-- it returns 24 rows live, so this case exercises a WORKING filter. Pinning a term that ' +
+             'returns nothing would have made the normal case indistinguishable from the empty one, ' +
+             'which is exactly how the old defect probe went on passing after the bug was fixed.' },
       { name: 'empty', arguments: { search: 'zzzqqq' },
-        why: 'A search that matches nothing -- and returns the same unfiltered feed, byte for byte. ' +
-             'That equality IS the defect probe on the normal case.' },
+        why: 'A search that matches nothing. Before #260 this returned the unfiltered feed byte-for-byte ' +
+             'identical to the normal case; now it is genuinely empty.' },
       { name: 'error', arguments: { role: 'chairman' }, why: 'Outside the role enum.' },
     ],
   },
