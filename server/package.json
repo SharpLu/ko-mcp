@@ -8,7 +8,9 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "registry:refresh-pin": "node scripts/refresh-upstream-pin.mjs",
-    "registry:check-upstream": "node scripts/check-upstream-pin.mjs"
+    "registry:check-upstream": "node scripts/check-upstream-pin.mjs",
+    "golden:gate": "node scripts/golden-gate.mjs",
+    "golden:capture": "node scripts/golden-capture.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

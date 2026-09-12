@@ -1,0 +1,149 @@
+{
+  "tool": "get_stock_activity",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "ticker": "AAPL"
+      },
+      "why": "Summary bullets plus the quarterly-trend table.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Institutional Activity — AAPL",
+              "BLANK",
+              "TEXT **Latest Quarter (<DATE>):**",
+              "TEXT - Institutions increased: <VAL> | Decreased: <VAL>",
+              "TEXT - New positions: <VAL> | Exited: <VAL>",
+              "TEXT - Net shares: <VAL> | Net value: <MONEY>",
+              "BLANK",
+              "H3 Quarterly Trend",
+              "BLANK",
+              "THEAD Quarter | Increased | Decreased | New | Exited | Net Shares | Net Value",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Quarter",
+                  "Increased",
+                  "Decreased",
+                  "New",
+                  "Exited",
+                  "Net Shares",
+                  "Net Value"
+                ],
+                "dataRows": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "ticker": "ZZZQQ"
+      },
+      "why": "Soft sentence, no table.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT No institutional activity data found for ZZZQQ. Check the ticker symbol (it may be invalid or have no <VAL> coverage)."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "ticker": "AAPL",
+        "quarters": 99
+      },
+      "why": "Above the quarters clamp (max 40).",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool get_stock_activity: [",
+              "ZOD   {",
+              "ZOD     \"code\": \"too_big\",",
+              "ZOD     \"maximum\": 40,",
+              "ZOD     \"type\": \"number\",",
+              "ZOD     \"inclusive\": true,",
+              "ZOD     \"exact\": false,",
+              "ZOD     \"message\": \"Number must be less than or equal to 40\",",
+              "ZOD     \"path\": [",
+              "ZOD       \"quarters\"",
+              "ZOD     ]",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "tool": "list_insider_traders",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "search": "Musk"
+      },
+      "why": "The P0 case. `search` never reaches ko-api, so this is the unfiltered feed (#125).",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Insider Traders — Page <VAL>",
+              "BLANK",
+              "THEAD Ticker | Company | Person | Title | Trade Date | Bought | Sold | Shares Owned",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Ticker",
+                  "Company",
+                  "Person",
+                  "Title",
+                  "Trade Date",
+                  "Bought",
+                  "Sold",
+                  "Shares Owned"
+                ],
+                "dataRows": 50
+              }
+            ]
+          }
+        ]
+      },
+      "knownDefect": {
+        "issue": "ko-bastion#125",
+        "summary": "list_insider_traders declares and sends `search`, and the upstream /v1/insider-trades route does not read it. The model is handed an unfiltered site-wide feed under a \"Insider Traders\" heading -- the only defect in this surface that makes a model state something false. The probe asserts the P0 signature: `search=Musk` and `search=zzzqqq` still come back byte-identical. The day they differ, the gate goes red and both cases must be re-pinned.",
+        "probe": {
+          "kind": "identicalToCase",
+          "case": "empty"
+        }
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "search": "zzzqqq"
+      },
+      "why": "A search that matches nothing -- and returns the same unfiltered feed, byte for byte. That equality IS the defect probe on the normal case.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Insider Traders — Page <VAL>",
+              "BLANK",
+              "THEAD Ticker | Company | Person | Title | Trade Date | Bought | Sold | Shares Owned",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Ticker",
+                  "Company",
+                  "Person",
+                  "Title",
+                  "Trade Date",
+                  "Bought",
+                  "Sold",
+                  "Shares Owned"
+                ],
+                "dataRows": 50
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "role": "chairman"
+      },
+      "why": "Outside the role enum.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool list_insider_traders: [",
+              "ZOD   {",
+              "ZOD     \"received\": \"chairman\",",
+              "ZOD     \"code\": \"invalid_enum_value\",",
+              "ZOD     \"options\": [",
+              "ZOD       \"ceo\",",
+              "ZOD       \"executive\",",
+              "ZOD       \"all\"",
+              "ZOD     ],",
+              "ZOD     \"path\": [",
+              "ZOD       \"role\"",
+              "ZOD     ],",
+              "ZOD     \"message\": \"Invalid enum value. Expected 'ceo' | 'executive' | 'all', received 'chairman'\"",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}

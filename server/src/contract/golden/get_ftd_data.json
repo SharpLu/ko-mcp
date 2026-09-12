@@ -1,0 +1,148 @@
+{
+  "tool": "get_ftd_data",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "empty",
+      "arguments": {
+        "ticker": "ZZZQQ"
+      },
+      "why": "Soft sentence, no table.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT No FTD data found for ZZZQQ."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "ticker": "GME",
+        "days": 9999
+      },
+      "why": "Above the days clamp (max 1825).",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool get_ftd_data: [",
+              "ZOD   {",
+              "ZOD     \"code\": \"too_big\",",
+              "ZOD     \"maximum\": 1825,",
+              "ZOD     \"type\": \"number\",",
+              "ZOD     \"inclusive\": true,",
+              "ZOD     \"exact\": false,",
+              "ZOD     \"message\": \"Number must be less than or equal to 1825\",",
+              "ZOD     \"path\": [",
+              "ZOD       \"days\"",
+              "ZOD     ]",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "truncation",
+      "arguments": {
+        "ticker": "GME",
+        "days": 1825
+      },
+      "why": "The tool sends no `per_page`, so ko-api caps the answer at its 50-row default and the rendering says nothing about it -- 50 rows out of a total_count of 1,025, with no page parameter to reach the rest (#126). Carries this tool's populated-table contract, since the recorded `normal` case is excluded above.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 SEC Failures-to-Deliver — GME",
+              "BLANK",
+              "THEAD Date | Ticker | Quantity | Price",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Date",
+                  "Ticker",
+                  "Quantity",
+                  "Price"
+                ],
+                "dataRows": 50
+              }
+            ]
+          }
+        ]
+      },
+      "knownDefect": {
+        "issue": "ko-bastion#126",
+        "summary": "The tool sends `limit`; the upstream ko-api route reads only `per_page`, so the argument is dropped and the page is always the 50-row default. The row count is NOT part of the pinned skeleton; this probe exists so that fixing #126 fails the gate instead of passing it silently.",
+        "probe": {
+          "kind": "dataRowCount",
+          "equals": 50
+        }
+      }
+    }
+  ]
+}

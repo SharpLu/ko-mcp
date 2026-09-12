@@ -1,0 +1,145 @@
+{
+  "tool": "get_stock_financials",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "ticker": "AAPL"
+      },
+      "why": "Quarterly financials table.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 AAPL Financials — Quarterly",
+              "BLANK",
+              "THEAD Period | Revenue | Net Income | EPS | Gross Margin | Op Margin | Op Cash Flow | D/E",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Period",
+                  "Revenue",
+                  "Net Income",
+                  "EPS",
+                  "Gross Margin",
+                  "Op Margin",
+                  "Op Cash Flow",
+                  "D/E"
+                ],
+                "dataRows": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "ticker": "ZZZQQ"
+      },
+      "why": "Upstream 404 as isError.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (404): Not found: No financial data found for ZZZQQ"
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "ticker": "AAPL",
+        "period_type": "monthly"
+      },
+      "why": "Outside the period_type enum -- zod -32602 listing the two allowed values.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool get_stock_financials: [",
+              "ZOD   {",
+              "ZOD     \"received\": \"monthly\",",
+              "ZOD     \"code\": \"invalid_enum_value\",",
+              "ZOD     \"options\": [",
+              "ZOD       \"quarterly\",",
+              "ZOD       \"annual\"",
+              "ZOD     ],",
+              "ZOD     \"path\": [",
+              "ZOD       \"period_type\"",
+              "ZOD     ],",
+              "ZOD     \"message\": \"Invalid enum value. Expected 'quarterly' | 'annual', received 'monthly'\"",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}

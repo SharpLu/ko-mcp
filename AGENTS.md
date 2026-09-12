@@ -44,6 +44,7 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 | 6 | **单测禁触网**：单元测试一律 `vi.mock("../ko-fetch.js")` / `vi.stubGlobal("fetch", …)`，不连真 CH/ko-api。live 探测归 deploy 后的健康门 | dev 机活服务让坏测试假绿 | `no-network` 守卫（如已挂） |
 | 7 | **验证必须真跑**：SDK / worker 改动 `npm test`（server）/`pytest`（python）绿；新/改 tool 的 ko-api 路径**部署后 curl 过**。眼看 ≠ verified——从没 curl 过的 tool 路径上线后可能全 500 | #191 教训（ko-api） | PR 模板"验证证据"必填 |
 | 8 | **版本 lockstep**：`server/server.json` + `server/package.json` 一起动（registry id `io.github.SharpLu/ko-mcp`）。三个 SDK 包各自独立，但应保持同一版本号齐步走 | registry / 发布一致性 | 人工 / PR review |
+| 9 | **黄金契约不许钉 bug**：`src/contract/golden/` 里任何一条已知缺陷的用例必须带 `knownDefect` + probe（断言"缺陷仍在"），或在 `EXCLUDED` 里写明理由。把今天的错答案钉成契约 = 这道门会挡住它自己的修复。修好缺陷时在**同一个 PR** 里删注解 + `npm run golden:capture` 重钉 | M1 黄金契约门（ko-api#231 / #236 的同形教训） | `golden.test.ts`（注解/排除/原值三道断言）+ `golden-gate.mjs`（缺陷被修 = 红） |
 
 ## 4. 任务怎么做（新 tool 五步）
 
@@ -53,13 +54,14 @@ Claude Code 用户可用 `/new-tool` skill（同一内容的快捷入口）。
 2. **写 tool**：在 `server/src/tools/<area>.ts` 加 `server.tool(name, desc, schema, handler)`。金额/份额字段先 `num()` 再 `fmt*`（铁律 #2）；列表响应做 `Array.isArray()` 双形态分支（铁律 #5）。
 3. **登记注册表 + 24-count 契约**：把新 tool 加进 `server/src/registry/tools.ts` 的 `TOOL_REGISTRY`（上游 route / 参数 / plan）和 `src/__tests__/registry/probes.ts` 的 `PROBES`，再加进 `tools-proxy.test.ts` 的 `EXPECTED_TOOLS` 并改数字断言（铁律 #1）。注册表的门会告诉你缺什么：**tool 发出而上游 handler 不读的参数 = 红门**（不是注释）。
 4. **写单测**：`vi.mock("../ko-fetch.js")`，断言代理路径 + 参数 + 渲染（`crypto.test.ts` / `stocks.test.ts` 是模板）。禁触网（铁律 #6）。
-5. **本地门 + 部署后实测**：`server` 目录 `npm run type-check && npm test` 全绿 → merge `server/**` → deploy-server.yml 跑 `tools/list>=24` 健康门 → 对 live mcp.ko.io 打一次该 tool（铁律 #7）。
+5. **本地门 + 部署后实测**：`server` 目录 `npm run type-check && npm test` 全绿 → 新 tool 进 `src/contract/cases.mjs` 三个用例（normal/empty/error）并 `npm run golden:capture` → `npm run golden:gate` 绿 → merge `server/**` → deploy-server.yml 先跑黄金契约门再部署，最后 `tools/list>=24` 健康门 → 对 live mcp.ko.io 打一次该 tool（铁律 #7）。
 
 ## 5. Definition of Done（全部勾完才算完成）
 
 - [ ] 代码 + 测试同一个 PR；改动包各自的门全绿（`server`: `npm run type-check` + `npm test`；`python`: `ruff`+`mypy`+`pytest`；`typescript/*`: `npm run build`+`npm test`）
 - [ ] 新/改/删 tool：`src/registry/tools.ts` 注册表 + `probes.ts` 探针 + `tools-proxy.test.ts` 的 24-count 契约全部同步（铁律 #1）
 - [ ] 触碰上游契约时：`npm test -- src/__tests__/registry` 全绿；改了 ko-api 侧 route/参数则 `KO_API_REPO=../ko-api npm run registry:refresh-pin` 重钉并在 PR 里贴 diff
+- [ ] 黄金契约：新/改 tool 进 `src/contract/cases.mjs` 并重钉 fixture；已知缺陷带 `knownDefect` probe 或写明排除理由（铁律 #9）
 - [ ] 新/改 tool 的 ko-api 路径已 curl 实测（铁律 #3/#7），证据贴 PR
 - [ ] 版本齐步（server.json + package.json；SDK 三包同版本）（铁律 #8）
 - [ ] 教训回写：普适 → 本文件 §3 加一行；能机器化 → 加守卫测试
@@ -68,7 +70,7 @@ Claude Code 用户可用 `/new-tool` skill（同一内容的快捷入口）。
 
 ```bash
 # server 本地门（deploy-server.yml 同款）
-cd server && npm run type-check && npm test
+cd server && npm run type-check && npm test && npm run golden:gate
 
 # SDK 门
 cd python && pip install -e ".[dev]" && ruff check src tests && mypy src && pytest -q
@@ -93,7 +95,8 @@ curl -s -X POST https://mcp.ko.io/mcp -H 'content-type: application/json' \
 | `server/README.md` | worker / tool 说明 | 新 tool 同步 |
 | `server/src/registry/tools.ts` | 24 个 tool → ko-api route/参数/plan 的唯一声明 | 新/改 tool 必改；异常表只许缩小 |
 | `server/src/registry/upstream/` | 按 blob SHA 钉住的 ko-api 快照（`pin.json` 是钉子） | 只能由 `registry:refresh-pin` 生成，不手改 |
-| `.github/workflows/deploy-server.yml` | server 部署 + 健康门 | |
+| `server/docs/GOLDEN_CONTRACT.md` | 黄金契约门：钉什么/不钉什么、两条防陈旧性质、已知缺陷注解、重录规程 | 改 tool 渲染前先读 §7 |
+| `.github/workflows/deploy-server.yml` | server 部署 + 部署前黄金契约门 + 健康门 | |
 | `.github/workflows/publish-{python,npm}.yml` | SDK 发布（带 test 门） | |
 | `../ko-api/AGENTS.md` | serving 端点侧规范 | tool 代理到的路径以那边为准 |
 | `../CLAUDE.md`（KO 根） | 运维手册（服务器/集群/域名单一真相） | 基础设施问题先读它 |

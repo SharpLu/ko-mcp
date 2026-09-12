@@ -1,0 +1,156 @@
+{
+  "tool": "get_stock_price",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "ticker": "AAPL"
+      },
+      "why": "Two tables (summary metrics + recent prices) -- the richest rendering in the surface.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 AAPL Price — <VAL>",
+              "BLANK",
+              "THEAD Metric | Value",
+              "TBODY",
+              "BLANK",
+              "H3 Recent Prices",
+              "BLANK",
+              "THEAD Date | Open | High | Low | Close | Volume",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Metric",
+                  "Value"
+                ],
+                "dataRows": 6
+              },
+              {
+                "columns": [
+                  "Date",
+                  "Open",
+                  "High",
+                  "Low",
+                  "Close",
+                  "Volume"
+                ],
+                "dataRows": 10
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "ticker": "ZZZQQ"
+      },
+      "why": "Unknown ticker: one soft sentence, so BOTH tables disappear -- the strongest empty-shell signal in the surface.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT No price data found for ZZZQQ."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "ticker": "AAPL",
+        "period": "20y"
+      },
+      "why": "Outside the period enum.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool get_stock_price: [",
+              "ZOD   {",
+              "ZOD     \"received\": \"20y\",",
+              "ZOD     \"code\": \"invalid_enum_value\",",
+              "ZOD     \"options\": [",
+              "ZOD       \"1y\",",
+              "ZOD       \"3y\",",
+              "ZOD       \"5y\",",
+              "ZOD       \"10y\"",
+              "ZOD     ],",
+              "ZOD     \"path\": [",
+              "ZOD       \"period\"",
+              "ZOD     ],",
+              "ZOD     \"message\": \"Invalid enum value. Expected '1y' | '3y' | '5y' | '10y', received '20y'\"",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}

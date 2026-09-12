@@ -1,0 +1,114 @@
+{
+  "tool": "get_crypto_exposure",
+  "planGated": false,
+  "capturedAt": "2026-09-12",
+  "provenance": {
+    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
+    "mode": "recordings",
+    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {},
+      "why": "The whole ETF complex: three bold summary lines plus a table.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Institutional Crypto-ETF Exposure (latest quarter)",
+              "BLANK",
+              "TEXT **Total institutional USD:** <MONEY>",
+              "TEXT **QoQ change:** <MONEY>",
+              "TEXT **Products tracked:** <VAL>",
+              "BLANK",
+              "THEAD ETF | Name | Sponsor | Holders | USD Held | QoQ",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "ETF",
+                  "Name",
+                  "Sponsor",
+                  "Holders",
+                  "USD Held",
+                  "QoQ"
+                ],
+                "dataRows": 11
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "unexpected": "x"
+      },
+      "why": "There is no way to make this tool fail. Its input schema is `{}`, so an unexpected argument is dropped and the normal answer comes back -- and THAT is the contract worth pinning: if the SDK ever starts rejecting unknown arguments, every caller passing one starts failing.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Institutional Crypto-ETF Exposure (latest quarter)",
+              "BLANK",
+              "TEXT **Total institutional USD:** <MONEY>",
+              "TEXT **QoQ change:** <MONEY>",
+              "TEXT **Products tracked:** <VAL>",
+              "BLANK",
+              "THEAD ETF | Name | Sponsor | Holders | USD Held | QoQ",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "ETF",
+                  "Name",
+                  "Sponsor",
+                  "Holders",
+                  "USD Held",
+                  "QoQ"
+                ],
+                "dataRows": 11
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
