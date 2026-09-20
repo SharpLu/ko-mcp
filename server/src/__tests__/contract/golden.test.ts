@@ -264,9 +264,12 @@ describe("known defects are annotated, never pinned", () => {
     // re-pinning the corrected rendering, which is the only way an annotation is
     // ever allowed to leave this set. The floor only moves DOWN, and only in the
     // PR that fixes the defect it was describing.
-    // 7 -> 3 (#126 retired four) -> 2 (#125 retired its last one). All that is
-    // left is the headed-empty-table warning, which has no issue filed.
-    expect(annotated.length).toBeGreaterThanOrEqual(2);
+    // 7 -> 3 (#126 retired four) -> 2 (#125 retired its last one) -> 1
+    // (2026-09-20: get_congress_member's headed empty table became a soft "no
+    // machine-readable trades" sentence that carries ko-api's coverage note,
+    // and its corrected rendering is re-pinned in the same PR). All that is
+    // left is list_institutions' headed empty table, which has no issue filed.
+    expect(annotated.length).toBeGreaterThanOrEqual(1);
     const bad: string[] = [];
     for (const { fixture, c } of annotated) {
       const d = c.knownDefect!;

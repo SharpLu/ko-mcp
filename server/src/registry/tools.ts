@@ -538,7 +538,14 @@ export const BEHAVIOURAL_DEFECTS: readonly BehaviouralDefect[] = [
   {
     id: 'headed-empty-table',
     issue: null,
-    what: 'list_institutions and get_congress_member render an empty result as a table header with no rows, unlike the soft "no results" sentence the other 22 tools use. A headed empty table reads to a model as a valid, complete, empty answer.',
-    stillTrue: 'both tools emit a markdown table header for an empty upstream response',
+    // NARROWED 2026-09-20. get_congress_member is fixed: it guards its table on
+    // a non-empty response and says "No machine-readable trades returned for
+    // this member.", carrying ko-api's `meta.coverage.note` when there is one
+    // (CONGRESS_10_DOD D1 -- ~72 members file only on paper, so an empty `data`
+    // there means "unreadable", not "did not trade"). list_institutions is
+    // unchanged and still renders the bare header; it needs its own evidence,
+    // and folding it in here would have made this entry un-assertable.
+    what: 'list_institutions renders an empty result as a table header with no rows, unlike the soft "no results" sentence the other 23 tools use. A headed empty table reads to a model as a valid, complete, empty answer.',
+    stillTrue: 'list_institutions emits a markdown table header for an empty upstream response',
   },
 ];

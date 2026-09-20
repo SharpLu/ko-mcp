@@ -94,21 +94,23 @@ describe('registry gate (g): declared defects still exist', () => {
     ).toBe(false);
   });
 
-  it('headed-empty-table: the two odd tools still render an empty table with a header', async () => {
+  it('headed-empty-table: the one remaining tool still renders an empty table with a header', async () => {
     const d = defect('headed-empty-table');
-    for (const tool of ['list_institutions', 'get_congress_member']) {
+    for (const tool of ['list_institutions']) {
       const text = await renderEmpty(tool);
       expect(
         /\n\|[-\s|]+\|\s*$/m.test(text),
-        `${tool} no longer renders a headed empty table -- retire "${d.id}" if both are fixed.`,
+        `${tool} no longer renders a headed empty table -- retire "${d.id}".`,
       ).toBe(true);
     }
   });
 
   it('headed-empty-table: the rest of the surface says "no results" in words', async () => {
     // Contrast group: these guard their table on a non-empty response, which is
-    // the behaviour the two above should converge on.
-    for (const tool of ['get_congress_trades', 'get_form144_notices', 'get_crypto_holders']) {
+    // the behaviour list_institutions should converge on. get_congress_member
+    // joined this group on 2026-09-20 -- it is the assertion that the fix is
+    // real, and it fails if anyone puts the bare header back.
+    for (const tool of ['get_congress_member', 'get_congress_trades', 'get_form144_notices', 'get_crypto_holders']) {
       const text = await renderEmpty(tool);
       expect(/\n\|[-\s|]+\|\s*$/m.test(text), `${tool} rendered a headed empty table`).toBe(false);
     }
