@@ -6,6 +6,28 @@ export interface KoConfig {
 export interface KoFetchOptions {
   /** Override the default budget. Only for a call that legitimately needs longer. */
   timeoutMs?: number;
+  /**
+   * Return `{ data, meta }` instead of just `data`.
+   *
+   * ko-api's envelope carries facts a renderer sometimes MUST show. The one
+   * that forced this: /api/v1/congress-trades/:member answers 200 with an empty
+   * `data` for a member who files only on paper, and puts the reason -- how many
+   * scanned filings exist, and that nothing machine-readable comes out of them
+   * -- in `meta.coverage`. Unwrapping to `data` throws that away, and the tool
+   * then renders "0 trades" for a member who did in fact file. That is the
+   * ko-bastion#125 disease: making a model state something untrue.
+   *
+   * Kept as an OPTION on koFetch rather than a second exported function on
+   * purpose -- `transport: 'koFetch'` in the tool registry stays literally true,
+   * and every test that mocks the transport keeps intercepting this call.
+   */
+  withEnvelope?: boolean;
+}
+
+/** ko-api's response envelope, for callers that pass `withEnvelope`. */
+export interface KoEnvelope<T, M = Record<string, unknown>> {
+  data: T;
+  meta?: M;
 }
 
 /**
@@ -121,6 +143,10 @@ export async function koFetch<T = unknown>(
   }
 
   const json = await res.json() as Record<string, unknown>;
-  // ko-api wraps responses in { data: ..., meta: ... } — unwrap automatically
+  // ko-api wraps responses in { data: ..., meta: ... } — unwrap automatically,
+  // unless the caller asked for the envelope because it needs `meta`.
+  if (options.withEnvelope) {
+    return (json.data !== undefined ? json : { data: json }) as T;
+  }
   return (json.data !== undefined ? json.data : json) as T;
 }

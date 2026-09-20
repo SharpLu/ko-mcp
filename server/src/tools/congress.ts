@@ -91,23 +91,55 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
       // NOTE the sibling /api/v1/congress-trades collection route above is the one
       // route in this surface that DOES accept `limit` (`per_page ?? limit`), which
       // is why get_congress_trades was never affected and is not touched here.
-      const trades = await koFetch<CongressTrade[]>(
+      // ENVELOPE, NOT JUST `data` (CONGRESS_10_DOD D1, ko-bastion#170). About 72
+      // members file every disclosure on paper: the clerk publishes a scan,
+      // nothing machine-readable comes out of it, and ko-api answers 200 with an
+      // empty `data` plus the reason in `meta.coverage`. Rendering only `data`
+      // would report "0 trades returned" for a member who demonstrably DID file
+      // -- making the model state something untrue, which is the ko-bastion#125
+      // disease in a new place.
+      //
+      // PAGE SIZE IS `per_page`, NOT `limit` (ko-bastion#126): the :member route
+      // reads only `per_page` and falls back to its own 50-row default otherwise.
+      // NOTE the sibling /api/v1/congress-trades collection route above is the one
+      // route in this surface that DOES accept `limit` (`per_page ?? limit`), which
+      // is why get_congress_trades was never affected and is not touched here.
+      const envelope = await koFetch<CongressMemberEnvelope | CongressTrade[]>(
         config,
         `/api/v1/congress-trades/${memberSlug}`,
-        { type: "trades", page, per_page: limit }
+        { type: "trades", page, per_page: limit },
+        { withEnvelope: true }
       );
+      // Tolerate a bare array: an older ko-api build, and every test that mocks
+      // the transport with a plain payload.
+      const trades: CongressTrade[] = Array.isArray(envelope) ? envelope : (envelope?.data ?? []);
+      const coverage = Array.isArray(envelope) ? undefined : envelope?.meta?.coverage;
 
+      // The heading and the count line are deliberately UNCHANGED, including the
+      // caller's slug rather than `meta.member.name`: every line here would
+      // otherwise depend on whether ko-api#283 has deployed, and this repo's
+      // golden fixtures would have to be re-captured in lockstep with another
+      // repo's release. The only thing that moves is the EMPTY branch.
       const lines: string[] = [
         `## ${member} — Trading History`,
         `*${trades.length} trades returned*\n`,
-        "| Date | Ticker | Asset | Type | Amount | Disclosed | Owner |",
-        "|------|--------|-------|------|--------|-----------|-------|",
       ];
 
-      for (const t of trades) {
-        lines.push(
-          `| ${t.transaction_date} | **${t.ticker || "N/A"}** | ${t.asset_description?.slice(0, 40) || "—"} | ${t.transaction_type} | ${t.amount_range} | ${t.disclosure_date} | ${t.owner || "—"} |`
-        );
+      if (trades.length > 0) {
+        lines.push("| Date | Ticker | Asset | Type | Amount | Disclosed | Owner |");
+        lines.push("|------|--------|-------|------|--------|-----------|-------|");
+        for (const t of trades) {
+          lines.push(
+            `| ${t.transaction_date} | **${t.ticker || "N/A"}** | ${t.asset_description?.slice(0, 40) || "—"} | ${t.transaction_type} | ${t.amount_range} | ${t.disclosure_date} | ${t.owner || "—"} |`
+          );
+        }
+      } else {
+        // A headed table with no rows reads to a model as a valid, complete,
+        // empty answer -- the `headed-empty-table` defect. Say it in words, and
+        // when the API explains WHY there is nothing, pass that explanation
+        // through verbatim rather than paraphrasing a number we did not compute.
+        lines.push("No machine-readable trades returned for this member.");
+        if (coverage?.note) lines.push(`\n**Coverage:** ${coverage.note}`);
       }
 
       if (trades.length === limit) {
@@ -122,6 +154,18 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+/** What /api/v1/congress-trades/:member returns when asked for the envelope. */
+interface CongressMemberEnvelope {
+  data: CongressTrade[];
+  meta?: {
+    member?: {
+      name?: string; chamber?: string; party?: string;
+      state?: string; district?: string; bioguide_id?: string;
+    };
+    coverage?: { paper_filings?: number | null; note?: string | null };
+  };
+}
+
 interface CongressTrade {
   member_name: string;
   chamber: string;
