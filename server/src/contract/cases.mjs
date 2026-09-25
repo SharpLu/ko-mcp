@@ -176,12 +176,17 @@ export const CASES = [
   {
     tool: 'list_insider_traders',
     cases: [
-      { name: 'normal', arguments: { search: 'Cook' },
+      { name: 'normal', arguments: { search: 'Cook', limit: 5 },
         why: 'ko-bastion#125 FIXED (ko-api#260, live 2026-09-12): `search` now reaches ko-api and ' +
              'filters on reporting_person_name. The term was changed from "Musk" to "Cook" on purpose ' +
-             '-- it returns 24 rows live, so this case exercises a WORKING filter. Pinning a term that ' +
+             '-- it returns rows live, so this case exercises a WORKING filter. Pinning a term that ' +
              'returns nothing would have made the normal case indistinguishable from the empty one, ' +
-             'which is exactly how the old defect probe went on passing after the bug was fixed.' },
+             'which is exactly how the old defect probe went on passing after the bug was fixed. ' +
+             '`limit: 5` is load-bearing: the feed is a rolling "recently traded" window, and the ' +
+             'full-page "More results" line only renders when rows == limit. Pinned at the default 20, ' +
+             '"Cook" decayed from 24 live rows (09-12) to 18 (09-25) and the line vanished -- a data-window ' +
+             'drift that red-lit the deploy gate with no code change. 5 keeps the full page (and the ' +
+             'paging line) robust to that decay.' },
       { name: 'empty', arguments: { search: 'zzzqqq' },
         why: 'A search that matches nothing. Before #260 this returned the unfiltered feed byte-for-byte ' +
              'identical to the normal case; now it is genuinely empty.' },
