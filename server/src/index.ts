@@ -62,6 +62,26 @@ export default {
       return Response.json({ status: "ok", service: "ko-mcp-server" });
     }
 
+    // Standalone SSE stream (GET /mcp): refuse with 405, as the Streamable HTTP
+    // spec allows ("the server MUST either return text/event-stream ... or else
+    // return HTTP 405 Method Not Allowed"). This server is stateless and never
+    // sends server-initiated messages, so there is nothing to stream. Before
+    // this, the SDK opened an SSE stream that nothing would ever write to; the
+    // Workers runtime cancelled it as hung (outcome=exception) within ms, and
+    // every MCP client (claude-code, opencode, node SDK) reconnected at once --
+    // ~98% of this Worker's invocations (7.29M of 7.44M in 30 days) were that
+    // loop. The SDK clients treat 405 as "no SSE here" and stop asking.
+    if (url.pathname === "/mcp" && req.method === "GET") {
+      return Response.json(
+        {
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Method Not Allowed: this server does not offer a standalone SSE stream; use POST /mcp" },
+          id: null,
+        },
+        { status: 405, headers: { ...CORS_HEADERS, Allow: "POST, DELETE, OPTIONS" } },
+      );
+    }
+
     // MCP endpoint
     if (url.pathname === "/mcp") {
       const server = createServer(env, extractUserKey(req));
