@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { defineTool } from "../tool-def.js";
-import { koFetch, asEnvelope, KoApiError, type KoConfig, type KoEnvelope } from "../ko-fetch.js";
-import { fmtMoney, fmtShares, fmtPct, truncate, num } from "../format.js";
+import { koFetch, asEnvelope, KoApiError, type KoConfig, type KoEnvelope, type KoMeta } from "../ko-fetch.js";
+import { fmtMoney, fmtShares, fmtPct, fmtPct2, truncate, num } from "../format.js";
 import { pagingOf, pagingLines, windowLine, planLimitOf, dec, int, str, fmtIntExact } from "../paging.js";
 import { STOCK_HOLDERS_OUTPUT, STOCK_ACTIVITY_OUTPUT, STOCK_PROFILE_OUTPUT, STOCK_PRICE_OUTPUT } from "../output-schemas.js";
 
@@ -101,7 +101,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
           const opt = hasOptionLegs(h) ? " (opt)" : "";
           if (hasOptionLegs(h)) legNotes.push(legNote(h.name, h));
           lines.push(
-            `| **${h.name}**${opt} | ${fmtShares(h.shares_held)} | ${fmtMoney(h.holding_value)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% |`
+            `| **${h.name}**${opt} | ${fmtShares(h.shares_held)} | ${fmtMoney(h.holding_value)} | ${fmtPct2(h.portfolio_weight_pct)}% |`
           );
         }
         if (legNotes.length) lines.push("", ...legNotes.map((n) => `*${n}*`));
@@ -227,7 +227,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         const fam = familyRef(h.family);
         const famTag = fam?.name ? ` (family: ${fam.name}${num(h.reported_by_members) > 1 ? `, ${num(h.reported_by_members)} filers` : ""})` : "";
         lines.push(
-          `| ${rank} | **${h.name}**${famTag}${opt} | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% | ${changeStr} | ${h.action} |`
+          `| ${rank} | **${h.name}**${famTag}${opt} | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${fmtPct2(h.portfolio_weight_pct)}% | ${changeStr} | ${h.action} |`
         );
       }
       if (legNotes.length) lines.push("", ...legNotes.map((n) => `*${n}*`));
@@ -351,19 +351,56 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         planNote = "Free plan / keyless access: latest 13F quarter only; the multi-quarter trend requires Pro.";
       }
 
-      const lines: string[] = [
-        `## Institutional Activity — ${data.ticker}`,
-        "",
-        `**Latest Quarter (${data.summary.quarterDate}):**`,
-        `- Institutions increased: ${data.summary.institutionsIncreased} | Decreased: ${data.summary.institutionsDecreased}`,
-        `- New positions: ${data.summary.institutionsNew} | Exited: ${data.summary.institutionsExited}`,
-        `- Net shares: ${fmtShares(num(data.summary.netShares))} | Net value: ${fmtMoney(num(data.summary.netValue))}`,
-        "",
-        "### Quarterly Trend\n",
-        "| Quarter | Increased | Decreased | New | Exited | Net Shares | Net Value |",
-        "|---------|-----------|-----------|-----|--------|------------|-----------|",
-      ];
+      // equity_filer_baseline (`changes`, PLAN_DATA 1.2 / 2A) is ADDITIVE: when
+      // ko-api does not send it, the text below is byte-identical to the
+      // legacy rendering and no basis line is shown.
+      const latestChanges = changesOf(data.summary.changes);
+      const lines: string[] = latestChanges
+        ? [
+            `Basis: ${latestChanges.basis ?? CHANGES_BASIS} -- ${changesDefinition(env.meta)}`,
+            "",
+            `## Institutional Activity — ${data.ticker}`,
+            "",
+            `**Latest Quarter (${data.summary.quarterDate}):**`,
+            ...changesLines(latestChanges),
+            `- Note -- legacy counts (all filers, including those without a prior-quarter baseline): ` +
+              `Institutions increased (incl. new): ${data.summary.institutionsIncreased} | Decreased (incl. exited): ${data.summary.institutionsDecreased} | ` +
+              `New: ${data.summary.institutionsNew} | Exited: ${data.summary.institutionsExited} | ` +
+              `Net shares: ${fmtShares(num(data.summary.netShares))} | Net value: ${fmtMoney(num(data.summary.netValue))}`,
+            "",
+            `### Quarterly Trend (${CHANGES_BASIS})\n`,
+            "| Quarter | New | Added | Trimmed | Exited | Unchanged | No baseline | Holders | Net Shares | Net Value |",
+            "|---------|-----|-------|---------|--------|-----------|-------------|---------|------------|-----------|",
+          ]
+        : [
+            `## Institutional Activity — ${data.ticker}`,
+            "",
+            `**Latest Quarter (${data.summary.quarterDate}):**`,
+            `- Institutions increased: ${data.summary.institutionsIncreased} | Decreased: ${data.summary.institutionsDecreased}`,
+            `- New positions: ${data.summary.institutionsNew} | Exited: ${data.summary.institutionsExited}`,
+            `- Net shares: ${fmtShares(num(data.summary.netShares))} | Net value: ${fmtMoney(num(data.summary.netValue))}`,
+            "",
+            "### Quarterly Trend\n",
+            "| Quarter | Increased | Decreased | New | Exited | Net Shares | Net Value |",
+            "|---------|-----------|-----------|-----|--------|------------|-----------|",
+          ];
 
+      if (latestChanges) {
+        for (const r of trend) {
+          const c = changesOf(r.changes);
+          lines.push(
+            c
+              ? `| ${r.quarter} | ${cnt(c.new)} | ${cnt(c.added)} | ${cnt(c.trimmed)} | ${cnt(c.exited)} | ${cnt(c.unchanged)} | ${cnt(c.no_baseline)} | ${cnt(c.holders)} | ${fmtShares(c.net_shares)} | ${fmtMoney(c.net_value)} |`
+              : `| ${r.quarter} | — | — | — | — | — | — | — | — | — |`,
+          );
+        }
+        lines.push(
+          "",
+          "*Note -- legacy counts (all filers, including those without a prior-quarter baseline; Increased includes New, Decreased includes Exited):*\n",
+          "| Quarter | Increased (incl. new) | Decreased (incl. exited) | New | Exited | Net Shares | Net Value |",
+          "|---------|-----------------------|--------------------------|-----|--------|------------|-----------|",
+        );
+      }
       for (const r of trend) {
         lines.push(
           `| ${r.quarter} | ${r.institutionsIncreased} | ${r.institutionsDecreased} | ${r.institutionsNew} | ${r.institutionsExited} | ${fmtShares(num(r.netShares))} | ${fmtMoney(num(r.netValue))} |`
@@ -379,6 +416,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         institutions_exited: int(r.institutionsExited),
         net_shares: dec(r.netShares),
         net_value: dec(r.netValue),
+        ...withChanges(r.changes),
       });
       const sm = data.summary;
       return {
@@ -571,6 +609,70 @@ interface HolderRow extends LegFields {
   portfolio_weight_pct: number | null;
 }
 
+// ---------------------------------------------------------------------------
+// get_stock_activity `changes` (PLAN_DATA 1.2 / 2A, basis equity_filer_baseline)
+//
+// ko-api adds `changes` to `summary` and to every `trend[]` row. It is passed
+// through into structuredContent with the SAME names and values as REST
+// (counts and amounts are JSON numbers there); the legacy fields are untouched.
+// ---------------------------------------------------------------------------
+const CHANGES_BASIS = "equity_filer_baseline";
+
+const CHANGES_DEFINITION =
+  "common stock only (option legs excluded); one holder per filer CIK; only filers with a usable " +
+  "prior-quarter 13F baseline in ko.io are classified as new/added/trimmed/exited/unchanged -- filers " +
+  "without one are counted as no_baseline, never as new buyers.";
+
+const CHANGE_COUNTS = ["new", "added", "trimmed", "exited", "unchanged", "no_baseline", "holders"] as const;
+const CHANGE_AMOUNTS = ["shares_added", "shares_removed", "net_shares", "value_added", "value_removed", "net_value"] as const;
+
+type ActivityChanges = { basis: string | null } & Record<(typeof CHANGE_COUNTS)[number], number | null> &
+  Record<(typeof CHANGE_AMOUNTS)[number], number | null>;
+
+/** A JSON number as REST sent it (a numeric string is coerced), or null. */
+function jnum(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** ko-api's `changes` object normalised, or null when absent / not an object. */
+function changesOf(v: unknown): ActivityChanges | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const o = v as Record<string, unknown>;
+  const out = { basis: typeof o.basis === "string" ? o.basis : null } as ActivityChanges;
+  for (const k of CHANGE_COUNTS) out[k] = int(o[k]);
+  for (const k of CHANGE_AMOUNTS) out[k] = jnum(o[k]);
+  return out;
+}
+
+/** `{ changes }` when ko-api sent it, `{}` otherwise (keeps legacy structuredContent unchanged). */
+function withChanges(v: unknown): { changes?: ActivityChanges } {
+  const c = changesOf(v);
+  return c ? { changes: c } : {};
+}
+
+const cnt = (v: number | null): string => (v === null ? "—" : String(v));
+
+function changesLines(c: ActivityChanges): string[] {
+  const exact = c.net_shares === null ? "" : ` (${fmtIntExact(c.net_shares)})`;
+  return [
+    `- New positions: ${cnt(c.new)} | Added: ${cnt(c.added)} | Trimmed: ${cnt(c.trimmed)} | Exited: ${cnt(c.exited)} | Unchanged: ${cnt(c.unchanged)}`,
+    `- No prior-quarter baseline (not classified): ${cnt(c.no_baseline)} | Holders: ${cnt(c.holders)}`,
+    `- Net shares: ${fmtShares(c.net_shares)}${exact} | Net value: ${fmtMoney(c.net_value)}`,
+    `- Shares added: ${fmtShares(c.shares_added)} | Shares removed: ${fmtShares(c.shares_removed)} | Value added: ${fmtMoney(c.value_added)} | Value removed: ${fmtMoney(c.value_removed)}`,
+  ];
+}
+
+/** ko-api's own one-line definition (meta.definitions.changes) when present. */
+function changesDefinition(meta: KoMeta): string {
+  const defs = meta.definitions;
+  const d = defs && typeof defs === "object" ? (defs as Record<string, unknown>).changes : undefined;
+  // "Basis: <name> -- <definition>": drop a leading "<name>:" so it is not said twice.
+  const text = typeof d === "string" ? d.trim().replace(new RegExp(`^${CHANGES_BASIS}\\s*[:\\-]+\\s*`), "") : "";
+  return text || CHANGES_DEFINITION;
+}
+
 interface ActivityResponse {
   ticker: string;
   summary: ActivitySummary;
@@ -590,6 +692,7 @@ interface ActivitySummary {
   valueAdded: number | string;
   valueRemoved: number | string;
   netValue: number | string;
+  changes?: unknown;
 }
 
 interface ActivityTrend {
@@ -600,6 +703,7 @@ interface ActivityTrend {
   institutionsExited: number;
   netShares: number | string;
   netValue: number | string;
+  changes?: unknown;
 }
 
 interface PriceRow {

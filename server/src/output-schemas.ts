@@ -205,6 +205,34 @@ export const STOCK_HOLDERS_OUTPUT = {
 };
 
 // ── get_stock_activity ──────────────────────────────────────────────────────
+// `changes` is ADDITIVE (PLAN_DATA 1.2 / 2A): present only when ko-api sends it,
+// with the SAME names and values as the REST `changes` object (JSON numbers).
+// The legacy institutions_* fields keep their old meaning (all filers, increased
+// includes new, decreased includes exited).
+const Num = z.number().nullable();
+const ACTIVITY_CHANGES = z
+  .object({
+    basis: Str.describe('"equity_filer_baseline"'),
+    new: Int,
+    added: Int,
+    trimmed: Int,
+    exited: Int,
+    unchanged: Int,
+    no_baseline: Int.describe("Filers with no usable prior-quarter baseline: not classified as new/added/..."),
+    holders: Int,
+    shares_added: Num,
+    shares_removed: Num,
+    net_shares: Num,
+    value_added: Num,
+    value_removed: Num,
+    net_value: Num,
+  })
+  .optional()
+  .describe(
+    "equity_filer_baseline: common stock only (option legs excluded); one holder per filer CIK; only filers with a " +
+      "usable prior-quarter baseline are classified. Same names/values as ko.io REST `changes`. Absent when ko.io did not send it.",
+  );
+
 const ACTIVITY_ROW = z.object({
   quarter: Str,
   institutions_increased: Int,
@@ -213,6 +241,7 @@ const ACTIVITY_ROW = z.object({
   institutions_exited: Int,
   net_shares: Dec,
   net_value: Dec,
+  changes: ACTIVITY_CHANGES,
 });
 
 export const STOCK_ACTIVITY_OUTPUT = {
