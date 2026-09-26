@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:62061",
+    "source": "http://127.0.0.1:53816",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -27,7 +27,7 @@
               }
             },
             "structuredContent": {
-              "entity_grain": "null",
+              "entity_grain": "string",
               "family": "null",
               "paging": {
                 "continuation": "string",
@@ -50,22 +50,22 @@
                 "window_end": "string",
                 "window_start": "string"
               },
-              "position_basis": "null",
-              "position_basis_note": "null",
+              "position_basis": "string",
+              "position_basis_note": "string",
               "quarter_date": "string",
               "requested_cik": "null",
               "rows": {
                 "_array": {
                   "action": "string",
-                  "call_shares": "null",
+                  "call_shares": "string",
                   "cik": "string",
-                  "equity_shares": "null",
+                  "equity_shares": "string",
                   "family": "null",
-                  "has_option_legs": "null",
+                  "has_option_legs": "boolean",
                   "holding_value": "string",
                   "name": "string",
                   "portfolio_weight_pct": "string",
-                  "put_shares": "null",
+                  "put_shares": "string",
                   "rank": "number",
                   "reported_by_members": "null",
                   "share_change": "string",
@@ -87,11 +87,13 @@
               "H2 Institutional Holders of AAPL — <VAL>",
               "TEXT **Total institutions:** <VAL>",
               "TEXT *Shares and Value are the <VAL> totals over all legs (common + shares underlying calls + puts); rows marked (opt) include option legs.*",
-              "TEXT **Entity grain:** not stated by ko.io for this response; rows are keyed by filer CIK.",
+              "TEXT **Entity grain:** filer -- each row is ONE <VAL> filer CIK, not a manager family (one family's filers can appear as separate rows).",
               "TEXT *ko.io Free-plan window: quarter_date <DATE> to <DATE> (period <DATE>). Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
               "THEAD # | Institution | Value | Shares | Weight | Change | Action",
               "TBODY",
+              "BLANK",
+              "TEXT *(opt) BlackRock, Inc.: <VAL> common + <VAL> via calls; <VAL> reports option lines at the underlying's value.*",
               "BLANK",
               "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
@@ -166,7 +168,7 @@
               }
             },
             "structuredContent": {
-              "entity_grain": "null",
+              "entity_grain": "string",
               "family": "null",
               "paging": {
                 "continuation": "string",
@@ -189,8 +191,8 @@
                 "window_end": "string",
                 "window_start": "string"
               },
-              "position_basis": "null",
-              "position_basis_note": "null",
+              "position_basis": "string",
+              "position_basis_note": "string",
               "quarter_date": "string",
               "requested_cik": "null",
               "rows": {
