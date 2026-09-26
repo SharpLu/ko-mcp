@@ -3,7 +3,7 @@ import { z } from "zod";
 import { defineTool } from "../tool-def.js";
 import { koFetch, asEnvelope, type KoConfig, type KoMeta } from "../ko-fetch.js";
 import { resolveInstitution } from "../resolve.js";
-import { fmtMoney, fmtShares, num } from "../format.js";
+import { fmtMoney, fmtShares, fmtPct2, num } from "../format.js";
 import { pagingOf, pagingLines, windowLine, planLimitOf, dec, int, str, fmtIntExact } from "../paging.js";
 import { INSTITUTION_HOLDINGS_OUTPUT, LIST_INSTITUTIONS_OUTPUT } from "../output-schemas.js";
 
@@ -260,7 +260,7 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
           }
           if (legs) notes.push(legNote(h.ticker || h.name_of_issuer, h));
           lines.push(
-            `| ${n} |${isHistory ? ` ${h.quarter_date} |` : ""}${multiFiler ? ` ${h.cik} |` : ""} **${h.ticker || "N/A"}**${mark} | ${h.name_of_issuer} | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% | ${changeStr} | ${h.action} |`
+            `| ${n} |${isHistory ? ` ${h.quarter_date} |` : ""}${multiFiler ? ` ${h.cik} |` : ""} **${h.ticker || "N/A"}**${mark} | ${h.name_of_issuer} | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${fmtPct2(h.portfolio_weight_pct)}% | ${changeStr} | ${h.action} |`
           );
         }
         if (notes.length) lines.push("", ...notes.map((x) => `*${x}*`));

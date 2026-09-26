@@ -1,0 +1,91 @@
+{
+  "data": {
+    "ticker": "NVDA",
+    "summary": {
+      "quarterDate": "2026-06-30",
+      "institutionsIncreased": 3292,
+      "institutionsDecreased": 2480,
+      "institutionsNew": 274,
+      "institutionsExited": 115,
+      "institutionsTotal": 5980,
+      "sharesAdded": 611843558,
+      "sharesRemoved": 417139231,
+      "netShares": 194704327,
+      "valueAdded": 122423775255,
+      "valueRemoved": 83465387186,
+      "netValue": 38958388069,
+      "changes": {
+        "basis": "equity_filer_baseline",
+        "new": 211,
+        "added": 3001,
+        "trimmed": 2353,
+        "exited": 114,
+        "unchanged": 322,
+        "no_baseline": 93,
+        "holders": 5980,
+        "shares_added": 518713045,
+        "shares_removed": 402146859,
+        "net_shares": 116566186,
+        "value_added": 103789291274,
+        "value_removed": 80465563545,
+        "net_value": 23323727729
+      }
+    },
+    "trend": [
+      {
+        "quarter": "2026-06-30",
+        "institutionsIncreased": 3292,
+        "institutionsDecreased": 2480,
+        "institutionsNew": 274,
+        "institutionsExited": 115,
+        "institutionsUnchanged": 323,
+        "institutionsTotal": 5980,
+        "sharesAdded": 611843558,
+        "sharesRemoved": 417139231,
+        "netShares": 194704327,
+        "valueAdded": 122423775255,
+        "valueRemoved": 83465387186,
+        "netValue": 38958388069,
+        "changes": {
+          "basis": "equity_filer_baseline",
+          "new": 211,
+          "added": 3001,
+          "trimmed": 2353,
+          "exited": 114,
+          "unchanged": 322,
+          "no_baseline": 93,
+          "holders": 5980,
+          "shares_added": 518713045,
+          "shares_removed": 402146859,
+          "net_shares": 116566186,
+          "value_added": 103789291274,
+          "value_removed": 80465563545,
+          "net_value": 23323727729
+        }
+      }
+    ]
+  },
+  "meta": {
+    "query_time_ms": 1889,
+    "grain": "ticker",
+    "entity_grain": "filer",
+    "position_basis": "13f_reported_all_legs",
+    "position_basis_note": "shares_held and holding_value are both the 13F-reported total over all legs (common + shares underlying calls + shares underlying puts); equity_shares / call_shares / put_shares break it down.",
+    "basis": "reported",
+    "excluded": [],
+    "definitions": {
+      "changes": "changes (basis equity_filer_baseline): common shares only, option legs excluded; one filer CIK counts once per ticker; a filer is classified (new / added / trimmed / exited / unchanged) only when it filed a 13F in this dataset for the previous quarter-end. Filers with shares but no previous-quarter filing are counted in no_baseline and in holders, never as buyers. shares_added / shares_removed / net_shares and value_* sum only classified filers; value = |share change| x the quarter-end close.",
+      "dealer": "DEALER marks filers on a hand-checked list of market makers and proprietary dealer desks (src/lib/dealer-filers.ts); their 13F positions are mostly hedge or market-making inventory. The list is curated, not inferred, so dealers missing from it are not flagged. Flagged rows are never removed unless the request says exclude=dealers."
+    },
+    "softwall": {
+      "policy_version": "softwall-v1",
+      "window_start": "2026-06-30",
+      "window_end": "2026-09-26",
+      "effective_period": "2026-06-30",
+      "date_basis": "quarter_date",
+      "row_cap": 25,
+      "truncated": false,
+      "continuation": "SIGNIN_REQUIRED"
+    }
+  }
+}

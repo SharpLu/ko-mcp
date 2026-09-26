@@ -61,3 +61,14 @@ export function fmtPct(value: number | string | null | undefined): string {
 export function truncate(arr: unknown[], max: number): unknown[] {
   return arr.slice(0, max);
 }
+
+/**
+ * A percentage VALUE (no sign, no "%") at 2 decimals for display, e.g.
+ * portfolio_weight_pct 12.620000000000001 -> "12.62". Accepts the numeric
+ * string form too (a bare `.toFixed` on a string throws). null/absent/non-finite
+ * -> the placeholder. Display only: structuredContent keeps the served value.
+ */
+export function fmtPct2(value: unknown, placeholder = "—"): string {
+  const v = coerce(value);
+  return v == null ? placeholder : v.toFixed(2);
+}
