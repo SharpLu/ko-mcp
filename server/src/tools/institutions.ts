@@ -205,17 +205,24 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
       // returns the family's position in that ticker ONE ROW PER QUARTER (for a
       // paid caller: the whole history; for Free: from the settled quarter on).
       // Titling that "Quarter: <first row>" presented March and June positions
-      // as one current portfolio. The view is decided by the rows themselves.
+      // as one current portfolio. The view is decided by the REQUEST, not by the
+      // rows on this page: family + ticker is ko-api's history branch, so page 2
+      // (older quarters only) or a one-row page is still a history. Rows from
+      // more than one quarter are a history whatever the request looked like.
       const quarters = [...new Set(holdings.map((h) => String(h.quarter_date ?? "")).filter(Boolean))];
-      const isHistory = quarters.length > 1;
+      const historyRequest = Boolean(tickerFilter) && entityGrain === "family";
+      const isHistory = historyRequest || quarters.length > 1;
       const qtr = holdings.length > 0 ? holdings[0].quarter_date : "Unknown";
       if (isHistory) {
-        lines.push(
-          `## 13F Position History${tickerFilter ? ` — ${tickerFilter}` : ""} — ${quarters.length} quarters (${quarters[quarters.length - 1]} to ${quarters[0]})`,
-        );
+        const span = quarters.length
+          ? ` — ${quarters.length} quarter${quarters.length === 1 ? "" : "s"} on this page (${quarters[quarters.length - 1]} to ${quarters[0]})`
+          : "";
+        lines.push(`## 13F Position History${tickerFilter ? ` — ${tickerFilter}` : ""}${span}`);
+        // No claim about which row is "current": this may be page 2, and the
+        // newest row on it is then an older quarter.
         lines.push(
           "*HISTORY, not a current portfolio: one row per quarter-end, newest first. Each row is the position AS OF " +
-            "its Quarter; only the newest row is the current holding.*",
+            "its Quarter.*",
         );
       } else {
         lines.push(`## 13F Holdings — Quarter: ${qtr}`);

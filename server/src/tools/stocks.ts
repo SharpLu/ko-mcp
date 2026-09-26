@@ -68,7 +68,9 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       );
 
       const s = data.stock;
-      const priceDate = str((s as { price_date?: unknown }).price_date);
+      // ko-api sends the as-of date as a SIBLING of `stock` (data.price_date);
+      // an older shape nested it inside `stock`. Read the sibling first.
+      const priceDate = str((data as { price_date?: unknown }).price_date) ?? str((s as { price_date?: unknown }).price_date);
 
       const lines: string[] = [
         `## ${s.ticker}`,
@@ -78,7 +80,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         `| **Sector** | ${s.sector || "N/A"} |`,
         `| **Industry** | ${s.industry || "N/A"} |`,
         `| **Market Cap** | ${fmtMoney(s.market_cap)} |`,
-        `| **Price** | $${s.current_price?.toFixed(2) ?? "N/A"}${priceDate ? ` (${priceDate})` : ""} |`,
+        `| **Price** | $${s.current_price?.toFixed(2) ?? "N/A"}${priceDate ? ` (as of ${priceDate})` : ""} |`,
         `| **Previous Close** | $${s.previous_close?.toFixed(2) ?? "N/A"} |`,
         `| **52W High** | $${s.fifty_two_week_high?.toFixed(2) ?? "N/A"} |`,
         `| **52W Low** | $${s.fifty_two_week_low?.toFixed(2) ?? "N/A"} |`,

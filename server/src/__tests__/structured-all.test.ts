@@ -220,13 +220,40 @@ describe("get_institution_holdings: history is labelled as history (R1 #4)", () 
     const r = await call("get_institution_holdings", { institution: "102909", ticker: "AMD" }, "ko_live_paid");
     const t = text(r);
     expect(t).not.toMatch(/## 13F Holdings — Quarter: 2026-06-30/);
-    expect(t).toMatch(/Position History — AMD — 2 quarters \(2026-03-31 to 2026-06-30\)/);
+    expect(t).toMatch(/Position History — AMD — 2 quarters on this page \(2026-03-31 to 2026-06-30\)/);
+    expect(t).not.toMatch(/current holding/i);
     expect(t).toMatch(/HISTORY, not a current portfolio/);
     expect(t).toMatch(/\| # \| Quarter \|/);
     expect(t).toMatch(/\| 1 \| 2026-06-30 \|/);
     expect(t).toMatch(/\| 2 \| 2026-03-31 \|/);
     expect(r.structuredContent).toMatchObject({ view: "history", quarters: ["2026-06-30", "2026-03-31"], quarter_date: null });
     expect(r.structuredContent!.rows.map((x: { quarter_date: string }) => x.quarter_date)).toEqual(["2026-06-30", "2026-03-31"]);
+  });
+
+  const famRow = (quarter_date: string) => ({ ...HOLDING, cik: "102909", ticker: "AMD", name_of_issuer: "AMD", quarter_date });
+
+  it("page 2 of a family+ticker history is still a history, with no 'current' claim", async () => {
+    mock.mockResolvedValue(env([famRow("2025-12-31"), famRow("2025-09-30")], { is_family: true, total_count: "8", page: 2, per_page: 2 }) as never);
+    const r = await call("get_institution_holdings", { institution: "102909", ticker: "AMD", page: 2, limit: 2 }, "ko_live_paid");
+    const t = text(r);
+    expect(t).toMatch(/Position History — AMD/);
+    expect(t).not.toMatch(/current holding|Quarter: 2025-12-31/i);
+    expect(t).toMatch(/\| 3 \| 2025-12-31 \|/);
+    expect(r.structuredContent).toMatchObject({ view: "history", quarter_date: null, quarters: ["2025-12-31", "2025-09-30"] });
+  });
+
+  it("a one-row family+ticker page is still a history", async () => {
+    mock.mockResolvedValue(env([famRow("2026-06-30")], { is_family: true, total_count: "1" }) as never);
+    const r = await call("get_institution_holdings", { institution: "102909", ticker: "AMD" });
+    expect(text(r)).toMatch(/Position History — AMD — 1 quarter on this page/);
+    expect(text(r)).toMatch(/\| # \| Quarter \|/);
+    expect(r.structuredContent).toMatchObject({ view: "history", quarter_date: null });
+  });
+
+  it("a filer (non-family) ticker query stays a snapshot", async () => {
+    mock.mockResolvedValue(env([{ ...HOLDING, ticker: "GOOG" }], { consolidated_share_classes: false }) as never);
+    const r = await call("get_institution_holdings", { institution: "1067983", ticker: "GOOG" });
+    expect(r.structuredContent).toMatchObject({ view: "snapshot", quarter_date: "2026-06-30" });
   });
 
   it("a single-quarter answer stays a snapshot", async () => {
@@ -342,5 +369,23 @@ describe("get_stock_holders: entity grain and family attribution survive the pro
     expect(text(r)).toMatch(/Entity grain:\*\* not stated by ko\.io/);
     expect(r.structuredContent).toMatchObject({ entity_grain: null, family: null });
     expect(r.structuredContent!.rows[0]).toMatchObject({ family: null, equity_shares: null, has_option_legs: null });
+  });
+});
+
+describe("get_stock_profile: the price as-of date survives (R2 #2)", () => {
+  it("reads ko-api's sibling data.price_date into Markdown and structuredContent", async () => {
+    mock.mockResolvedValue({ stock: { ticker: "AAPL", current_price: 255.46 }, price_date: "2026-09-25", top_holders: [] } as never);
+    const r = await call("get_stock_profile", { ticker: "AAPL" });
+    expect(text(r)).toContain("$255.46 (as of 2026-09-25)");
+    expect(r.structuredContent!.stock).toMatchObject({ current_price: "255.46", price_date: "2026-09-25" });
+  });
+
+  it("falls back to stock.price_date on the older shape, and to null when absent", async () => {
+    mock.mockResolvedValue({ stock: { ticker: "AAPL", current_price: 1, price_date: "2026-09-24" }, top_holders: [] } as never);
+    expect((await call("get_stock_profile", { ticker: "AAPL" })).structuredContent!.stock.price_date).toBe("2026-09-24");
+    mock.mockResolvedValue({ stock: { ticker: "AAPL", current_price: 1 }, top_holders: [] } as never);
+    const r = await call("get_stock_profile", { ticker: "AAPL" });
+    expect(r.structuredContent!.stock.price_date).toBeNull();
+    expect(text(r)).not.toMatch(/as of/);
   });
 });
