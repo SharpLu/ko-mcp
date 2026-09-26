@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:59747",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -27,6 +27,8 @@
               }
             },
             "structuredContent": {
+              "entity_grain": "null",
+              "family": "null",
               "paging": {
                 "continuation": "string",
                 "has_more": "boolean",
@@ -49,19 +51,23 @@
                 "window_start": "string"
               },
               "position_basis": "null",
+              "position_basis_note": "null",
               "quarter_date": "string",
+              "requested_cik": "null",
               "rows": {
                 "_array": {
                   "action": "string",
                   "call_shares": "null",
                   "cik": "string",
                   "equity_shares": "null",
+                  "family": "null",
                   "has_option_legs": "null",
                   "holding_value": "string",
                   "name": "string",
                   "portfolio_weight_pct": "string",
                   "put_shares": "null",
                   "rank": "number",
+                  "reported_by_members": "null",
                   "share_change": "string",
                   "shares_held": "string"
                 }
@@ -81,6 +87,7 @@
               "H2 Institutional Holders of AAPL — <VAL>",
               "TEXT **Total institutions:** <VAL>",
               "TEXT *Shares and Value are the <VAL> totals over all legs (common + shares underlying calls + puts); rows marked (opt) include option legs.*",
+              "TEXT **Entity grain:** not stated by ko.io for this response; rows are keyed by filer CIK.",
               "TEXT *ko.io Free-plan window: quarter_date <DATE> to <DATE> (period <DATE>). Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
               "THEAD # | Institution | Value | Shares | Weight | Change | Action",
@@ -159,6 +166,8 @@
               }
             },
             "structuredContent": {
+              "entity_grain": "null",
+              "family": "null",
               "paging": {
                 "continuation": "string",
                 "has_more": "boolean",
@@ -181,7 +190,9 @@
                 "window_start": "string"
               },
               "position_basis": "null",
+              "position_basis_note": "null",
               "quarter_date": "string",
+              "requested_cik": "null",
               "rows": {
                 "_array": null
               },

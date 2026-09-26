@@ -2,7 +2,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { defineTool } from "../tool-def.js";
 import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
-import { pagingOf, pagingLines } from "../paging.js";
+import { pagingOf, pagingLines, planLimitOf, str } from "../paging.js";
+import { CONGRESS_TRADES_OUTPUT, CONGRESS_MEMBER_OUTPUT } from "../output-schemas.js";
 
 export function registerCongressTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
@@ -71,8 +72,17 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
         lines.push(`\n*Page ${page} — use page=${page + 1} for more.*`);
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          filters: { chamber: str(chamber), ticker: str(ticker), search: str(search), sort: str(sort) },
+          rows: trades.map(congressRow),
+          paging: pagingOf(env.meta, { page, limit, returned: trades.length }),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: CONGRESS_TRADES_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
@@ -128,14 +138,30 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
         lines.push(`\n*Showing ${trades.length} trades — use page=${page + 1} for more.*`);
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          member,
+          rows: trades.map(congressRow),
+          paging: pagingOf(env.meta, { page, limit, returned: trades.length }),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: CONGRESS_MEMBER_OUTPUT },
   );
 }
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+const congressRow = (t: CongressTrade) => ({
+  member_name: str(t.member_name), chamber: str(t.chamber), ticker: str(t.ticker),
+  asset_description: str(t.asset_description), transaction_type: str(t.transaction_type),
+  transaction_date: str(t.transaction_date), disclosure_date: str(t.disclosure_date),
+  amount_range: str(t.amount_range), owner: str(t.owner),
+});
+
 interface CongressTrade {
   member_name: string;
   chamber: string;

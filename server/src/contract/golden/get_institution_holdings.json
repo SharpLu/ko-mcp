@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:59747",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -52,6 +52,9 @@
               },
               "position_basis": "null",
               "quarter_date": "string",
+              "quarters": {
+                "_array": "string"
+              },
               "requested": "string",
               "requested_cik": "string",
               "resolved_cik": "string",
@@ -81,7 +84,8 @@
                 }
               },
               "security_grain": "string",
-              "ticker_filter": "null"
+              "ticker_filter": "null",
+              "view": "string"
             }
           }
         },
@@ -246,6 +250,9 @@
               },
               "position_basis": "null",
               "quarter_date": "string",
+              "quarters": {
+                "_array": "string"
+              },
               "requested": "string",
               "requested_cik": "string",
               "resolved_cik": "string",
@@ -275,7 +282,8 @@
                 }
               },
               "security_grain": "string",
-              "ticker_filter": "string"
+              "ticker_filter": "string",
+              "view": "string"
             }
           }
         },

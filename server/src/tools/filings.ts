@@ -2,6 +2,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { defineTool } from "../tool-def.js";
 import { koFetch, KoApiError, KO_FETCH_TIMEOUT_MS, type KoConfig } from "../ko-fetch.js";
+import { str, int } from "../paging.js";
+import { FILINGS_LIST_OUTPUT, FILING_INDEX_OUTPUT, FILING_DOCUMENT_OUTPUT } from "../output-schemas.js";
 
 /**
  * SEC source-document gateway tools (ko-api#104).
@@ -45,8 +47,19 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
         lines.push(`| ${f.filingDate} | ${f.form} | \`${f.accession}\` | ${f.primaryDocument || "—"} |`);
       }
       if (filings.length === 0) lines.push("\nNo filings found.");
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          cik,
+          filters: { form_type: str(form_type), from: str(from), to: str(to) },
+          rows: (Array.isArray(filings) ? filings : []).map((f) => ({
+            filing_date: str(f.filingDate), form: str(f.form), accession: str(f.accession),
+            primary_document: str(f.primaryDocument), description: str(f.primaryDocDescription),
+          })),
+        },
+      };
+    },
+    { outputSchema: FILINGS_LIST_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
@@ -73,8 +86,16 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
       for (const f of index.files) {
         lines.push(`| \`${f.name}\` | ${f.type || "—"} | ${f.size ? `${f.size.toLocaleString()} B` : "—"} |`);
       }
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          cik: str(index.cik),
+          accession: str(index.accession),
+          files: index.files.map((f) => ({ name: str(f.name), type: str(f.type), size_bytes: int(f.size), last_modified: str(f.lastModified) })),
+        },
+      };
+    },
+    { outputSchema: FILING_INDEX_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
@@ -105,19 +126,35 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
       // envelope holding an unsigned link it could not open and
       // "(excerpt unavailable: 403)" -- which a model reports as "I fetched the
       // document". A plan refusal is now an error that names the plan.
+      //
+      // Rule (final-eval R1 #6): a CONFIRMED plan denial stays an error unless
+      // something usable actually came back. "Usable" = a signed link, or an
+      // excerpt that arrived. An unsigned link is not usable to a caller without
+      // a paid key, so a 5xx / timeout on the other leg must not launder a
+      // PLAN_REQUIRED into a success.
       let planDenied: string | null = null;
+      let shareOk = false;
+      let shareFailure: string | null = null;
+      let expiresAt: string | null = null;
       try {
         const share = await koFetch<{ url: string; expires_at: string }>(
           config,
           `/api/v1/filings/${encodeURIComponent(cik)}/${encodeURIComponent(accession_no)}/share`,
           file ? { file } : {},
         );
-        htmlLink = share.url;
-        linkNote = ` *(link valid until ${share.expires_at})*`;
+        if (share && typeof share.url === "string" && share.url) {
+          htmlLink = share.url;
+          expiresAt = share.expires_at ?? null;
+          shareOk = true;
+          linkNote = ` *(link valid until ${share.expires_at})*`;
+        } else {
+          shareFailure = "share link response carried no url";
+        }
       } catch (e) {
         if (e instanceof KoApiError && (e.status === 401 || e.status === 403)) planDenied = e.message;
-        linkNote = " *(unsigned link — requires an API key to open)*";
+        else shareFailure = e instanceof Error ? e.message : String(e);
       }
+      if (!shareOk) linkNote = " *(unsigned link — requires a paid API key to open)*";
 
       const lines = [
         `## SEC Filing Document`,
@@ -126,6 +163,10 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
         `\n**View:** ${htmlLink}${linkNote}`,
       ];
 
+      let excerptStatus: "ok" | "unavailable" | "not_requested" = "not_requested";
+      let excerptText: string | null = null;
+      let excerptChars: number | null = null;
+      let excerptFailure: string | null = null;
       if (include_excerpt) {
         try {
           const mdUrl = new URL(`${base}${file ? `?file=${encodeURIComponent(file)}&` : "?"}format=markdown`, config.baseUrl);
@@ -140,25 +181,59 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
               : { "User-Agent": "ko-mcp-worker/1.0" },
             signal: AbortSignal.timeout(KO_FETCH_TIMEOUT_MS),
           });
-          if ((res.status === 401 || res.status === 403) && planDenied) {
-            return planLimitResult(planDenied);
-          }
           if (res.ok) {
             const text = await res.text();
-            const excerpt = text.slice(0, MAX_EXCERPT);
-            lines.push(`\n---\n\n${excerpt}${text.length > MAX_EXCERPT ? `\n\n*[excerpt — ${text.length.toLocaleString()} chars total; open the link for the full document]*` : ""}`);
+            excerptStatus = "ok";
+            excerptChars = text.length;
+            excerptText = text.slice(0, MAX_EXCERPT);
+            lines.push(`\n---\n\n${excerptText}${text.length > MAX_EXCERPT ? `\n\n*[excerpt — ${text.length.toLocaleString()} chars total; open the link for the full document]*` : ""}`);
           } else {
+            excerptStatus = "unavailable";
+            if (res.status === 401 || res.status === 403) {
+              planDenied ??= `ko.io API error (${res.status}): excerpt refused (paid plan required)`;
+            }
+            excerptFailure = `ko.io API error (${res.status})`;
             lines.push(`\n*(excerpt unavailable: ${res.status})*`);
           }
         } catch (e) {
-          lines.push(`\n*(excerpt unavailable: ${e instanceof Error ? e.message : "fetch error"})*`);
+          excerptStatus = "unavailable";
+          excerptFailure = e instanceof Error ? e.message : "fetch error";
+          lines.push(`\n*(excerpt unavailable: ${excerptFailure})*`);
         }
       }
 
-      if (planDenied && !include_excerpt) return planLimitResult(planDenied);
+      const usable = shareOk || excerptStatus === "ok";
+      if (!usable) {
+        if (planDenied) return planLimitResult(planDenied);
+        return {
+          isError: true,
+          content: [{
+            type: "text" as const,
+            text:
+              "ko.io could not serve this filing document right now (no signed link and no excerpt). " +
+              `Share link: ${shareFailure ?? "not attempted"}. Excerpt: ${excerptFailure ?? "not requested"}. ` +
+              "This is a service failure, not evidence the document does not exist; retry, or use sec_get_filing_index.",
+          }],
+        };
+      }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          cik,
+          accession_no,
+          file: file ?? null,
+          link: { url: htmlLink, signed: shareOk, expires_at: expiresAt },
+          excerpt: {
+            status: excerptStatus,
+            text: excerptText,
+            chars_total: excerptChars,
+            truncated: excerptChars !== null ? excerptChars > MAX_EXCERPT : null,
+          },
+        },
+      };
+    },
+    { outputSchema: FILING_DOCUMENT_OUTPUT },
   );
 }
 

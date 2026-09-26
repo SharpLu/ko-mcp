@@ -2,7 +2,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { defineTool } from "../tool-def.js";
 import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
-import { pagingOf, pagingLines } from "../paging.js";
+import { pagingOf, pagingLines, planLimitOf, dec, int, str } from "../paging.js";
+import { CRYPTO_EXPOSURE_OUTPUT, CRYPTO_HOLDERS_OUTPUT, CRYPTO_HOLDER_OUTPUT } from "../output-schemas.js";
 import { resolveInstitution } from "../resolve.js";
 import { fmtMoney, fmtShares, num } from "../format.js";
 
@@ -23,7 +24,7 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
     "Get a market-wide summary of institutional exposure to US spot crypto ETFs (Bitcoin ETF complex: IBIT, FBTC, GBTC, etc.) from the latest quarter of SEC 13F filings. Returns total institutional USD held, quarter-over-quarter change, and a per-ETF breakdown (holders, USD, QoQ).",
     {},
     async () => {
-      const data = await koFetch<ExposureSummary>(config, "/api/v1/crypto/exposure-summary");
+      const data = (await koFetch<ExposureSummary>(config, "/api/v1/crypto/exposure-summary")) ?? {};
       const lines: string[] = [];
       lines.push("## Institutional Crypto-ETF Exposure (latest quarter)\n");
       lines.push(`**Total institutional USD:** ${fmtMoney(num(data.complex?.total_usd))}`);
@@ -42,8 +43,20 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
       } else {
         lines.push("No crypto-ETF exposure data available.");
       }
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          complex: {
+            total_usd: dec(data.complex?.total_usd), qoq_change: dec(data.complex?.qoq_change), products: int(data.complex?.products),
+          },
+          products: products.map((p) => ({
+            product_ticker: str(p.product_ticker), product_name: str(p.product_name), sponsor: str(p.sponsor),
+            holders: int(p.holders), total_usd: dec(p.total_usd), prev_usd: dec(p.prev_usd), qoq_change: dec(p.qoq_change),
+          })),
+        },
+      };
+    },
+    { outputSchema: CRYPTO_EXPOSURE_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
@@ -87,8 +100,22 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
       } else {
         lines.push("No institutional holders found.");
       }
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          product: product ? product.toUpperCase() : null,
+          total_holders: int(data.total_count),
+          rows: holders.map((h) => ({
+            rank: int(h.rank), cik: str(h.cik), name: str(h.name), total_usd: dec(h.total_usd), prev_usd: dec(h.prev_usd),
+            qoq_value_change: dec(h.qoq_value_change), product_count: int(h.product_count),
+            products: Array.isArray(h.products) ? h.products.map(String) : [],
+          })),
+          paging: pagingOf({ ...env.meta, total_count: data.total_count ?? env.meta.total_count }, { page, limit, returned: holders.length }),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: CRYPTO_HOLDERS_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
@@ -120,6 +147,7 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
               text: `No institution found matching "${institution}". Provide a numeric CIK (e.g. '1512857') or use get_crypto_holders / search to find one.`,
             },
           ],
+          structuredContent: { requested: institution, cik: null, institution: null, positions: [], plan_limit: null },
         };
       }
       const env = asEnvelope<HolderDetail>(
@@ -149,8 +177,27 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
       } else {
         lines.push("No spot crypto-ETF positions for this institution.");
       }
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          requested: institution,
+          cik,
+          institution: inst
+            ? {
+                name: str(inst.name), latest_quarter: str(inst.latest_quarter), total_usd: dec(inst.total_usd),
+                qoq_change: dec(inst.qoq_change), rank: int(inst.rank), total_holders: int(inst.total_holders),
+                portfolio_weight_pct: dec(inst.portfolio_weight_pct),
+              }
+            : null,
+          positions: positions.map((p) => ({
+            product_ticker: str(p.product_ticker), product_name: str(p.product_name), shares_held: dec(p.shares_held),
+            usd_value: dec(p.usd_value), qoq_value_change: dec(p.qoq_value_change), action: str(p.action),
+          })),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: CRYPTO_HOLDER_OUTPUT },
   );
 }
 

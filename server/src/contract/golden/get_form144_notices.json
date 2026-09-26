@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:59747",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -24,6 +24,50 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "filters": {
+                "insider_cik": "null",
+                "ticker": "string"
+              },
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": {
+                  "accession_no": "string",
+                  "aggregate_market_value": "string",
+                  "approx_sale_date": "string",
+                  "broker_name": "string",
+                  "filed_date": "string",
+                  "has_10b5_1_plan": "boolean",
+                  "issuer_cik": "string",
+                  "issuer_name": "string",
+                  "issuer_ticker": "string",
+                  "relationship": "string",
+                  "securities_class": "string",
+                  "seller_name": "string",
+                  "units_to_sell": "string"
+                }
               }
             }
           }
@@ -76,6 +120,36 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "filters": {
+                "insider_cik": "null",
+                "ticker": "string"
+              },
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": null
               }
             }
           }

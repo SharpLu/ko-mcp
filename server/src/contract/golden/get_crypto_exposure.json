@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:59747",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -21,6 +21,24 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "complex": {
+                "products": "number",
+                "qoq_change": "string",
+                "total_usd": "string"
+              },
+              "products": {
+                "_array": {
+                  "holders": "number",
+                  "prev_usd": "string",
+                  "product_name": "string",
+                  "product_ticker": "string",
+                  "qoq_change": "string",
+                  "sponsor": "string",
+                  "total_usd": "string"
+                }
               }
             }
           }
@@ -73,6 +91,24 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "complex": {
+                "products": "number",
+                "qoq_change": "string",
+                "total_usd": "string"
+              },
+              "products": {
+                "_array": {
+                  "holders": "number",
+                  "prev_usd": "string",
+                  "product_name": "string",
+                  "product_ticker": "string",
+                  "qoq_change": "string",
+                  "sponsor": "string",
+                  "total_usd": "string"
+                }
               }
             }
           }

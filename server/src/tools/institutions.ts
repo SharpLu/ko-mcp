@@ -4,8 +4,8 @@ import { defineTool } from "../tool-def.js";
 import { koFetch, asEnvelope, type KoConfig, type KoMeta } from "../ko-fetch.js";
 import { resolveInstitution } from "../resolve.js";
 import { fmtMoney, fmtShares, num } from "../format.js";
-import { pagingOf, pagingLines, windowLine, planLimitOf, dec, int, fmtIntExact } from "../paging.js";
-import { INSTITUTION_HOLDINGS_OUTPUT } from "../output-schemas.js";
+import { pagingOf, pagingLines, windowLine, planLimitOf, dec, int, str, fmtIntExact } from "../paging.js";
+import { INSTITUTION_HOLDINGS_OUTPUT, LIST_INSTITUTIONS_OUTPUT } from "../output-schemas.js";
 
 interface FamilyRef { slug: string | null; name: string | null; canonical_cik: string | null }
 
@@ -68,6 +68,8 @@ function emptyHoldings(requested: string, target: string | null, ticker: string 
     security_grain: "security" as const,
     ticker_filter: ticker ? ticker.toUpperCase() : null,
     position_basis: null,
+    view: "snapshot" as const,
+    quarters: [],
     quarter_date: null,
     rows: [],
     paging: { page: 1, per_page: 0, returned: 0, total_count: 0, has_more: false, next_page: null,
@@ -199,9 +201,26 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
 
       const lines: string[] = [];
       if (resolved.note) lines.push(resolved.note);
+      // SNAPSHOT vs HISTORY (final-eval R1 #4). ko-api's family + ticker branch
+      // returns the family's position in that ticker ONE ROW PER QUARTER (for a
+      // paid caller: the whole history; for Free: from the settled quarter on).
+      // Titling that "Quarter: <first row>" presented March and June positions
+      // as one current portfolio. The view is decided by the rows themselves.
+      const quarters = [...new Set(holdings.map((h) => String(h.quarter_date ?? "")).filter(Boolean))];
+      const isHistory = quarters.length > 1;
       const qtr = holdings.length > 0 ? holdings[0].quarter_date : "Unknown";
-      lines.push(`## 13F Holdings — Quarter: ${qtr}`);
-      lines.push(`**Positions shown:** ${holdings.length}${paging.total_count !== null ? ` of ${paging.total_count.toLocaleString("en-US")}` : ""}`);
+      if (isHistory) {
+        lines.push(
+          `## 13F Position History${tickerFilter ? ` — ${tickerFilter}` : ""} — ${quarters.length} quarters (${quarters[quarters.length - 1]} to ${quarters[0]})`,
+        );
+        lines.push(
+          "*HISTORY, not a current portfolio: one row per quarter-end, newest first. Each row is the position AS OF " +
+            "its Quarter; only the newest row is the current holding.*",
+        );
+      } else {
+        lines.push(`## 13F Holdings — Quarter: ${qtr}`);
+      }
+      lines.push(`**${isHistory ? "Quarters" : "Positions"} shown:** ${holdings.length}${paging.total_count !== null ? ` of ${paging.total_count.toLocaleString("en-US")}` : ""}`);
       lines.push(entityLine(entityGrain, requestedCik, resolvedCik, family, ciks));
       lines.push(
         tickerFilter
@@ -216,8 +235,8 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
 
       if (holdings.length > 0) {
         const multiFiler = ciks.length > 1;
-        lines.push(`| # |${multiFiler ? " Filer CIK |" : ""} Ticker | Issuer | Value | Shares | Weight | Change | Action |`);
-        lines.push(`|---|${multiFiler ? "-----------|" : ""}--------|--------|-------|--------|--------|--------|--------|`);
+        lines.push(`| # |${isHistory ? " Quarter |" : ""}${multiFiler ? " Filer CIK |" : ""} Ticker | Issuer | Value | Shares | Weight | Change | Action |`);
+        lines.push(`|---|${isHistory ? "---------|" : ""}${multiFiler ? "-----------|" : ""}--------|--------|-------|--------|--------|--------|--------|`);
 
         const notes: string[] = [];
         for (const [i, h] of holdings.entries()) {
@@ -234,7 +253,7 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
           }
           if (legs) notes.push(legNote(h.ticker || h.name_of_issuer, h));
           lines.push(
-            `| ${n} |${multiFiler ? ` ${h.cik} |` : ""} **${h.ticker || "N/A"}**${mark} | ${h.name_of_issuer} | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% | ${changeStr} | ${h.action} |`
+            `| ${n} |${isHistory ? ` ${h.quarter_date} |` : ""}${multiFiler ? ` ${h.cik} |` : ""} **${h.ticker || "N/A"}**${mark} | ${h.name_of_issuer} | ${fmtMoney(h.holding_value)} | ${fmtShares(h.shares_held)} | ${h.portfolio_weight_pct?.toFixed(2) ?? "—"}% | ${changeStr} | ${h.action} |`
           );
         }
         if (notes.length) lines.push("", ...notes.map((x) => `*${x}*`));
@@ -254,7 +273,9 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
           security_grain: tickerFilter ? "security" : securityGrain,
           ticker_filter: tickerFilter ?? null,
           position_basis: basis,
-          quarter_date: holdings[0]?.quarter_date ?? null,
+          view: isHistory ? "history" : "snapshot",
+          quarters,
+          quarter_date: isHistory ? null : holdings[0]?.quarter_date ?? null,
           rows: holdings.map((h) => {
             const classes = classesOf(h);
             return {
@@ -329,8 +350,20 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
         lines.push(`\n*More results available — use page=${page + 1}*`);
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          search: str(search),
+          rows: institutions.map((inst) => ({
+            cik: str(inst.cik), name: str(inst.name), slug: str(inst.slug), rank: int(inst.rank), category: str(inst.category),
+            portfolio_value: dec(inst.portfolio_value), stock_count: int(inst.stock_count),
+          })),
+          paging: pagingOf(env.meta, { page, limit, returned: institutions.length }),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: LIST_INSTITUTIONS_OUTPUT },
   );
 }
 

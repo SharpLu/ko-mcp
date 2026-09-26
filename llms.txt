@@ -32,7 +32,7 @@ Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "messa
 - get_stock_activity(ticker, quarters): institutional accumulation/distribution trend (omit quarters for the plan default; Free = latest quarter)
 - get_stock_price(ticker, period, series, limit): daily OHLCV
 - get_stock_financials(ticker, period_type, limit): XBRL-derived statements
-- get_insider_trades(ticker, executive_cik, period, page, limit): Form 4 -- per insider per day (open-market vs all dispositions) or, with executive_cik, per transaction line with SEC code
+- get_insider_trades(ticker, executive_cik, period, page, limit): Form 4 -- per insider per day (code P/S, open market or private, vs all dispositions) or, with executive_cik, per transaction line with SEC code
 - list_insider_traders(search, role, page, limit): insiders directory
 - get_congress_trades(chamber, party, ticker, state, search, sort, page, limit)
 - get_congress_member(member, page, limit): one member's trades by slug
@@ -49,9 +49,8 @@ Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "messa
 - get_economic_indicators(category, days) [Pro]
 - get_financial_stress(days) [Pro]
 
-Output contract: every tool is annotated readOnlyHint/openWorldHint. get_institution_holdings,
-get_stock_holders, get_stock_activity, get_stock_financials, get_insider_trades and get_ftd_data also
-return structuredContent (declared outputSchema) with exact integers / decimal strings. A plan limit is
+Output contract: every tool is annotated readOnlyHint/openWorldHint, declares an outputSchema and
+returns structuredContent (exact integers / decimal strings) on every successful answer, empty ones included. A plan limit is
 an isError result that names the plan, never an empty "no data" answer.
 
 ## Key REST endpoints

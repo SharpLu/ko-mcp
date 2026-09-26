@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:59747",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -24,6 +24,23 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "cik": "string",
+              "filters": {
+                "form_type": "null",
+                "from": "null",
+                "to": "null"
+              },
+              "rows": {
+                "_array": {
+                  "accession": "string",
+                  "description": "string",
+                  "filing_date": "string",
+                  "form": "string",
+                  "primary_document": "string"
+                }
               }
             }
           }
@@ -72,6 +89,17 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "cik": "string",
+              "filters": {
+                "form_type": "string",
+                "from": "null",
+                "to": "null"
+              },
+              "rows": {
+                "_array": null
               }
             }
           }

@@ -3,8 +3,8 @@ import { z } from "zod";
 import { defineTool } from "../tool-def.js";
 import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
 import { fmtMoney, fmtShares, num } from "../format.js";
-import { pagingOf, pagingLines, windowLine, planLimitOf, dec, int, fmtIntExact, fmtUsdExact } from "../paging.js";
-import { INSIDER_TRADES_OUTPUT } from "../output-schemas.js";
+import { pagingOf, pagingLines, windowLine, planLimitOf, dec, int, str, fmtIntExact, fmtUsdExact } from "../paging.js";
+import { INSIDER_TRADES_OUTPUT, INSIDER_TRADERS_OUTPUT } from "../output-schemas.js";
 
 export function registerInsiderTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
@@ -13,11 +13,11 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
   // GRAIN IS THE WHOLE POINT (final-eval 2026-09-26, EVAL_CODEX_TECH #2).
   // This tool used to read /executive-trades/:ticker, whose mart holds ONE row
   // per insider per trade date with a single `action`. Jennifer Newstead's
-  // AAPL Form 4 lines on 2026-09-15 were four transactions -- an open-market
+  // AAPL Form 4 lines on 2026-09-15 were four transactions -- a code-S
   // sale of 1,438 sh ($474,813.22), an RSU vest/exercise acquiring 30,104 sh,
   // 16,228 sh withheld for tax ($5,376,985.52), and the derivative leg of the
   // vest -- and the tool showed them as one "SELL 17,666 sh, $5.85M". A model
-  // reads that as a $5.85M discretionary sale; the discretionary part was
+  // reads that as a $5.85M sale decision; the code-S (open market or private) part was
   // $474,813.22.
   //
   // Two views now, each saying which one it is:
@@ -26,21 +26,24 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
   //     ko-api has; it is keyed by the insider, so it needs the CIK.
   //   - otherwise            -> /insider-trades?ticker=&include=detail: one row
   //     per insider per trade date, labelled as an aggregate, with the
-  //     open-market (P/S) side split from every other acquisition/disposition
+  //     code P/S side (open market or private purchase/sale) split from every
+  //     other acquisition/disposition, with the unpriced-line counts kept so a
+  //     partial dollar total is never shown as a complete one
   //     and BOTH dollar totals.
   // ---------------------------------------------------------------------------
   defineTool(server, 
     "get_insider_trades",
     "Get insider (SEC Form 4) transactions for one company. Two grains, and the answer says which: " +
       "(1) with `executive_cik` -> one row per Form 4 transaction line, with its SEC code " +
-      "(P open-market purchase, S open-market sale, M/X/C option or RSU exercise/conversion, A grant/award, " +
+      "(P open-market or private purchase, S open-market or private sale, M/X/C option or RSU exercise/conversion, A grant/award, " +
       "F shares withheld for tax, G gift, ...), shares, price and value; " +
       "(2) without it -> one row per insider per trade date that AGGREGATES all that day's lines, split into " +
-      "open-market buys/sells (codes P/S -- the discretionary trading signal) versus all acquisitions/dispositions " +
+      "code P/S purchases/sales (open market or private) versus all acquisitions/dispositions " +
       "(which also count vests, exercises and tax withholding), with both dollar totals and the line count; " +
       "when ko.io reports them, the Lines cell and structuredContent also carry that day's SEC codes " +
       "(e.g. '4 (F 1, M 2, S 1)'). " +
-      "Do not read an aggregate day's total disposed value as a discretionary sale; use the open-market columns. " +
+      "Do not read an aggregate day's total disposed value as a sale decision; use the P/S columns, whose dollar " +
+      "totals cover priced lines only (unpriced lines are counted and flagged as partial). " +
       "Keyless/Free access covers the trailing 92 days; `period` beyond 1Q requires Pro. " +
       "structuredContent carries the exact share counts and dollar amounts.",
     {
@@ -83,7 +86,8 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
         const lines: string[] = [
           `## Form 4 Transactions — ${t} · insider CIK ${cik}`,
           "*Grain: one row per Form 4 transaction line (newest first). Code = SEC transaction code; " +
-            "only P (open-market purchase) and S (open-market sale) are discretionary market trades.*",
+            "P (purchase) and S (sale) are open-market or private purchases/sales; every other code is a grant, " +
+            "exercise, withholding, gift or other non-sale event.*",
         ];
         const w = windowLine(env.meta);
         if (w) lines.push(w);
@@ -113,7 +117,7 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
               person_name: null,
               transaction_code: r.transaction_code ?? null,
               code_meaning: codeMeaning(r.transaction_code),
-              open_market: r.transaction_code === "P" || r.transaction_code === "S",
+              code_p_or_s: r.transaction_code === "P" || r.transaction_code === "S",
               acquired_disposed: r.side === "BUY" ? "A" : r.side === "SELL" ? "D" : null,
               security_title: r.security_title ?? null,
               is_derivative: num(r.is_derivative) === 1,
@@ -147,7 +151,8 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
       const lines: string[] = [
         `## Insider Trades — ${t} (period ${period})`,
         "*Grain: one row per insider per trade date, AGGREGATING every Form 4 line that day (`Lines`). " +
-          "Open-market = SEC codes P/S only (the discretionary trading signal). All acquired/disposed also count " +
+          "P/S = SEC codes P (purchase) / S (sale), open market or private; dollar totals cover priced lines only and " +
+          "say so when lines are unpriced. All acquired/disposed also count " +
           "grants, option/RSU exercises (M), shares withheld for tax (F), gifts (G), etc. -- never read those as a " +
           "sale decision. For the individual lines, call again with executive_cik = the insider's CIK.*",
       ];
@@ -155,12 +160,12 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
       if (w) lines.push(w);
       lines.push("");
       if (rows.length > 0) {
-        lines.push("| Date | Insider (CIK) | Title | Lines | Open-Mkt Bought (sh / $) | Open-Mkt Sold (sh / $) | All Acquired (sh) | All Disposed (sh / $) | Owned After |");
-        lines.push("|------|---------------|-------|-------|--------------------------|------------------------|-------------------|-----------------------|-------------|");
+        lines.push("| Date | Insider (CIK) | Title | Lines | Code P Bought (sh / $) | Code S Sold (sh / $) | All Acquired (sh) | All Disposed (sh / $) | Owned After |");
+        lines.push("|------|---------------|-------|-------|------------------------|----------------------|-------------------|-----------------------|-------------|");
         for (const r of rows) {
           const title = r.officer_title || (num(r.is_director) ? "Director" : num(r.is_ten_percent_owner) ? "10%+ Owner" : "—");
           lines.push(
-            `| ${r.trade_date} | ${r.person_name} (${r.person_cik}) | ${title} | ${linesCell(r)} | ${sideCell(r.ps_shares_bought, r.om_value_bought, r.om_buy_tx)} | ${sideCell(r.ps_shares_sold, r.om_value_sold, r.om_sell_tx)} | ${fmtIntExact(r.stock_shares_bought)} | ${fmtIntExact(r.stock_shares_sold)} / ${fmtUsdExact(r.stock_value_sold)} | ${fmtIntExact(r.shares_owned_after)} |`
+            `| ${r.trade_date} | ${r.person_name} (${r.person_cik}) | ${title} | ${linesCell(r)} | ${sideCell(r.ps_shares_bought, r.om_value_bought, r.om_buy_tx, r.ps_buy_unpriced_lines)} | ${sideCell(r.ps_shares_sold, r.om_value_sold, r.om_sell_tx, r.ps_sell_unpriced_lines)} | ${fmtIntExact(r.stock_shares_bought)} | ${fmtIntExact(r.stock_shares_sold)} / ${fmtUsdExact(r.stock_value_sold)} | ${fmtIntExact(r.shares_owned_after)} |`
           );
         }
       } else {
@@ -181,12 +186,16 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
             person_name: r.person_name ?? null,
             officer_title: r.officer_title ?? null,
             form4_lines: int(r.total_transactions),
-            open_market_buy_lines: int(r.om_buy_tx),
-            open_market_sell_lines: int(r.om_sell_tx),
-            open_market_shares_bought: dec(r.ps_shares_bought),
-            open_market_value_bought: dec(r.om_value_bought),
-            open_market_shares_sold: dec(r.ps_shares_sold),
-            open_market_value_sold: dec(r.om_value_sold),
+            ps_buy_lines: int(r.om_buy_tx),
+            ps_sell_lines: int(r.om_sell_tx),
+            ps_buy_unpriced_lines: int(r.ps_buy_unpriced_lines),
+            ps_sell_unpriced_lines: int(r.ps_sell_unpriced_lines),
+            ps_shares_bought: dec(r.ps_shares_bought),
+            ps_value_bought: dec(r.om_value_bought),
+            ps_value_bought_complete: completeness(r.om_buy_tx, r.ps_buy_unpriced_lines),
+            ps_shares_sold: dec(r.ps_shares_sold),
+            ps_value_sold: dec(r.om_value_sold),
+            ps_value_sold_complete: completeness(r.om_sell_tx, r.ps_sell_unpriced_lines),
             all_shares_acquired: dec(r.stock_shares_bought),
             all_value_acquired: dec(r.stock_value_bought),
             all_shares_disposed: dec(r.stock_shares_sold),
@@ -254,17 +263,18 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
 
       // Same grain rule as get_insider_trades: a row is one insider on one trade
       // date, and "Sold" used to be every disposition that day (tax withholding
-      // included). The open-market columns are the discretionary signal.
+      // included). The P/S columns (open market or private) are the purchase/sale signal.
       const lines: string[] = [
         `## Insider Traders${role !== "all" ? ` (${role.toUpperCase()}s only)` : ""} — Page ${page}`,
-        "*Grain: one row per insider per trade date. Open-market = SEC codes P/S; All Disposed also counts tax " +
+        "*Grain: one row per insider per trade date. P/S = SEC codes P (purchase) / S (sale), open market or private; " +
+          "All Disposed also counts tax " +
           "withholding, gifts and other non-market dispositions.*",
       ];
       const w = windowLine(env.meta);
       if (w) lines.push(w);
       lines.push(
         "",
-        "| Ticker | Company | Person (CIK) | Title | Trade Date | Lines | Open-Mkt Bought | Open-Mkt Sold | All Disposed | Shares Owned |",
+        "| Ticker | Company | Person (CIK) | Title | Trade Date | Lines | Code P Bought $ | Code S Sold $ | All Disposed $ | Shares Owned |",
         "|--------|---------|--------------|-------|------------|-------|-----------------|---------------|--------------|-------------|",
       );
 
@@ -275,10 +285,28 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
         );
       }
 
-      lines.push(...pagingLines(pagingOf(env.meta, { page, limit, returned: traders.length })));
+      const paging = pagingOf(env.meta, { page, limit, returned: traders.length });
+      lines.push(...pagingLines(paging));
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          search: str(search),
+          role,
+          grain: "insider_trade_date" as const,
+          rows: traders.map((t) => ({
+            ticker: str(t.ticker), company_name: str(t.company_name), person_cik: str(t.person_cik),
+            person_name: str(t.person_name), officer_title: str(t.officer_title), trade_date: str(t.trade_date),
+            form4_lines: int(t.total_transactions), ps_value_bought: dec(t.om_value_bought), ps_value_sold: dec(t.om_value_sold),
+            all_value_acquired: dec(t.stock_value_bought), all_value_disposed: dec(t.stock_value_sold),
+            shares_owned_after: dec(t.shares_owned_after),
+          })),
+          paging,
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: INSIDER_TRADERS_OUTPUT },
   );
 }
 
@@ -287,12 +315,13 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
 // ---------------------------------------------------------------------------
 /**
  * SEC Form 4 transaction codes (Form 4 General Instructions 8). Only P and S
- * are open-market, discretionary trades; everything else is compensation,
+ * are purchases/sales (open market OR private -- the SEC codes do not tell the
+ * two apart); everything else is compensation,
  * exercise mechanics, tax withholding, gifts or other non-market events.
  */
 const FORM4_CODES: Record<string, string> = {
-  P: "Open-market purchase",
-  S: "Open-market sale",
+  P: "Open-market or private purchase",
+  S: "Open-market or private sale",
   A: "Grant / award",
   M: "Exercise/conversion of derivative (e.g. option, RSU vest)",
   X: "Exercise of in/at-the-money derivative",
@@ -318,12 +347,27 @@ function codeMeaning(code: string | null | undefined): string {
   return FORM4_CODES[code] ?? "Other (see Form 4 instructions)";
 }
 
-/** "1,438 sh / $474,813.22 (1 line)" -- or "—" when that side did not happen. */
-function sideCell(shares: unknown, value: unknown, lines: unknown): string {
+/**
+ * "1,438 sh / $474,813.22 (1 line)" -- or "—" when that side did not happen.
+ * `unpriced` = that side's P/S lines with no dollar value (ko-api include=detail):
+ * the dollar total then covers only the priced lines and is labelled PARTIAL,
+ * never shown as if complete (final-eval R1 #5).
+ */
+function sideCell(shares: unknown, value: unknown, lines: unknown, unpriced?: unknown): string {
   const n = num(lines);
   if (!n && dec(value) === null && dec(shares) === null) return "—";
   const sh = dec(shares) === null ? "? sh" : `${fmtIntExact(shares)} sh`;
-  return `${sh} / ${fmtUsdExact(value)} (${n} line${n === 1 ? "" : "s"})`;
+  const u = num(unpriced);
+  const usd = dec(value) === null
+    ? (u ? "$ unknown" : fmtUsdExact(value))
+    : `${fmtUsdExact(value)}${u ? ` PARTIAL (${u} of ${n} line${n === 1 ? "" : "s"} unpriced)` : ""}`;
+  return `${sh} / ${usd} (${n} line${n === 1 ? "" : "s"})`;
+}
+
+/** true = every P/S line on that side is priced; false = partial; null = not reported. */
+function completeness(lines: unknown, unpriced: unknown): boolean | null {
+  if (unpriced === null || unpriced === undefined || unpriced === "") return num(lines) === 0 ? true : null;
+  return num(unpriced) === 0;
 }
 
 /** The day's distinct codes, when ko.io reported them (include=codes); else null. */
@@ -403,6 +447,8 @@ interface InsiderDayRow {
   shares_owned_after: number | string | null;
   ps_shares_bought?: number | string | null;
   ps_shares_sold?: number | string | null;
+  ps_buy_unpriced_lines?: number | string | null;
+  ps_sell_unpriced_lines?: number | string | null;
   first_filed_date?: string | null;
   last_filed_date?: string | null;
   // include=codes (ko-api#340); absent on an API that predates it.

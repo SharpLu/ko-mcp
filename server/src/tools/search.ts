@@ -3,6 +3,8 @@ import { z } from "zod";
 import { defineTool } from "../tool-def.js";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
 import { fmtMoney } from "../format.js";
+import { dec, int, str } from "../paging.js";
+import { SEARCH_OUTPUT } from "../output-schemas.js";
 
 export function registerSearchTool(server: McpServer, config: KoConfig) {
   defineTool(server, 
@@ -24,7 +26,20 @@ export function registerSearchTool(server: McpServer, config: KoConfig) {
         .describe("Max results per category"),
     },
     async ({ query, limit }) => {
-      const data = await koFetch<SearchData>(config, "/api/v1/search", { q: query, limit });
+      const data = (await koFetch<SearchData>(config, "/api/v1/search", { q: query, limit })) ?? ({} as SearchData);
+      const arr = <T,>(v: T[] | undefined): T[] => (Array.isArray(v) ? v : []);
+      const structured = {
+        query,
+        institutions: arr(data.institutions).map((r) => ({
+          cik: str(r.cik), name: str(r.name), slug: str(r.slug), category: str(r.category), aum: dec(r.aum), rank: int(r.rank),
+          matched_person: r.matched_person?.name ? { name: str(r.matched_person.name), role: str(r.matched_person.role) } : null,
+        })),
+        stocks: arr(data.stocks).map((r) => ({
+          ticker: str(r.ticker), name: str(r.name), sector: str(r.sector), industry: str(r.industry), market_cap: dec(r.market_cap),
+        })),
+        insiders: arr(data.insiders).map((r) => ({ name: str(r.name), ticker: str(r.ticker), type: str(r.type) })),
+        congress: arr(data.congress).map((r) => ({ name: str(r.name), type: str(r.type) })),
+      };
 
       const hasResults =
         (data.institutions?.length || 0) +
@@ -35,6 +50,7 @@ export function registerSearchTool(server: McpServer, config: KoConfig) {
       if (!hasResults) {
         return {
           content: [{ type: "text", text: `No results found for "${query}".` }],
+          structuredContent: structured,
         };
       }
 
@@ -88,8 +104,9 @@ export function registerSearchTool(server: McpServer, config: KoConfig) {
         }
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: structured };
+    },
+    { outputSchema: SEARCH_OUTPUT },
   );
 }
 

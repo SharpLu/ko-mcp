@@ -68,7 +68,7 @@ export const INSIDER_TRADES_OUTPUT = {
       // form4_transaction_line grain
       transaction_code: Str.optional(),
       code_meaning: Str.optional(),
-      open_market: z.boolean().optional().describe("true only for SEC codes P and S"),
+      code_p_or_s: z.boolean().optional().describe("true for SEC codes P (purchase) and S (sale) -- open market OR private; the code does not distinguish"),
       acquired_disposed: z.enum(["A", "D"]).nullable().optional(),
       security_title: Str.optional(),
       is_derivative: z.boolean().optional(),
@@ -77,12 +77,16 @@ export const INSIDER_TRADES_OUTPUT = {
       value: Dec.optional(),
       // insider_trade_date grain
       form4_lines: Int.optional(),
-      open_market_buy_lines: Int.optional(),
-      open_market_sell_lines: Int.optional(),
-      open_market_shares_bought: Dec.optional(),
-      open_market_value_bought: Dec.optional(),
-      open_market_shares_sold: Dec.optional(),
-      open_market_value_sold: Dec.optional(),
+      ps_buy_lines: Int.optional().describe("Code P lines that day (open market or private purchases)"),
+      ps_sell_lines: Int.optional().describe("Code S lines that day (open market or private sales)"),
+      ps_buy_unpriced_lines: Int.optional().describe("Code P lines with no dollar value; > 0 means ps_value_bought is partial"),
+      ps_sell_unpriced_lines: Int.optional().describe("Code S lines with no dollar value; > 0 means ps_value_sold is partial"),
+      ps_shares_bought: Dec.optional().describe("null = unknown (a line had no share count)"),
+      ps_value_bought: Dec.optional().describe("Dollar total of PRICED code P lines only"),
+      ps_value_bought_complete: z.boolean().nullable().optional().describe("false = some code P lines unpriced; null = not reported"),
+      ps_shares_sold: Dec.optional(),
+      ps_value_sold: Dec.optional().describe("Dollar total of PRICED code S lines only"),
+      ps_value_sold_complete: z.boolean().nullable().optional(),
       all_shares_acquired: Dec.optional(),
       all_value_acquired: Dec.optional(),
       all_shares_disposed: Dec.optional(),
@@ -133,7 +137,11 @@ export const INSTITUTION_HOLDINGS_OUTPUT = {
     .describe("security = one row per security/share class; issuer = share classes of one issuer merged; mixed = portfolio with some merged rows"),
   ticker_filter: Str,
   position_basis: Str.describe("What shares_held/holding_value count, when ko.io stated it (e.g. 13f_reported_all_legs)"),
-  quarter_date: Str,
+  view: z
+    .enum(["snapshot", "history"])
+    .describe("snapshot = one quarter's holdings; history = one position across quarters (family + ticker), one row per quarter, newest first"),
+  quarters: z.array(z.string()).describe("Distinct quarter-ends present in rows, newest first"),
+  quarter_date: Str.describe("The snapshot's quarter; null for a history (each row carries its own quarter_date)"),
   rows: z.array(
     z.object({
       cik: Str,
@@ -166,6 +174,13 @@ export const STOCK_HOLDERS_OUTPUT = {
   ticker: z.string(),
   quarter_date: Str,
   position_basis: Str,
+  position_basis_note: Str,
+  entity_grain: z
+    .enum(["filer", "family"])
+    .nullable()
+    .describe("filer = each row is one 13F filer CIK (not consolidated into manager families); null = ko.io did not state it"),
+  requested_cik: Str,
+  family: z.object({ slug: Str, name: Str, canonical_cik: Str }).nullable(),
   total_institutions: Int,
   rows: z.array(
     z.object({
@@ -181,6 +196,8 @@ export const STOCK_HOLDERS_OUTPUT = {
       call_shares: Dec,
       put_shares: Dec,
       has_option_legs: z.boolean().nullable(),
+      family: z.object({ slug: Str, name: Str, canonical_cik: Str }).nullable().describe("The manager family this holder belongs to, when ko.io attributes it"),
+      reported_by_members: Int,
     }),
   ),
   paging: PAGING,
@@ -252,5 +269,196 @@ export const FTD_OUTPUT = {
     }),
   ),
   paging: PAGING,
+  plan_limit: PLAN_LIMIT,
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// The other 18 tools (final-eval R1 #7): every tool that returns data returns
+// structuredContent, on its empty-success path too. Identifiers / dates /
+// labels are strings, quantities and money exact decimal strings, small counts
+// integers; null = not reported.
+// ────────────────────────────────────────────────────────────────────────────
+
+const Bool = z.boolean().nullable();
+
+export const LIST_INSTITUTIONS_OUTPUT = {
+  search: Str,
+  rows: z.array(z.object({
+    cik: Str, name: Str, slug: Str, rank: Int, category: Str,
+    portfolio_value: Dec, stock_count: Int,
+  })),
+  paging: PAGING,
+  plan_limit: PLAN_LIMIT,
+};
+
+export const STOCK_PROFILE_OUTPUT = {
+  ticker: z.string(),
+  stock: z.object({
+    sector: Str, industry: Str, market_cap: Dec, current_price: Dec, price_date: Str, previous_close: Dec,
+    fifty_two_week_high: Dec, fifty_two_week_low: Dec, pe_ratio: Dec, eps: Dec, beta: Dec,
+    dividend_yield_pct: Dec, profit_margins: Dec, avg_volume: Dec,
+  }),
+  position_basis: Str,
+  top_holders: z.array(z.object({
+    cik: Str, name: Str, shares_held: Dec, holding_value: Dec, portfolio_weight_pct: Dec,
+    equity_shares: Dec, call_shares: Dec, put_shares: Dec, has_option_legs: Bool,
+  })),
+};
+
+const OHLCV = z.object({ date: Str, open: Dec, high: Dec, low: Dec, close: Dec, volume: Dec });
+export const STOCK_PRICE_OUTPUT = {
+  ticker: z.string(),
+  period: z.string(),
+  days_requested: z.number().int(),
+  rows_returned: z.number().int(),
+  latest: z.object({ date: Str, close: Dec }).nullable(),
+  period_start: z.object({ date: Str, close: Dec }).nullable(),
+  total_return_pct: Dec.describe("(latest close - period-start close) / period-start close x 100, from the returned rows"),
+  period_high_close: Dec,
+  period_low_close: Dec,
+  rows: z.array(OHLCV).describe("The rows rendered: the full series (series=true, up to limit) or the latest 10"),
+  plan_limit: PLAN_LIMIT,
+};
+
+export const INSIDER_TRADERS_OUTPUT = {
+  search: Str,
+  role: z.string(),
+  grain: z.literal("insider_trade_date"),
+  rows: z.array(z.object({
+    ticker: Str, company_name: Str, person_cik: Str, person_name: Str, officer_title: Str, trade_date: Str,
+    form4_lines: Int,
+    ps_value_bought: Dec.describe("Code P lines (open-market or private purchase), priced lines only"),
+    ps_value_sold: Dec.describe("Code S lines (open-market or private sale), priced lines only"),
+    all_value_acquired: Dec, all_value_disposed: Dec, shares_owned_after: Dec,
+  })),
+  paging: PAGING,
+  plan_limit: PLAN_LIMIT,
+};
+
+const CONGRESS_ROW = z.object({
+  member_name: Str, chamber: Str, ticker: Str, asset_description: Str, transaction_type: Str,
+  transaction_date: Str, disclosure_date: Str,
+  amount_range: Str.describe("The disclosed dollar RANGE (STOCK Act bands), not an exact amount"),
+  owner: Str,
+});
+export const CONGRESS_TRADES_OUTPUT = {
+  filters: z.object({ chamber: Str, ticker: Str, search: Str, sort: Str }),
+  rows: z.array(CONGRESS_ROW),
+  paging: PAGING,
+  plan_limit: PLAN_LIMIT,
+};
+export const CONGRESS_MEMBER_OUTPUT = {
+  member: z.string(),
+  rows: z.array(CONGRESS_ROW),
+  paging: PAGING,
+  plan_limit: PLAN_LIMIT,
+};
+
+export const SEARCH_OUTPUT = {
+  query: z.string(),
+  institutions: z.array(z.object({
+    cik: Str, name: Str, slug: Str, category: Str, aum: Dec, rank: Int,
+    matched_person: z.object({ name: Str, role: Str }).nullable(),
+  })),
+  stocks: z.array(z.object({ ticker: Str, name: Str, sector: Str, industry: Str, market_cap: Dec })),
+  insiders: z.array(z.object({ name: Str, ticker: Str, type: Str })),
+  congress: z.array(z.object({ name: Str, type: Str })),
+};
+
+export const FORM144_OUTPUT = {
+  filters: z.object({ ticker: Str, insider_cik: Str }),
+  rows: z.array(z.object({
+    accession_no: Str, filed_date: Str, issuer_ticker: Str, issuer_name: Str, issuer_cik: Str, seller_name: Str,
+    relationship: Str, securities_class: Str,
+    units_to_sell: Dec.describe("Units the filer NOTIFIED an intent to sell -- not a completed sale"),
+    aggregate_market_value: Dec, approx_sale_date: Str, broker_name: Str, has_10b5_1_plan: Bool,
+  })),
+  paging: PAGING,
+  plan_limit: PLAN_LIMIT,
+};
+
+export const FILINGS_LIST_OUTPUT = {
+  cik: z.string(),
+  filters: z.object({ form_type: Str, from: Str, to: Str }),
+  rows: z.array(z.object({ filing_date: Str, form: Str, accession: Str, primary_document: Str, description: Str })),
+};
+
+export const FILING_INDEX_OUTPUT = {
+  cik: Str,
+  accession: Str,
+  files: z.array(z.object({ name: Str, type: Str, size_bytes: Int, last_modified: Str })),
+};
+
+export const FILING_DOCUMENT_OUTPUT = {
+  cik: z.string(),
+  accession_no: z.string(),
+  file: Str,
+  link: z.object({
+    url: z.string(),
+    signed: z.boolean().describe("true = ko.io-signed, expiring link a browser can open; false = needs a paid API key"),
+    expires_at: Str,
+  }),
+  excerpt: z.object({
+    status: z.enum(["ok", "unavailable", "not_requested"]),
+    text: Str,
+    chars_total: Int,
+    truncated: z.boolean().nullable(),
+  }),
+};
+
+export const TREASURY_YIELDS_OUTPUT = {
+  unit: z.literal("percent"),
+  rows: z.array(z.object({
+    date: Str, m1: Dec, m3: Dec, m6: Dec, y1: Dec, y2: Dec, y5: Dec, y10: Dec, y30: Dec,
+  })),
+};
+
+export const FED_RATES_OUTPUT = {
+  unit: z.literal("percent"),
+  rows: z.array(z.object({
+    date: Str, fed_funds_rate: Dec, sofr: Dec, prime_rate: Dec, treasury_3m: Dec, treasury_2y: Dec,
+    treasury_10y: Dec, treasury_30y: Dec,
+  })),
+};
+
+export const ECONOMIC_OUTPUT = {
+  category: z.string(),
+  rows: z.array(z.object({ date: Str, series_id: Str, series_name: Str, value: Dec, category: Str })),
+  paging: PAGING,
+};
+
+export const STRESS_OUTPUT = {
+  rows: z.array(z.object({ date: Str, series: Str, value: Dec })),
+  paging: PAGING,
+};
+
+export const CRYPTO_EXPOSURE_OUTPUT = {
+  complex: z.object({ total_usd: Dec, qoq_change: Dec, products: Int }),
+  products: z.array(z.object({
+    product_ticker: Str, product_name: Str, sponsor: Str, holders: Int, total_usd: Dec, prev_usd: Dec, qoq_change: Dec,
+  })),
+};
+
+export const CRYPTO_HOLDERS_OUTPUT = {
+  product: Str,
+  total_holders: Int,
+  rows: z.array(z.object({
+    rank: Int, cik: Str, name: Str, total_usd: Dec, prev_usd: Dec, qoq_value_change: Dec, product_count: Int,
+    products: z.array(z.string()),
+  })),
+  paging: PAGING,
+  plan_limit: PLAN_LIMIT,
+};
+
+export const CRYPTO_HOLDER_OUTPUT = {
+  requested: z.string(),
+  cik: Str,
+  institution: z.object({
+    name: Str, latest_quarter: Str, total_usd: Dec, qoq_change: Dec, rank: Int, total_holders: Int,
+    portfolio_weight_pct: Dec,
+  }).nullable(),
+  positions: z.array(z.object({
+    product_ticker: Str, product_name: Str, shares_held: Dec, usd_value: Dec, qoq_value_change: Dec, action: Str,
+  })),
   plan_limit: PLAN_LIMIT,
 };

@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:59747",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -23,6 +23,39 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "congress": {
+                "_array": null
+              },
+              "insiders": {
+                "_array": {
+                  "name": "string",
+                  "ticker": "string",
+                  "type": "string"
+                }
+              },
+              "institutions": {
+                "_array": {
+                  "aum": "string",
+                  "category": "string",
+                  "cik": "string",
+                  "matched_person": "null",
+                  "name": "string",
+                  "rank": "number",
+                  "slug": "string"
+                }
+              },
+              "query": "string",
+              "stocks": {
+                "_array": {
+                  "industry": "string",
+                  "market_cap": "string",
+                  "name": "string",
+                  "sector": "string",
+                  "ticker": "string"
+                }
               }
             }
           }
@@ -100,6 +133,21 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "congress": {
+                "_array": null
+              },
+              "insiders": {
+                "_array": null
+              },
+              "institutions": {
+                "_array": null
+              },
+              "query": "string",
+              "stocks": {
+                "_array": null
               }
             }
           }

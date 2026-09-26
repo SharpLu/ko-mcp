@@ -3,7 +3,8 @@ import { z } from "zod";
 import { defineTool } from "../tool-def.js";
 import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
 import { pagingOf, pagingLines, windowLine, planLimitOf, dec, fmtIntExact } from "../paging.js";
-import { FTD_OUTPUT } from "../output-schemas.js";
+import { FTD_OUTPUT, TREASURY_YIELDS_OUTPUT, FED_RATES_OUTPUT, ECONOMIC_OUTPUT, STRESS_OUTPUT } from "../output-schemas.js";
+import { str } from "../paging.js";
 
 // ---------------------------------------------------------------------------
 // Paging for the `days`-window tools (ko-bastion#126, silent-truncation half)
@@ -78,8 +79,15 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         { days }
       );
 
+      const treasury = {
+        unit: "percent" as const,
+        rows: (Array.isArray(rows) ? rows : []).map((r) => ({
+          date: str(r.date), m1: dec(r.m1), m3: dec(r.m3), m6: dec(r.m6), y1: dec(r.y1), y2: dec(r.y2),
+          y5: dec(r.y5), y10: dec(r.y10), y30: dec(r.y30),
+        })),
+      };
       if (!rows || rows.length === 0) {
-        return { content: [{ type: "text", text: "No Treasury yield data available." }] };
+        return { content: [{ type: "text", text: "No Treasury yield data available." }], structuredContent: treasury };
       }
 
       const lines: string[] = [
@@ -95,8 +103,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         );
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: treasury };
+    },
+    { outputSchema: TREASURY_YIELDS_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
@@ -122,8 +131,16 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         { days }
       );
 
+      const fed = {
+        unit: "percent" as const,
+        rows: (Array.isArray(rows) ? rows : []).map((r) => ({
+          date: str(r.date), fed_funds_rate: dec(r.fed_funds_rate), sofr: dec(r.sofr), prime_rate: dec(r.prime_rate),
+          treasury_3m: dec(r.treasury_3m), treasury_2y: dec(r.treasury_2y), treasury_10y: dec(r.treasury_10y),
+          treasury_30y: dec(r.treasury_30y),
+        })),
+      };
       if (!rows || rows.length === 0) {
-        return { content: [{ type: "text", text: "No Federal Reserve rate data available." }] };
+        return { content: [{ type: "text", text: "No Federal Reserve rate data available." }], structuredContent: fed };
       }
 
       const lines: string[] = [
@@ -139,8 +156,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         );
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: fed };
+    },
+    { outputSchema: FED_RATES_OUTPUT },
   );
 
   // get_short_volume tool removed 2026-06-14: backing FINRA short-volume DAG was
@@ -197,14 +215,26 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
       ...PAGE_SCHEMA,
     },
     async ({ category, days, page, limit }) => {
-      const rows = await koFetch<EconomicRow[]>(
-        config,
-        "/api/v1/economic/indicators",
-        { category: category === "all" ? undefined : category, days, page, per_page: limit }
+      const env = asEnvelope<EconomicRow[]>(
+        await koFetch<unknown>(
+          config,
+          "/api/v1/economic/indicators",
+          { category: category === "all" ? undefined : category, days, page, per_page: limit },
+          { envelope: true },
+        ),
       );
+      const rows = Array.isArray(env.data) ? env.data : [];
+      const econPaging = pagingOf(env.meta, { page, limit, returned: rows.length });
+      const econ = {
+        category,
+        rows: rows.map((r) => ({
+          date: str(r.date), series_id: str(r.series_id), series_name: str(r.series_name), value: dec(r.value), category: str(r.category),
+        })),
+        paging: econPaging,
+      };
 
-      if (!rows || rows.length === 0) {
-        return { content: [{ type: "text", text: "No economic indicator data available." }] };
+      if (rows.length === 0) {
+        return { content: [{ type: "text", text: "No economic indicator data available." }], structuredContent: econ };
       }
 
       const lines: string[] = [
@@ -223,8 +253,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
       const more = pageNote(rows.length, limit, page);
       if (more) lines.push(more);
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: econ };
+    },
+    { outputSchema: ECONOMIC_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
@@ -341,14 +372,17 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
       ...PAGE_SCHEMA,
     },
     async ({ days, page, limit }) => {
-      const rows = await koFetch<StressRow[]>(
-        config,
-        "/api/v1/stress/ofr",
-        { days, page, per_page: limit }
+      const env = asEnvelope<StressRow[]>(
+        await koFetch<unknown>(config, "/api/v1/stress/ofr", { days, page, per_page: limit }, { envelope: true }),
       );
+      const rows = Array.isArray(env.data) ? env.data : [];
+      const stress = {
+        rows: rows.map((r) => ({ date: str(r.date), series: str(r.series_name || r.series || "FSI"), value: dec(r.value) })),
+        paging: pagingOf(env.meta, { page, limit, returned: rows.length }),
+      };
 
-      if (!rows || rows.length === 0) {
-        return { content: [{ type: "text", text: "No financial stress data available." }] };
+      if (rows.length === 0) {
+        return { content: [{ type: "text", text: "No financial stress data available." }], structuredContent: stress };
       }
 
       const lines: string[] = [
@@ -367,8 +401,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
       const more = pageNote(rows.length, limit, page);
       if (more) lines.push(more);
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: stress };
+    },
+    { outputSchema: STRESS_OUTPUT },
   );
 }
 

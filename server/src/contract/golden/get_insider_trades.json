@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:61436",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -61,14 +61,18 @@
                   "form4_lines": "number",
                   "last_filed_date": "string",
                   "officer_title": "string",
-                  "open_market_buy_lines": "number",
-                  "open_market_sell_lines": "number",
-                  "open_market_shares_bought": "null",
-                  "open_market_shares_sold": "string",
-                  "open_market_value_bought": "null",
-                  "open_market_value_sold": "string",
                   "person_cik": "string",
                   "person_name": "string",
+                  "ps_buy_lines": "number",
+                  "ps_buy_unpriced_lines": "null",
+                  "ps_sell_lines": "number",
+                  "ps_sell_unpriced_lines": "number",
+                  "ps_shares_bought": "null",
+                  "ps_shares_sold": "string",
+                  "ps_value_bought": "null",
+                  "ps_value_bought_complete": "boolean",
+                  "ps_value_sold": "string",
+                  "ps_value_sold_complete": "boolean",
                   "shares_owned_after": "string",
                   "trade_date": "string",
                   "transaction_code_breakdown": "null",
@@ -87,10 +91,10 @@
           {
             "lines": [
               "H2 Insider Trades — AAPL (period <VAL>",
-              "TEXT *Grain: one row per insider per trade date, AGGREGATING every Form <VAL> line that day (`Lines`). Open-market = SEC codes P/S only (the discretionary trading signal). All acquired/disposed also count grants, option/RSU exercises (M), shares withheld for tax (F), gifts (G), etc. -- never read those as a sale decision. For the individual lines, call again with executive_cik = the insider's CIK.*",
+              "TEXT *Grain: one row per insider per trade date, AGGREGATING every Form <VAL> line that day (`Lines`). P/S = SEC codes P (purchase) / S (sale), open market or private; dollar totals cover priced lines only and say so when lines are unpriced. All acquired/disposed also count grants, option/RSU exercises (M), shares withheld for tax (F), gifts (G), etc. -- never read those as a sale decision. For the individual lines, call again with executive_cik = the insider's CIK.*",
               "TEXT *ko.io Free-plan window: trade_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
-              "THEAD Date | Insider (CIK) | Title | Lines | Open-Mkt Bought (sh / $) | Open-Mkt Sold (sh / $) | All Acquired (sh) | All Disposed (sh / $) | Owned After",
+              "THEAD Date | Insider (CIK) | Title | Lines | Code P Bought (sh / $) | Code S Sold (sh / $) | All Acquired (sh) | All Disposed (sh / $) | Owned After",
               "TBODY",
               "BLANK",
               "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
@@ -102,8 +106,8 @@
                   "Insider (CIK)",
                   "Title",
                   "Lines",
-                  "Open-Mkt Bought (sh / $)",
-                  "Open-Mkt Sold (sh / $)",
+                  "Code P Bought (sh / $)",
+                  "Code S Sold (sh / $)",
                   "All Acquired (sh)",
                   "All Disposed (sh / $)",
                   "Owned After"
@@ -163,8 +167,8 @@
                 "_array": {
                   "acquired_disposed": "string",
                   "code_meaning": "string",
+                  "code_p_or_s": "boolean",
                   "is_derivative": "boolean",
-                  "open_market": "boolean",
                   "person_cik": "string",
                   "person_name": "null",
                   "price": "string",
@@ -188,7 +192,7 @@
           {
             "lines": [
               "H2 Form <VAL> Transactions — AAPL · insider CIK <VAL>",
-              "TEXT *Grain: one row per Form <VAL> transaction line (newest first). Code = SEC transaction code; only P (open-market purchase) and S (open-market sale) are discretionary market trades.*",
+              "TEXT *Grain: one row per Form <VAL> transaction line (newest first). Code = SEC transaction code; P (purchase) and S (sale) are open-market or private purchases/sales; every other code is a grant, exercise, withholding, gift or other non-sale event.*",
               "TEXT *ko.io Free-plan window: filing_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
               "THEAD Date | Code | Meaning | Security | Deriv. | Acq/Disp | Shares | Price | Value | Owned After",
@@ -274,7 +278,7 @@
           {
             "lines": [
               "H2 Insider Trades — ZZZQQ (period <VAL>",
-              "TEXT *Grain: one row per insider per trade date, AGGREGATING every Form <VAL> line that day (`Lines`). Open-market = SEC codes P/S only (the discretionary trading signal). All acquired/disposed also count grants, option/RSU exercises (M), shares withheld for tax (F), gifts (G), etc. -- never read those as a sale decision. For the individual lines, call again with executive_cik = the insider's CIK.*",
+              "TEXT *Grain: one row per insider per trade date, AGGREGATING every Form <VAL> line that day (`Lines`). P/S = SEC codes P (purchase) / S (sale), open market or private; dollar totals cover priced lines only and say so when lines are unpriced. All acquired/disposed also count grants, option/RSU exercises (M), shares withheld for tax (F), gifts (G), etc. -- never read those as a sale decision. For the individual lines, call again with executive_cik = the insider's CIK.*",
               "TEXT *ko.io Free-plan window: trade_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
               "TEXT No insider trades found for ZZZQQ in period <VAL> inside the Free-plan window."

@@ -182,3 +182,17 @@ export function fmtUsdExact(v: unknown): string {
   const sign = n < 0 ? "-" : "";
   return `${sign}$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
+
+/** A value as a string, or null for null/absent/"" (identifiers, dates, labels). */
+export function str(v: unknown): string | null {
+  if (v === null || v === undefined || v === "") return null;
+  return String(v);
+}
+
+/** 0/1/"1"/true -> boolean; null/absent -> null. */
+export function bool(v: unknown): boolean | null {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "boolean") return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n !== 0 : null;
+}

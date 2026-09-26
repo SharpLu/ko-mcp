@@ -81,13 +81,10 @@ describe("tools/list: annotations on all 24, outputSchema where structured", () 
     }
   });
 
-  it("the six exact-value tools declare an outputSchema", async () => {
+  it("every one of the 24 tools declares an outputSchema", async () => {
     const { tools } = await (await connect()).listTools();
-    const withSchema = tools.filter((t) => t.outputSchema).map((t) => t.name).sort();
-    expect(withSchema).toEqual([
-      "get_ftd_data", "get_insider_trades", "get_institution_holdings",
-      "get_stock_activity", "get_stock_financials", "get_stock_holders",
-    ]);
+    const without = tools.filter((t) => !t.outputSchema).map((t) => t.name);
+    expect(without, `tools without outputSchema: ${without.join(", ")}`).toEqual([]);
   });
 });
 
@@ -111,14 +108,17 @@ describe("get_insider_trades never collapses a day into one SELL", () => {
     const t = text(r);
     expect(t).toMatch(/one row per insider per trade date/);
     expect(t).toContain("1,438 sh / $474,813.22 (1 line)");
+    expect(t).not.toMatch(/discretionary/i);
+    expect(t).toMatch(/open market or private/);
     expect(t).toContain("17,666 / $5,851,798.74");
     expect(t).not.toMatch(/\*\*SELL\*\*/);
     const row = r.structuredContent!.rows[0];
     expect(r.structuredContent!.grain).toBe("insider_trade_date");
     expect(row).toMatchObject({
-      form4_lines: 4, open_market_value_sold: "474813.22", open_market_shares_sold: "1438",
+      form4_lines: 4, ps_value_sold: "474813.22", ps_shares_sold: "1438", ps_sell_unpriced_lines: 0,
+      ps_value_sold_complete: true,
       all_shares_acquired: "30104", all_shares_disposed: "17666", all_value_disposed: "5851798.74",
-      open_market_value_bought: null,
+      ps_value_bought: null,
     });
     const [, path, params] = mock.mock.calls[0];
     expect(path).toBe("/api/v1/insider-trades");
@@ -146,7 +146,7 @@ describe("get_insider_trades never collapses a day into one SELL", () => {
     const t = text(r);
     expect(t).toContain("| 4 (F 1, M 2, S 1) |");
     // the table header does not move with the upstream version
-    expect(t).toContain("| Date | Insider (CIK) | Title | Lines | Open-Mkt Bought (sh / $) |");
+    expect(t).toContain("| Date | Insider (CIK) | Title | Lines | Code P Bought (sh / $) |");
     const row = r.structuredContent!.rows[0];
     expect(row.transaction_codes).toEqual(["F", "M", "S"]);
     expect(row.transaction_code_breakdown).toHaveLength(4);
@@ -177,8 +177,8 @@ describe("get_insider_trades never collapses a day into one SELL", () => {
     const rows = r.structuredContent!.rows;
     expect(r.structuredContent!.grain).toBe("form4_transaction_line");
     expect(rows.map((x: { transaction_code: string }) => x.transaction_code)).toEqual(["S", "M", "F", "M"]);
-    expect(rows[0]).toMatchObject({ open_market: true, value: "474813.22", shares: "1438" });
-    expect(rows[2]).toMatchObject({ open_market: false, code_meaning: "Shares withheld to pay exercise price or tax" });
+    expect(rows[0]).toMatchObject({ code_p_or_s: true, code_meaning: "Open-market or private sale", value: "474813.22", shares: "1438" });
+    expect(rows[2]).toMatchObject({ code_p_or_s: false, code_meaning: "Shares withheld to pay exercise price or tax" });
     expect(text(r)).toContain("Shares withheld to pay exercise price or tax");
   });
 
