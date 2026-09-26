@@ -1,9 +1,9 @@
 {
   "tool": "list_institutions",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:50885",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -24,6 +24,41 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "null",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "null",
+                "window_start": "null"
+              },
+              "rows": {
+                "_array": {
+                  "category": "string",
+                  "cik": "string",
+                  "name": "string",
+                  "portfolio_value": "string",
+                  "rank": "number",
+                  "slug": "string",
+                  "stock_count": "number"
+                }
+              },
+              "search": "null"
             }
           }
         },
@@ -39,7 +74,7 @@
               "THEAD # | Name | CIK | Rank | Category | Portfolio Value | Stocks",
               "TBODY",
               "BLANK",
-              "TEXT *More results available — use <VAL>"
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {
@@ -75,6 +110,33 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "null",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "null",
+                "window_start": "null"
+              },
+              "rows": {
+                "_array": null
+              },
+              "search": "string"
             }
           }
         },

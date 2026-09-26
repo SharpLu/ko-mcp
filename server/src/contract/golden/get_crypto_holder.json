@@ -1,11 +1,11 @@
 {
   "tool": "get_crypto_holder",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:62061",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -24,6 +24,39 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "cik": "string",
+              "institution": {
+                "latest_quarter": "string",
+                "name": "string",
+                "portfolio_weight_pct": "string",
+                "qoq_change": "string",
+                "rank": "number",
+                "total_holders": "number",
+                "total_usd": "string"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "string",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "positions": {
+                "_array": {
+                  "action": "string",
+                  "product_name": "string",
+                  "product_ticker": "string",
+                  "qoq_value_change": "string",
+                  "shares_held": "string",
+                  "usd_value": "string"
+                }
+              },
+              "requested": "string"
             }
           }
         },

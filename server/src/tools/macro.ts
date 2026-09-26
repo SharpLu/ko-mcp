@@ -1,7 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { koFetch, type KoConfig } from "../ko-fetch.js";
-import { fmtShares } from "../format.js";
+import { defineTool } from "../tool-def.js";
+import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
+import { pagingOf, pagingLines, windowLine, planLimitOf, dec, fmtIntExact } from "../paging.js";
+import { FTD_OUTPUT, TREASURY_YIELDS_OUTPUT, FED_RATES_OUTPUT, ECONOMIC_OUTPUT, STRESS_OUTPUT } from "../output-schemas.js";
+import { str } from "../paging.js";
 
 // ---------------------------------------------------------------------------
 // Paging for the `days`-window tools (ko-bastion#126, silent-truncation half)
@@ -56,7 +59,7 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // Tool: get_treasury_yields
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_treasury_yields",
     "Get U.S. Treasury yield curve data — daily yields for maturities from 1-month to 30-year. Essential for understanding interest rate environment and yield curve shape.",
     {
@@ -76,8 +79,15 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         { days }
       );
 
+      const treasury = {
+        unit: "percent" as const,
+        rows: (Array.isArray(rows) ? rows : []).map((r) => ({
+          date: str(r.date), m1: dec(r.m1), m3: dec(r.m3), m6: dec(r.m6), y1: dec(r.y1), y2: dec(r.y2),
+          y5: dec(r.y5), y10: dec(r.y10), y30: dec(r.y30),
+        })),
+      };
       if (!rows || rows.length === 0) {
-        return { content: [{ type: "text", text: "No Treasury yield data available." }] };
+        return { content: [{ type: "text", text: "No Treasury yield data available." }], structuredContent: treasury };
       }
 
       const lines: string[] = [
@@ -93,14 +103,15 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         );
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: treasury };
+    },
+    { outputSchema: TREASURY_YIELDS_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
   // Tool: get_fed_rates
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_fed_rates",
     "Get daily U.S. policy and money-market interest rates as a markdown table: Effective Fed Funds Rate, SOFR, Prime Rate, and benchmark Treasury yields (3M, 2Y, 10Y, 30Y) per date, newest first. Use for monetary-policy questions like 'Where is the Fed funds rate now?' or 'How has SOFR moved this quarter?', or to compare policy rates against long-end yields for inversion analysis. Covers up to 10 years of daily history. For the full Treasury curve across all maturities, use get_treasury_yields instead.",
     {
@@ -120,8 +131,16 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         { days }
       );
 
+      const fed = {
+        unit: "percent" as const,
+        rows: (Array.isArray(rows) ? rows : []).map((r) => ({
+          date: str(r.date), fed_funds_rate: dec(r.fed_funds_rate), sofr: dec(r.sofr), prime_rate: dec(r.prime_rate),
+          treasury_3m: dec(r.treasury_3m), treasury_2y: dec(r.treasury_2y), treasury_10y: dec(r.treasury_10y),
+          treasury_30y: dec(r.treasury_30y),
+        })),
+      };
       if (!rows || rows.length === 0) {
-        return { content: [{ type: "text", text: "No Federal Reserve rate data available." }] };
+        return { content: [{ type: "text", text: "No Federal Reserve rate data available." }], structuredContent: fed };
       }
 
       const lines: string[] = [
@@ -137,8 +156,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         );
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: fed };
+    },
+    { outputSchema: FED_RATES_OUTPUT },
   );
 
   // get_short_volume tool removed 2026-06-14: backing FINRA short-volume DAG was
@@ -149,7 +169,7 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // Tool: get_economic_indicators
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_economic_indicators",
     "Get U.S. economic indicators from BLS — CPI (inflation), PPI (producer prices), Non-farm Payrolls (employment), Unemployment Rate, JOLTS. Filter by category.",
     {
@@ -195,14 +215,26 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
       ...PAGE_SCHEMA,
     },
     async ({ category, days, page, limit }) => {
-      const rows = await koFetch<EconomicRow[]>(
-        config,
-        "/api/v1/economic/indicators",
-        { category: category === "all" ? undefined : category, days, page, per_page: limit }
+      const env = asEnvelope<EconomicRow[]>(
+        await koFetch<unknown>(
+          config,
+          "/api/v1/economic/indicators",
+          { category: category === "all" ? undefined : category, days, page, per_page: limit },
+          { envelope: true },
+        ),
       );
+      const rows = Array.isArray(env.data) ? env.data : [];
+      const econPaging = pagingOf(env.meta, { page, limit, returned: rows.length });
+      const econ = {
+        category,
+        rows: rows.map((r) => ({
+          date: str(r.date), series_id: str(r.series_id), series_name: str(r.series_name), value: dec(r.value), category: str(r.category),
+        })),
+        paging: econPaging,
+      };
 
-      if (!rows || rows.length === 0) {
-        return { content: [{ type: "text", text: "No economic indicator data available." }] };
+      if (rows.length === 0) {
+        return { content: [{ type: "text", text: "No economic indicator data available." }], structuredContent: econ };
       }
 
       const lines: string[] = [
@@ -221,16 +253,33 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
       const more = pageNote(rows.length, limit, page);
       if (more) lines.push(more);
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: econ };
+    },
+    { outputSchema: ECONOMIC_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
   // Tool: get_ftd_data
+  //
+  // WHAT THE NUMBER IS (EVAL_CODEX_TECH #7). SEC's fails-to-deliver file
+  // reports, per security and settlement date, the aggregate net BALANCE of
+  // shares that have failed to deliver and are still outstanding -- not the
+  // fails that arose that day. A balance carries over, so summing across dates
+  // counts the same unsettled shares again and again. And a fail has many
+  // causes (processing delays, long sales, options-market-maker activity); the
+  // SEC says outright that FTDs are not necessarily the result of short selling.
+  // The old description pointed a model at "naked short selling"; this one
+  // states the measure and its limits.
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_ftd_data",
-    "Get SEC Failures-to-Deliver (FTD) data for a stock. High FTD quantities may indicate naked short selling or settlement issues.",
+    "Get SEC fails-to-deliver (FTD) data for a stock. Each quantity is the aggregate net BALANCE of shares that had " +
+      "failed to deliver and were still outstanding on that settlement date, as published by the SEC -- NOT the " +
+      "number of new fails that day. Balances carry over between days, so never sum quantities across dates (that " +
+      "counts the same unsettled shares repeatedly); compare levels or take the maximum instead. Fails arise from " +
+      "many causes (operational and processing delays, long sales, market-maker activity), and FTD data on its own is " +
+      "not evidence of naked short selling. Free/keyless access covers the trailing 92 days. structuredContent " +
+      "carries the exact share quantities.",
     {
       ticker: z.string().max(200).describe("Stock ticker symbol (e.g. 'GME', 'TSLA')"),
       days: z
@@ -240,46 +289,75 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
         .max(1825)
         .optional()
         .default(90)
-        .describe("Number of days of history (default 90)"),
+        .describe("Days of settlement-date history (default 90; Free/keyless access allows up to 92)"),
       ...PAGE_SCHEMA,
     },
     async ({ ticker, days, page, limit }) => {
-      const rows = await koFetch<FtdRow[]>(
-        config,
-        "/api/v1/sec/ftd",
-        { ticker: ticker.toUpperCase(), days, page, per_page: limit }
+      const t = ticker.toUpperCase();
+      const env = asEnvelope<FtdRow[]>(
+        await koFetch<unknown>(
+          config,
+          "/api/v1/sec/ftd",
+          { ticker: t, days, page, per_page: limit },
+          { envelope: true },
+        ),
       );
+      const rows = Array.isArray(env.data) ? env.data : [];
+      const paging = pagingOf(env.meta, { page, limit, returned: rows.length });
+      const structured = {
+        ticker: t,
+        measure: "outstanding_fail_balance" as const,
+        rows: rows.map((r) => ({
+          settlement_date: r.settlement_date || r.date || null,
+          ticker: r.ticker || r.symbol || t,
+          quantity: dec(r.quantity),
+          price: dec(r.price),
+        })),
+        paging,
+        plan_limit: planLimitOf(env.meta),
+      };
 
-      if (!rows || rows.length === 0) {
+      if (rows.length === 0) {
         return {
-          content: [{ type: "text", text: `No FTD data found for ${ticker.toUpperCase()}.` }],
+          content: [{ type: "text", text: `No FTD data found for ${t}.` }],
+          structuredContent: structured,
         };
       }
 
       const lines: string[] = [
-        `## SEC Failures-to-Deliver — ${ticker.toUpperCase()}`,
+        `## SEC Failures-to-Deliver — ${t}`,
+        "*Quantity = outstanding fail balance on that settlement date (not new fails that day); do not sum across dates.*",
+      ];
+      const w = windowLine(env.meta);
+      if (w) lines.push(w);
+      lines.push(
         "",
         "| Date | Ticker | Quantity | Price |",
         "|------|--------|---------|-------|",
-      ];
+      );
 
       for (const r of rows) {
         lines.push(
-          `| ${r.settlement_date || r.date} | ${r.ticker || r.symbol || ticker.toUpperCase()} | ${fmtShares(r.quantity)} | $${r.price?.toFixed(2) ?? "N/A"} |`
+          `| ${r.settlement_date || r.date} | ${r.ticker || r.symbol || t} | ${fmtIntExact(r.quantity)} | $${r.price?.toFixed(2) ?? "N/A"} |`
         );
       }
 
-      const more = pageNote(rows.length, limit, page);
-      if (more) lines.push(more);
+      if (env.meta.softwall || env.meta.total_count !== undefined) {
+        lines.push(...pagingLines(paging));
+      } else {
+        const more = pageNote(rows.length, limit, page);
+        if (more) lines.push(more);
+      }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: structured };
+    },
+    { outputSchema: FTD_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
   // Tool: get_financial_stress
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_financial_stress",
     "Get the OFR Financial Stress Index — a daily indicator of stress in global financial markets. Values above 0 indicate above-average stress.",
     {
@@ -294,14 +372,17 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
       ...PAGE_SCHEMA,
     },
     async ({ days, page, limit }) => {
-      const rows = await koFetch<StressRow[]>(
-        config,
-        "/api/v1/stress/ofr",
-        { days, page, per_page: limit }
+      const env = asEnvelope<StressRow[]>(
+        await koFetch<unknown>(config, "/api/v1/stress/ofr", { days, page, per_page: limit }, { envelope: true }),
       );
+      const rows = Array.isArray(env.data) ? env.data : [];
+      const stress = {
+        rows: rows.map((r) => ({ date: str(r.date), series: str(r.series_name || r.series || "FSI"), value: dec(r.value) })),
+        paging: pagingOf(env.meta, { page, limit, returned: rows.length }),
+      };
 
-      if (!rows || rows.length === 0) {
-        return { content: [{ type: "text", text: "No financial stress data available." }] };
+      if (rows.length === 0) {
+        return { content: [{ type: "text", text: "No financial stress data available." }], structuredContent: stress };
       }
 
       const lines: string[] = [
@@ -320,8 +401,9 @@ export function registerMacroTools(server: McpServer, config: KoConfig) {
       const more = pageNote(rows.length, limit, page);
       if (more) lines.push(more);
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: stress };
+    },
+    { outputSchema: STRESS_OUTPUT },
   );
 }
 

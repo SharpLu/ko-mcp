@@ -1,11 +1,11 @@
 {
   "tool": "get_stock_profile",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:62061",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -23,6 +23,39 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "position_basis": "null",
+              "stock": {
+                "avg_volume": "string",
+                "beta": "string",
+                "current_price": "string",
+                "dividend_yield_pct": "string",
+                "eps": "string",
+                "fifty_two_week_high": "string",
+                "fifty_two_week_low": "string",
+                "industry": "string",
+                "market_cap": "string",
+                "pe_ratio": "string",
+                "previous_close": "string",
+                "price_date": "null",
+                "profit_margins": "string",
+                "sector": "string"
+              },
+              "ticker": "string",
+              "top_holders": {
+                "_array": {
+                  "call_shares": "null",
+                  "cik": "string",
+                  "equity_shares": "null",
+                  "has_option_legs": "null",
+                  "holding_value": "string",
+                  "name": "string",
+                  "portfolio_weight_pct": "string",
+                  "put_shares": "null",
+                  "shares_held": "string"
+                }
               }
             }
           }

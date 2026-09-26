@@ -1,11 +1,11 @@
 {
   "tool": "get_institution_holdings",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:62061",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -25,6 +25,67 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "entity_grain": "string",
+              "family": "null",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "string",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "position_basis": "null",
+              "quarter_date": "string",
+              "quarters": {
+                "_array": "string"
+              },
+              "requested": "string",
+              "requested_cik": "string",
+              "resolved_cik": "string",
+              "rows": {
+                "_array": {
+                  "action": "string",
+                  "call_shares": "string",
+                  "cik": "string",
+                  "equity_shares": "null",
+                  "has_option_legs": "boolean",
+                  "holding_value": "string",
+                  "issuer": "string",
+                  "portfolio_weight_pct": "string",
+                  "put_shares": "string",
+                  "quarter_date": "string",
+                  "reported_by_members": "null",
+                  "security_grain": "string",
+                  "share_change": "string",
+                  "share_classes": {
+                    "_array": null
+                  },
+                  "shares_held": "string",
+                  "ticker": "string",
+                  "tickers": {
+                    "_array": "string"
+                  }
+                }
+              },
+              "security_grain": "string",
+              "ticker_filter": "null",
+              "view": "string"
             }
           }
         },
@@ -36,12 +97,17 @@
           {
             "lines": [
               "H2 <VAL> Holdings — Quarter: <DATE>",
-              "TEXT **Positions shown:** <VAL>",
+              "TEXT **Positions shown:** <VAL> of <VAL>",
+              "TEXT **Entity grain:** filer -- the <VAL> of CIK <VAL> only.",
+              "TEXT **Security grain:** rows marked † merge several share classes of one issuer (issuer total); the per-class breakdown is listed under the table.",
+              "TEXT *ko.io Free-plan window: quarter_date <DATE> to <DATE> (period <DATE>). Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
               "THEAD # | Ticker | Issuer | Value | Shares | Weight | Change | Action",
               "TBODY",
               "BLANK",
-              "TEXT *Page <VAL> — use <VAL> for more.*"
+              "TEXT *† GOOG = issuer total of GOOGL <VAL> sh / <MONEY> + GOOG <VAL> sh / <MONEY>*",
+              "BLANK",
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {
@@ -68,7 +134,7 @@
         "institution": "1067983",
         "page": 99999
       },
-      "why": "A page past the end: the soft-empty path, \"Quarter: Unknown\" and no table at all.",
+      "why": "A page past the end. Since ko-api's soft wall went on (2026-09-24) a KEYLESS page>1 is a 403 SIGNIN_REQUIRED, and the gate is keyless -- so this pins that refusal as a plan-limit isError whose text says it is a sign-in limit, not missing data (EVAL_CODEX_TECH #6).",
       "contract": {
         "envelope": {
           "id": "number",
@@ -79,20 +145,18 @@
                 "text": "string",
                 "type": "string"
               }
-            }
+            },
+            "isError": "boolean"
           }
         },
-        "isError": false,
+        "isError": true,
         "contentTypes": [
           "text"
         ],
         "blocks": [
           {
             "lines": [
-              "H2 <VAL> Holdings — Quarter: Unknown",
-              "TEXT **Positions shown:** <VAL>",
-              "BLANK",
-              "TEXT No holdings found."
+              "TEXT ko.io API error (403): Access forbidden (check your plan): Sign in (free) to see more rows. [SIGNIN_REQUIRED (continuation); parameter `page`] This is a limit of keyless (anonymous) access, not missing data: without an API key ko.io serves only the first page, capped at <VAL> rows. Send a free ko.io API key (Authorization: Bearer ko_...) to page further."
             ],
             "tables": []
           }
@@ -138,6 +202,122 @@
             ],
             "tables": [],
             "verbatim": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "security",
+      "arguments": {
+        "institution": "1067983",
+        "ticker": "GOOG"
+      },
+      "why": "SPEC R2/C3: a ticker asks for the SECURITY grain (raw_share_classes=true). Pins the entity- and security-grain lines; before 2026-09-26 the tool rendered Alphabet's issuer total under \"GOOG\".",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "entity_grain": "string",
+              "family": "null",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "string",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "position_basis": "null",
+              "quarter_date": "string",
+              "quarters": {
+                "_array": "string"
+              },
+              "requested": "string",
+              "requested_cik": "string",
+              "resolved_cik": "string",
+              "rows": {
+                "_array": {
+                  "action": "string",
+                  "call_shares": "string",
+                  "cik": "string",
+                  "equity_shares": "null",
+                  "has_option_legs": "boolean",
+                  "holding_value": "string",
+                  "issuer": "string",
+                  "portfolio_weight_pct": "string",
+                  "put_shares": "string",
+                  "quarter_date": "string",
+                  "reported_by_members": "null",
+                  "security_grain": "string",
+                  "share_change": "string",
+                  "share_classes": {
+                    "_array": null
+                  },
+                  "shares_held": "string",
+                  "ticker": "string",
+                  "tickers": {
+                    "_array": "string"
+                  }
+                }
+              },
+              "security_grain": "string",
+              "ticker_filter": "string",
+              "view": "string"
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 <VAL> Holdings — Quarter: <DATE>",
+              "TEXT **Positions shown:** <VAL> of <VAL>",
+              "TEXT **Entity grain:** filer -- the <VAL> of CIK <VAL> only.",
+              "TEXT **Security grain:** security -- only GOOG; other share classes of the same issuer are not included.",
+              "TEXT *ko.io Free-plan window: quarter_date <DATE> to <DATE> (period <DATE>). Earlier data exists and requires Pro -- it is not absent.*",
+              "BLANK",
+              "THEAD # | Ticker | Issuer | Value | Shares | Weight | Change | Action",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "#",
+                  "Ticker",
+                  "Issuer",
+                  "Value",
+                  "Shares",
+                  "Weight",
+                  "Change",
+                  "Action"
+                ],
+                "dataRows": 1
+              }
+            ]
           }
         ]
       }

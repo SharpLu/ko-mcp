@@ -1,11 +1,11 @@
 {
   "tool": "search",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:62061",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -23,6 +23,39 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "congress": {
+                "_array": null
+              },
+              "insiders": {
+                "_array": {
+                  "name": "string",
+                  "ticker": "string",
+                  "type": "string"
+                }
+              },
+              "institutions": {
+                "_array": {
+                  "aum": "string",
+                  "category": "string",
+                  "cik": "string",
+                  "matched_person": "null",
+                  "name": "string",
+                  "rank": "number",
+                  "slug": "string"
+                }
+              },
+              "query": "string",
+              "stocks": {
+                "_array": {
+                  "industry": "string",
+                  "market_cap": "string",
+                  "name": "string",
+                  "sector": "string",
+                  "ticker": "string"
+                }
               }
             }
           }
@@ -60,7 +93,7 @@
                   "Slug",
                   "Category"
                 ],
-                "dataRows": 3
+                "dataRows": 5
               },
               {
                 "columns": [
@@ -78,7 +111,7 @@
                   "Ticker",
                   "Type"
                 ],
-                "dataRows": 3
+                "dataRows": 5
               }
             ]
           }
@@ -100,6 +133,21 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "congress": {
+                "_array": null
+              },
+              "insiders": {
+                "_array": null
+              },
+              "institutions": {
+                "_array": null
+              },
+              "query": "string",
+              "stocks": {
+                "_array": null
               }
             }
           }

@@ -1,9 +1,9 @@
 {
   "tool": "sec_get_filing_index",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:64236",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -24,6 +24,18 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "accession": "string",
+              "cik": "string",
+              "files": {
+                "_array": {
+                  "last_modified": "string",
+                  "name": "string",
+                  "size_bytes": "number",
+                  "type": "string"
+                }
               }
             }
           }

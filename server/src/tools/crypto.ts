@@ -1,6 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { koFetch, type KoConfig } from "../ko-fetch.js";
+import { defineTool } from "../tool-def.js";
+import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
+import { pagingOf, pagingLines, planLimitOf, dec, int, str } from "../paging.js";
+import { CRYPTO_EXPOSURE_OUTPUT, CRYPTO_HOLDERS_OUTPUT, CRYPTO_HOLDER_OUTPUT } from "../output-schemas.js";
 import { resolveInstitution } from "../resolve.js";
 import { fmtMoney, fmtShares, num } from "../format.js";
 
@@ -16,12 +19,12 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // Tool: get_crypto_exposure — complex-wide + per-product summary
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_crypto_exposure",
     "Get a market-wide summary of institutional exposure to US spot crypto ETFs (Bitcoin ETF complex: IBIT, FBTC, GBTC, etc.) from the latest quarter of SEC 13F filings. Returns total institutional USD held, quarter-over-quarter change, and a per-ETF breakdown (holders, USD, QoQ).",
     {},
     async () => {
-      const data = await koFetch<ExposureSummary>(config, "/api/v1/crypto/exposure-summary");
+      const data = (await koFetch<ExposureSummary>(config, "/api/v1/crypto/exposure-summary")) ?? {};
       const lines: string[] = [];
       lines.push("## Institutional Crypto-ETF Exposure (latest quarter)\n");
       lines.push(`**Total institutional USD:** ${fmtMoney(num(data.complex?.total_usd))}`);
@@ -40,14 +43,26 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
       } else {
         lines.push("No crypto-ETF exposure data available.");
       }
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          complex: {
+            total_usd: dec(data.complex?.total_usd), qoq_change: dec(data.complex?.qoq_change), products: int(data.complex?.products),
+          },
+          products: products.map((p) => ({
+            product_ticker: str(p.product_ticker), product_name: str(p.product_name), sponsor: str(p.sponsor),
+            holders: int(p.holders), total_usd: dec(p.total_usd), prev_usd: dec(p.prev_usd), qoq_change: dec(p.qoq_change),
+          })),
+        },
+      };
+    },
+    { outputSchema: CRYPTO_EXPOSURE_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
   // Tool: get_crypto_holders — institutions holding spot crypto ETFs
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_crypto_holders",
     "List institutional investors holding US spot crypto ETFs (Bitcoin ETF complex), ranked by total USD held, from the latest quarter of SEC 13F filings. Optionally filter to holders of a specific ETF via the `product` parameter (e.g. 'IBIT').",
     {
@@ -56,11 +71,15 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
       limit: z.number().int().min(1).max(200).optional().default(50).describe("Results per page"),
     },
     async ({ product, page, limit }) => {
-      const data = await koFetch<HoldersResponse>(config, "/api/v1/crypto/institutional-holders", {
-        product: product ? product.toUpperCase() : undefined,
-        page,
-        per_page: limit,
-      });
+      const env = asEnvelope<HoldersResponse>(
+        await koFetch<unknown>(
+          config,
+          "/api/v1/crypto/institutional-holders",
+          { product: product ? product.toUpperCase() : undefined, page, per_page: limit },
+          { envelope: true },
+        ),
+      );
+      const data = env.data ?? ({} as HoldersResponse);
       const holders = data.holders ?? [];
       const lines: string[] = [];
       lines.push(`## Institutional Holders of Spot Crypto ETFs${product ? ` — ${product.toUpperCase()}` : ""}`);
@@ -75,18 +94,34 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
             `| ${h.rank ?? "—"} | **${h.name || `CIK ${h.cik}`}** | ${h.cik} | ${fmtMoney(num(h.total_usd))} | ${qoq(h.qoq_value_change)} | ${num(h.product_count) || "—"} | ${products} |`
           );
         }
-        if (holders.length === limit) lines.push(`\n*Page ${page} — use page=${page + 1} for more.*`);
+        if (env.meta.softwall) {
+          lines.push(...pagingLines(pagingOf({ ...env.meta, total_count: data.total_count ?? env.meta.total_count }, { page, limit, returned: holders.length })));
+        } else if (holders.length === limit) lines.push(`\n*Page ${page} — use page=${page + 1} for more.*`);
       } else {
         lines.push("No institutional holders found.");
       }
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          product: product ? product.toUpperCase() : null,
+          total_holders: int(data.total_count),
+          rows: holders.map((h) => ({
+            rank: int(h.rank), cik: str(h.cik), name: str(h.name), total_usd: dec(h.total_usd), prev_usd: dec(h.prev_usd),
+            qoq_value_change: dec(h.qoq_value_change), product_count: int(h.product_count),
+            products: Array.isArray(h.products) ? h.products.map(String) : [],
+          })),
+          paging: pagingOf({ ...env.meta, total_count: data.total_count ?? env.meta.total_count }, { page, limit, returned: holders.length }),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: CRYPTO_HOLDERS_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
   // Tool: get_crypto_holder — one institution's crypto-ETF positions
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_crypto_holder",
     "Get one institution's spot crypto-ETF holdings (Bitcoin ETF complex): its per-ETF positions in the latest filed quarter (shares, USD, QoQ change, action) plus its rank among all crypto-ETF holders. Use a CIK number (find it with get_crypto_holders or the search tool).",
     {
@@ -112,9 +147,13 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
               text: `No institution found matching "${institution}". Provide a numeric CIK (e.g. '1512857') or use get_crypto_holders / search to find one.`,
             },
           ],
+          structuredContent: { requested: institution, cik: null, institution: null, positions: [], plan_limit: null },
         };
       }
-      const data = await koFetch<HolderDetail>(config, `/api/v1/crypto/holder/${encodeURIComponent(cik)}`);
+      const env = asEnvelope<HolderDetail>(
+        await koFetch<unknown>(config, `/api/v1/crypto/holder/${encodeURIComponent(cik)}`, {}, { envelope: true }),
+      );
+      const data = env.data ?? ({} as HolderDetail);
       const inst = data.institution;
       const positions = data.positions ?? [];
       const lines: string[] = [];
@@ -132,11 +171,33 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
             `| **${p.product_ticker}** | ${p.product_name || "—"} | ${fmtShares(num(p.shares_held))} | ${fmtMoney(num(p.usd_value))} | ${qoq(p.qoq_value_change)} | ${p.action || "—"} |`
           );
         }
+        if (env.meta.softwall?.truncated) {
+          lines.push(`\n*Keyless access: positions capped at ${env.meta.softwall.row_cap} rows by the ko.io Free plan; more exist. Send a free ko.io API key for all of them.*`);
+        }
       } else {
         lines.push("No spot crypto-ETF positions for this institution.");
       }
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          requested: institution,
+          cik,
+          institution: inst
+            ? {
+                name: str(inst.name), latest_quarter: str(inst.latest_quarter), total_usd: dec(inst.total_usd),
+                qoq_change: dec(inst.qoq_change), rank: int(inst.rank), total_holders: int(inst.total_holders),
+                portfolio_weight_pct: dec(inst.portfolio_weight_pct),
+              }
+            : null,
+          positions: positions.map((p) => ({
+            product_ticker: str(p.product_ticker), product_name: str(p.product_name), shares_held: dec(p.shares_held),
+            usd_value: dec(p.usd_value), qoq_value_change: dec(p.qoq_value_change), action: str(p.action),
+          })),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: CRYPTO_HOLDER_OUTPUT },
   );
 }
 

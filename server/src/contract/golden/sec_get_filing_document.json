@@ -1,11 +1,11 @@
 {
   "tool": "sec_get_filing_document",
-  "planGated": false,
-  "capturedAt": "2026-09-12",
+  "planGated": true,
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:62061",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -14,7 +14,7 @@
         "cik": "320193",
         "accession_no": "0000320193-25-000079"
       },
-      "why": "The free-tier path: an UNSIGNED link and \"(excerpt unavailable: 403)\" inside a SUCCESS envelope (audit warning 7). Pinned because the shape is the contract a model sees, and the 403 in it is one of only two digits normalisation keeps.",
+      "why": "PLAN GATE, NOT DATA. The free-tier path. Until 2026-09-26 an UNSIGNED link and \"(excerpt unavailable: 403)\" inside a SUCCESS envelope (audit warning 7); both legs are paid upstream, so it is now an isError plan-limit answer naming Pro -- the retired filing-document-plan-undeclared defect.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -25,23 +25,18 @@
                 "text": "string",
                 "type": "string"
               }
-            }
+            },
+            "isError": "boolean"
           }
         },
-        "isError": false,
+        "isError": true,
         "contentTypes": [
           "text"
         ],
         "blocks": [
           {
             "lines": [
-              "H2 SEC Filing Document",
-              "TEXT **CIK** <VAL> · **Accession** `<ACCESSION>` · primary document",
-              "TEXT **Source:** SEC EDGAR · served by ko.io",
-              "BLANK",
-              "TEXT **View:** <URL> *(unsigned link — requires an API key to open)*",
-              "BLANK",
-              "TEXT *(excerpt unavailable: 403)*"
+              "TEXT ko.io plan limit (PLAN_REQUIRED): sec_get_filing_document requires a paid ko.io plan (Pro). This caller is on the Free plan or keyless, so neither the signed link nor the excerpt can be served -- this is a plan limit, not a missing document. sec_list_filings and sec_get_filing_index work on every plan; SEC's own copy is on <URL> Upstream said: ko.io API error (403): Access forbidden (check your plan): Source filing documents require Pro. Upgrade at <URL> [PLAN_REQUIRED] This endpoint is not included in the caller's ko.io plan; it is a plan limit, not missing data."
             ],
             "tables": []
           }
@@ -55,7 +50,7 @@
         "accession_no": "0000320193-25-000079",
         "file": "nosuchfile.htm"
       },
-      "why": "A file that is not in the filing -- still a success envelope with a link.",
+      "why": "A file that is not in the filing. Keyless, the paid legs refuse before the file is looked up, so this is the same plan-limit isError as `normal`.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -66,23 +61,18 @@
                 "text": "string",
                 "type": "string"
               }
-            }
+            },
+            "isError": "boolean"
           }
         },
-        "isError": false,
+        "isError": true,
         "contentTypes": [
           "text"
         ],
         "blocks": [
           {
             "lines": [
-              "H2 SEC Filing Document",
-              "TEXT **CIK** <VAL> · **Accession** `<ACCESSION>` · **File** `nosuchfile.htm`",
-              "TEXT **Source:** SEC EDGAR · served by ko.io",
-              "BLANK",
-              "TEXT **View:** <URL> *(unsigned link — requires an API key to open)*",
-              "BLANK",
-              "TEXT *(excerpt unavailable: 403)*"
+              "TEXT ko.io plan limit (PLAN_REQUIRED): sec_get_filing_document requires a paid ko.io plan (Pro). This caller is on the Free plan or keyless, so neither the signed link nor the excerpt can be served -- this is a plan limit, not a missing document. sec_list_filings and sec_get_filing_index work on every plan; SEC's own copy is on <URL> Upstream said: ko.io API error (403): Access forbidden (check your plan): Source filing documents require Pro. Upgrade at <URL> [PLAN_REQUIRED] This endpoint is not included in the caller's ko.io plan; it is a plan limit, not missing data."
             ],
             "tables": []
           }

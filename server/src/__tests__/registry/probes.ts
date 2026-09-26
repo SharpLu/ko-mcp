@@ -25,14 +25,14 @@ import { registerCryptoTools } from '../../tools/crypto.js';
 import { makeFakeServer, type CapturedTool } from '../helpers.js';
 
 export const PROBES: Record<string, Record<string, unknown>> = {
-  get_institution_holdings: { institution: 'Berkshire Hathaway', page: 2, limit: 25 },
+  get_institution_holdings: { institution: 'Berkshire Hathaway', ticker: 'GOOG', entity: 'filer', page: 2, limit: 25 },
   list_institutions: { search: 'Baupost', page: 2, limit: 25 },
   get_stock_profile: { ticker: 'AAPL' },
   get_stock_holders: { ticker: 'NVDA', page: 2, limit: 25 },
   get_stock_activity: { ticker: 'NVDA', quarters: 8 },
   get_stock_price: { ticker: 'AAPL', period: '3y', series: true, limit: 100 },
   get_stock_financials: { ticker: 'AAPL', period_type: 'annual', limit: 8 },
-  get_insider_trades: { ticker: 'AAPL', executive_cik: '1214128', page: 2, limit: 25 },
+  get_insider_trades: { ticker: 'AAPL', executive_cik: '1214128', period: '1Y', page: 2, limit: 25 },
   list_insider_traders: { search: 'Musk', role: 'ceo', page: 2, limit: 25 },
   get_congress_trades: {
     chamber: 'house', party: 'D', ticker: 'NVDA', state: 'CA',
@@ -55,6 +55,20 @@ export const PROBES: Record<string, Record<string, unknown>> = {
   get_crypto_exposure: {},
   get_crypto_holders: { product: 'IBIT', page: 2, limit: 25 },
   get_crypto_holder: { institution: 'Goldman Sachs' },
+};
+
+/**
+ * Extra argument sets for tools whose legs are MUTUALLY EXCLUSIVE, so no single
+ * probe can reach them all. The behaviour gate runs the main probe AND every
+ * variant and judges the union of the calls: each declared leg must be seen,
+ * nothing undeclared may be sent. The main probe still has to set every input
+ * (the coverage assertion reads PROBES only); a variant exists solely to take
+ * the other branch.
+ */
+export const PROBE_VARIANTS: Record<string, Array<Record<string, unknown>>> = {
+  // executive_cik present -> /insider/:cik/transactions (main probe);
+  // absent -> /insider-trades (this variant).
+  get_insider_trades: [{ ticker: 'AAPL', period: '1Y', page: 2, limit: 25 }],
 };
 
 /**

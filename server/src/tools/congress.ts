@@ -1,12 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { koFetch, type KoConfig } from "../ko-fetch.js";
+import { defineTool } from "../tool-def.js";
+import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
+import { pagingOf, pagingLines, planLimitOf, str } from "../paging.js";
+import { CONGRESS_TRADES_OUTPUT, CONGRESS_MEMBER_OUTPUT } from "../output-schemas.js";
 
 export function registerCongressTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // Tool: get_congress_trades
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_congress_trades",
     "Search individual stock trades disclosed by U.S. Congress members (House and Senate) under the STOCK Act. Returns a markdown table of transactions: member name, chamber, ticker, buy/sell type, transaction date, disclosure date (the gap between the two reveals reporting delay), dollar amount range, and owner (self/spouse/joint). Use for questions like 'What did Nancy Pelosi trade recently?', 'Which members bought NVDA?', or 'Show the largest Senate trades this quarter'. Filter by chamber, ticker, or member name; sort by traded value, trade count, or recency. For one member's profile and complete trading history, use get_congress_member instead.",
     {
@@ -36,11 +39,15 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
     },
     async ({ chamber, ticker, search, sort, page, limit }) => {
       // koFetch returns the array directly
-      const trades = await koFetch<CongressTrade[]>(
-        config,
-        "/api/v1/congress-trades",
-        { chamber, ticker, search, sort, page, limit }
+      const env = asEnvelope<CongressTrade[]>(
+        await koFetch<unknown>(
+          config,
+          "/api/v1/congress-trades",
+          { chamber, ticker, search, sort, page, limit },
+          { envelope: true },
+        ),
       );
+      const trades = Array.isArray(env.data) ? env.data : [];
 
       const lines: string[] = [];
       lines.push(`## Congress Trades\n`);
@@ -59,18 +66,29 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
         lines.push("No congress trades found matching the criteria.");
       }
 
-      if (trades.length === limit) {
+      if (env.meta.softwall || env.meta.total_count !== undefined) {
+        lines.push(...pagingLines(pagingOf(env.meta, { page, limit, returned: trades.length })));
+      } else if (trades.length === limit) {
         lines.push(`\n*Page ${page} — use page=${page + 1} for more.*`);
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          filters: { chamber: str(chamber), ticker: str(ticker), search: str(search), sort: str(sort) },
+          rows: trades.map(congressRow),
+          paging: pagingOf(env.meta, { page, limit, returned: trades.length }),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: CONGRESS_TRADES_OUTPUT },
   );
 
   // ---------------------------------------------------------------------------
   // Tool: get_congress_member
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_congress_member",
     "Get detailed trading history of a specific U.S. Congress member. Shows individual trades with transaction types, amounts, and disclosure dates.",
     {
@@ -91,11 +109,15 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
       // NOTE the sibling /api/v1/congress-trades collection route above is the one
       // route in this surface that DOES accept `limit` (`per_page ?? limit`), which
       // is why get_congress_trades was never affected and is not touched here.
-      const trades = await koFetch<CongressTrade[]>(
-        config,
-        `/api/v1/congress-trades/${memberSlug}`,
-        { type: "trades", page, per_page: limit }
+      const env = asEnvelope<CongressTrade[]>(
+        await koFetch<unknown>(
+          config,
+          `/api/v1/congress-trades/${memberSlug}`,
+          { type: "trades", page, per_page: limit },
+          { envelope: true },
+        ),
       );
+      const trades = Array.isArray(env.data) ? env.data : [];
 
       const lines: string[] = [
         `## ${member} — Trading History`,
@@ -110,18 +132,36 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
         );
       }
 
-      if (trades.length === limit) {
+      if (env.meta.softwall || env.meta.total_count !== undefined) {
+        lines.push(...pagingLines(pagingOf(env.meta, { page, limit, returned: trades.length })));
+      } else if (trades.length === limit) {
         lines.push(`\n*Showing ${trades.length} trades — use page=${page + 1} for more.*`);
       }
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          member,
+          rows: trades.map(congressRow),
+          paging: pagingOf(env.meta, { page, limit, returned: trades.length }),
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: CONGRESS_MEMBER_OUTPUT },
   );
 }
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+const congressRow = (t: CongressTrade) => ({
+  member_name: str(t.member_name), chamber: str(t.chamber), ticker: str(t.ticker),
+  asset_description: str(t.asset_description), transaction_type: str(t.transaction_type),
+  transaction_date: str(t.transaction_date), disclosure_date: str(t.disclosure_date),
+  amount_range: str(t.amount_range), owner: str(t.owner),
+});
+
 interface CongressTrade {
   member_name: string;
   chamber: string;

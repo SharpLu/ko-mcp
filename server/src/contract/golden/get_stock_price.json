@@ -1,11 +1,11 @@
 {
   "tool": "get_stock_price",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:62061",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -24,6 +24,43 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "days_requested": "number",
+              "latest": {
+                "close": "string",
+                "date": "string"
+              },
+              "period": "string",
+              "period_high_close": "string",
+              "period_low_close": "string",
+              "period_start": {
+                "close": "string",
+                "date": "string"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": {
+                  "close": "string",
+                  "date": "string",
+                  "high": "string",
+                  "low": "string",
+                  "open": "string",
+                  "volume": "string"
+                }
+              },
+              "rows_returned": "number",
+              "ticker": "string",
+              "total_return_pct": "string"
             }
           }
         },
@@ -42,7 +79,9 @@
               "H3 Recent Prices",
               "BLANK",
               "THEAD Date | Open | High | Low | Close | Volume",
-              "TBODY"
+              "TBODY",
+              "BLANK",
+              "TEXT *ko.io Free-plan window: date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*"
             ],
             "tables": [
               {
@@ -84,6 +123,30 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "days_requested": "number",
+              "latest": "null",
+              "period": "string",
+              "period_high_close": "null",
+              "period_low_close": "null",
+              "period_start": "null",
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": null
+              },
+              "rows_returned": "number",
+              "ticker": "string",
+              "total_return_pct": "null"
             }
           }
         },

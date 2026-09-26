@@ -226,16 +226,16 @@ describe("fixtures", () => {
       .filter((f) => !f.cases.some((c) =>
         !c.contract.isError && c.contract.blocks.some((b) => b.tables.length > 0 || b.lines.length >= 4)))
       .map((f) => f.tool);
-    // The 4 plan-gated tools cannot reach data from the free tier, by design.
+    // The 5 plan-gated tools cannot reach data from the free tier, by design.
     expect(hollow.sort(), `no populated contract pinned for:\n${hollow.join("\n")}`)
       .toEqual([...PLAN_GATED_TOOLS].sort());
   });
 });
 
 describe("plan-gated tools are labelled, so nobody mistakes a 403 for coverage", () => {
-  it("all four pin the gate and are flagged as such", () => {
+  it("all five pin the gate and are flagged as such", () => {
     expect(PLAN_GATED_TOOLS.sort()).toEqual(
-      ["get_economic_indicators", "get_fed_rates", "get_financial_stress", "get_treasury_yields"],
+      ["get_economic_indicators", "get_fed_rates", "get_financial_stress", "get_treasury_yields", "sec_get_filing_document"],
     );
     for (const tool of PLAN_GATED_TOOLS) {
       const f = fixtures.find((x) => x.tool === tool)!;
@@ -266,7 +266,11 @@ describe("known defects are annotated, never pinned", () => {
     // PR that fixes the defect it was describing.
     // 7 -> 3 (#126 retired four) -> 2 (#125 retired its last one). All that is
     // left is the headed-empty-table warning, which has no issue filed.
-    expect(annotated.length).toBeGreaterThanOrEqual(2);
+    // 2 -> 1 (2026-09-26) WITHOUT a fix: get_congress_member.empty (page 9999)
+    // became a keyless 403 SIGNIN_REQUIRED under ko-api's soft wall, so the gate
+    // can no longer observe that tool's headed empty table. The defect itself is
+    // still asserted offline by registry-defects.test.ts.
+    expect(annotated.length).toBeGreaterThanOrEqual(1);
     const bad: string[] = [];
     for (const { fixture, c } of annotated) {
       const d = c.knownDefect!;

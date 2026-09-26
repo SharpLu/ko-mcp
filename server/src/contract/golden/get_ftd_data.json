@@ -1,9 +1,9 @@
 {
   "tool": "get_ftd_data",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:50885",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -24,6 +24,34 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "measure": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": null
+              },
+              "ticker": "string"
             }
           }
         },
@@ -92,10 +120,11 @@
     {
       "name": "truncation",
       "arguments": {
-        "ticker": "GME",
-        "days": 1825
+        "ticker": "AAPL",
+        "days": 90,
+        "limit": 5
       },
-      "why": "The 1,025-row window. This case used to demonstrate the defect -- the tool sent no `per_page` at all, ko-api capped the answer at its 50-row default, and the rendering said nothing about it -- and it now pins the OPPOSITE: a page the caller controls plus the disclosure line that says the page is full and names the next one (#126). The line is what is pinned; the row count still is not, because row counts are data. Also carries this tool's populated-table contract, since the recorded `normal` case is excluded above.",
+      "why": "A page boundary the caller controls, and its disclosure (#126). Was {GME, days:1825}: since the soft wall went on (2026-09-24) a keyless 1825-day window is a 403 PLAN_REQUIRED, so it could no longer carry the populated-table contract. AAPL has settlement fails on most dates, so 5 rows inside the keyless 92-day window keep the page full; the pinned footer is the keyless one (SIGNIN_REQUIRED instead of \"use page=2\"). Also carries this tool's populated-table contract, since the recorded `normal` case is excluded above.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -106,6 +135,39 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "measure": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": {
+                  "price": "string",
+                  "quantity": "string",
+                  "settlement_date": "string",
+                  "ticker": "string"
+                }
+              },
+              "ticker": "string"
             }
           }
         },
@@ -116,12 +178,14 @@
         "blocks": [
           {
             "lines": [
-              "H2 SEC Failures-to-Deliver — GME",
+              "H2 SEC Failures-to-Deliver — AAPL",
+              "TEXT *Quantity = outstanding fail balance on that settlement date (not new fails that day); do not sum across dates.*",
+              "TEXT *ko.io Free-plan window: settlement_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
               "THEAD Date | Ticker | Quantity | Price",
               "TBODY",
               "BLANK",
-              "TEXT *Full page of <VAL> rows — more may exist; use <VAL>"
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {
@@ -131,9 +195,44 @@
                   "Quantity",
                   "Price"
                 ],
-                "dataRows": 100
+                "dataRows": 5
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "plan_limit",
+      "arguments": {
+        "ticker": "GME",
+        "days": 1825
+      },
+      "why": "The old truncation arguments, kept for what they now demonstrate: a window past the Free plan is an isError that names PLAN_REQUIRED, the parameter and the window -- not an empty table.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (403): Access forbidden (check your plan): Earlier periods require Pro. [PLAN_REQUIRED (history); parameter `days`; Free window starts settlement_date <DATE>] This is a limit of the caller's ko.io plan, not missing data. Retry inside the Free window (omit `days` to get the plan default), or use a Pro API key: <URL>"
+            ],
+            "tables": []
           }
         ]
       }

@@ -1,9 +1,9 @@
 {
   "tool": "list_insider_traders",
   "planGated": false,
-  "capturedAt": "2026-09-25",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:52309",
+    "source": "http://127.0.0.1:62061",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -25,6 +25,48 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "grain": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "role": "string",
+              "rows": {
+                "_array": {
+                  "all_value_acquired": "null",
+                  "all_value_disposed": "string",
+                  "company_name": "string",
+                  "form4_lines": "number",
+                  "officer_title": "string",
+                  "person_cik": "string",
+                  "person_name": "string",
+                  "ps_value_bought": "null",
+                  "ps_value_sold": "string",
+                  "shares_owned_after": "string",
+                  "ticker": "string",
+                  "trade_date": "string"
+                }
+              },
+              "search": "string"
             }
           }
         },
@@ -36,22 +78,26 @@
           {
             "lines": [
               "H2 Insider Traders — Page <VAL>",
+              "TEXT *Grain: one row per insider per trade date. P/S = SEC codes P (purchase) / S (sale), open market or private; All Disposed also counts tax withholding, gifts and other non-market dispositions.*",
+              "TEXT *ko.io Free-plan window: trade_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
-              "THEAD Ticker | Company | Person | Title | Trade Date | Bought | Sold | Shares Owned",
+              "THEAD Ticker | Company | Person (CIK) | Title | Trade Date | Lines | Code P Bought $ | Code S Sold $ | All Disposed $ | Shares Owned",
               "TBODY",
               "BLANK",
-              "TEXT *More results — use <VAL>"
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {
                 "columns": [
                   "Ticker",
                   "Company",
-                  "Person",
+                  "Person (CIK)",
                   "Title",
                   "Trade Date",
-                  "Bought",
-                  "Sold",
+                  "Lines",
+                  "Code P Bought $",
+                  "Code S Sold $",
+                  "All Disposed $",
                   "Shares Owned"
                 ],
                 "dataRows": 5
@@ -77,6 +123,35 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "grain": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "role": "string",
+              "rows": {
+                "_array": null
+              },
+              "search": "string"
             }
           }
         },
@@ -88,8 +163,10 @@
           {
             "lines": [
               "H2 Insider Traders — Page <VAL>",
+              "TEXT *Grain: one row per insider per trade date. P/S = SEC codes P (purchase) / S (sale), open market or private; All Disposed also counts tax withholding, gifts and other non-market dispositions.*",
+              "TEXT *ko.io Free-plan window: trade_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
-              "THEAD Ticker | Company | Person | Title | Trade Date | Bought | Sold | Shares Owned",
+              "THEAD Ticker | Company | Person (CIK) | Title | Trade Date | Lines | Code P Bought $ | Code S Sold $ | All Disposed $ | Shares Owned",
               "TBODY"
             ],
             "tables": [
@@ -97,11 +174,13 @@
                 "columns": [
                   "Ticker",
                   "Company",
-                  "Person",
+                  "Person (CIK)",
                   "Title",
                   "Trade Date",
-                  "Bought",
-                  "Sold",
+                  "Lines",
+                  "Code P Bought $",
+                  "Code S Sold $",
+                  "All Disposed $",
                   "Shares Owned"
                 ],
                 "dataRows": 0

@@ -12,7 +12,7 @@ vi.mock('../../ko-fetch.js', async () => ({
 import { koFetch } from '../../ko-fetch.js';
 
 import { TOOL_REGISTRY, TOOLS_BY_NAME, TRANSPORT_PARAMS } from '../../registry/tools.js';
-import { PROBES, cannedResponse, registerAllTools, templateToRegExp } from './probes.js';
+import { PROBES, PROBE_VARIANTS, cannedResponse, registerAllTools, templateToRegExp } from './probes.js';
 
 const mock = vi.mocked(koFetch);
 
@@ -63,7 +63,10 @@ async function observe(tool: string): Promise<Observed[]> {
   try {
     const handler = registerAllTools().get(tool)!.handler;
     // Rendering may throw on canned data; the transport calls are already recorded.
-    await handler(PROBES[tool]).catch(() => undefined);
+    // Variants take branches the main probe cannot (mutually exclusive legs).
+    for (const args of [PROBES[tool], ...(PROBE_VARIANTS[tool] ?? [])]) {
+      await handler(args).catch(() => undefined);
+    }
   } finally {
     globalThis.fetch = realFetch;
   }
