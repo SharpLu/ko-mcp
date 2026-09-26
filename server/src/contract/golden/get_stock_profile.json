@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:62061",
+    "source": "http://127.0.0.1:53816",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -39,21 +39,21 @@
                 "market_cap": "string",
                 "pe_ratio": "string",
                 "previous_close": "string",
-                "price_date": "null",
+                "price_date": "string",
                 "profit_margins": "string",
                 "sector": "string"
               },
               "ticker": "string",
               "top_holders": {
                 "_array": {
-                  "call_shares": "null",
+                  "call_shares": "string",
                   "cik": "string",
-                  "equity_shares": "null",
-                  "has_option_legs": "null",
+                  "equity_shares": "string",
+                  "has_option_legs": "boolean",
                   "holding_value": "string",
                   "name": "string",
                   "portfolio_weight_pct": "string",
-                  "put_shares": "null",
+                  "put_shares": "string",
                   "shares_held": "string"
                 }
               }
@@ -75,7 +75,10 @@
               "H3 Top Institutional Holders",
               "BLANK",
               "THEAD Institution | Shares | Value | Weight",
-              "TBODY"
+              "TBODY",
+              "BLANK",
+              "TEXT *(opt) BlackRock, Inc.: <VAL> common + <VAL> via calls; <VAL> reports option lines at the underlying's value.*",
+              "TEXT *(opt) JPMORGAN CHASE & CO: <VAL> common + <VAL> via calls + <VAL> via puts; <VAL> reports option lines at the underlying's value.*"
             ],
             "tables": [
               {
