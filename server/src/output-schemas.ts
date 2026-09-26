@@ -89,6 +89,26 @@ export const INSIDER_TRADES_OUTPUT = {
       all_value_disposed: Dec.optional(),
       first_filed_date: Str.optional(),
       last_filed_date: Str.optional(),
+      transaction_codes: z
+        .array(z.string())
+        .nullable()
+        .optional()
+        .describe("Distinct SEC Form 4 codes aggregated into this day (e.g. [\"F\",\"M\",\"S\"]); null = not reported by ko.io"),
+      transaction_code_breakdown: z
+        .array(
+          z.object({
+            code: Str,
+            code_meaning: z.string(),
+            acquired_disposed: z.enum(["A", "D"]),
+            is_derivative: z.boolean(),
+            lines: Int,
+            shares: Dec,
+            value: Dec,
+          }),
+        )
+        .nullable()
+        .optional()
+        .describe("Per code x acquired/disposed x table: line count, shares, value (null = unknown, not partial)"),
       shares_owned_after: Dec,
     }),
   ),

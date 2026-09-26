@@ -3,7 +3,7 @@
   "planGated": false,
   "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:59747",
+    "source": "http://127.0.0.1:61436",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -70,7 +70,9 @@
                   "person_cik": "string",
                   "person_name": "string",
                   "shares_owned_after": "string",
-                  "trade_date": "string"
+                  "trade_date": "string",
+                  "transaction_code_breakdown": "null",
+                  "transaction_codes": "null"
                 }
               },
               "ticker": "string"

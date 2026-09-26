@@ -37,7 +37,9 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
       "F shares withheld for tax, G gift, ...), shares, price and value; " +
       "(2) without it -> one row per insider per trade date that AGGREGATES all that day's lines, split into " +
       "open-market buys/sells (codes P/S -- the discretionary trading signal) versus all acquisitions/dispositions " +
-      "(which also count vests, exercises and tax withholding), with both dollar totals and the line count. " +
+      "(which also count vests, exercises and tax withholding), with both dollar totals and the line count; " +
+      "when ko.io reports them, the Lines cell and structuredContent also carry that day's SEC codes " +
+      "(e.g. '4 (F 1, M 2, S 1)'). " +
       "Do not read an aggregate day's total disposed value as a discretionary sale; use the open-market columns. " +
       "Keyless/Free access covers the trailing 92 days; `period` beyond 1Q requires Pro. " +
       "structuredContent carries the exact share counts and dollar amounts.",
@@ -127,13 +129,16 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
       }
 
       // Per-insider-per-day aggregate. include=detail adds the P/S-only share
-      // counts; ko-api refuses it together with period=ALL (unbounded read), so
-      // ALL goes without it and those two columns render as unknown.
+      // counts; include=codes adds the day's Form 4 transaction codes
+      // (ko-api#340). ko-api refuses both together with period=ALL (unbounded
+      // read), so ALL goes without them: the P/S shares render as unknown and
+      // the Lines cell shows the count alone, exactly as before codes existed.
+      // An API that does not know `codes` ignores it -- same fallback.
       const env = asEnvelope<InsiderDayRow[]>(
         await koFetch<unknown>(
           config,
           "/api/v1/insider-trades",
-          { ticker: t, period, include: period === "ALL" ? undefined : "detail", page, per_page: limit },
+          { ticker: t, period, include: period === "ALL" ? undefined : "detail,codes", page, per_page: limit },
           { envelope: true },
         ),
       );
@@ -155,7 +160,7 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
         for (const r of rows) {
           const title = r.officer_title || (num(r.is_director) ? "Director" : num(r.is_ten_percent_owner) ? "10%+ Owner" : "—");
           lines.push(
-            `| ${r.trade_date} | ${r.person_name} (${r.person_cik}) | ${title} | ${fmtIntExact(r.total_transactions)} | ${sideCell(r.ps_shares_bought, r.om_value_bought, r.om_buy_tx)} | ${sideCell(r.ps_shares_sold, r.om_value_sold, r.om_sell_tx)} | ${fmtIntExact(r.stock_shares_bought)} | ${fmtIntExact(r.stock_shares_sold)} / ${fmtUsdExact(r.stock_value_sold)} | ${fmtIntExact(r.shares_owned_after)} |`
+            `| ${r.trade_date} | ${r.person_name} (${r.person_cik}) | ${title} | ${linesCell(r)} | ${sideCell(r.ps_shares_bought, r.om_value_bought, r.om_buy_tx)} | ${sideCell(r.ps_shares_sold, r.om_value_sold, r.om_sell_tx)} | ${fmtIntExact(r.stock_shares_bought)} | ${fmtIntExact(r.stock_shares_sold)} / ${fmtUsdExact(r.stock_value_sold)} | ${fmtIntExact(r.shares_owned_after)} |`
           );
         }
       } else {
@@ -189,6 +194,10 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
             shares_owned_after: dec(r.shares_owned_after),
             first_filed_date: r.first_filed_date ?? null,
             last_filed_date: r.last_filed_date ?? null,
+            // Always present on this grain (null = ko.io did not report codes),
+            // so the structured shape does not depend on the upstream version.
+            transaction_codes: codesOf(r),
+            transaction_code_breakdown: breakdownOf(r),
           })),
           paging,
           plan_limit: planLimitOf(env.meta),
@@ -317,6 +326,42 @@ function sideCell(shares: unknown, value: unknown, lines: unknown): string {
   return `${sh} / ${fmtUsdExact(value)} (${n} line${n === 1 ? "" : "s"})`;
 }
 
+/** The day's distinct codes, when ko.io reported them (include=codes); else null. */
+function codesOf(r: InsiderDayRow): string[] | null {
+  return Array.isArray(r.transaction_codes) ? r.transaction_codes.map(String) : null;
+}
+
+function breakdownOf(r: InsiderDayRow) {
+  if (!Array.isArray(r.transaction_code_breakdown)) return null;
+  return r.transaction_code_breakdown.map((b) => ({
+    code: b.code ? String(b.code) : null,
+    code_meaning: codeMeaning(b.code),
+    acquired_disposed: b.acquired_disposed === "D" ? ("D" as const) : ("A" as const),
+    is_derivative: b.derivative === true,
+    lines: int(b.lines),
+    shares: dec(b.shares),
+    value: dec(b.value),
+  }));
+}
+
+/**
+ * The Lines cell: "4" as before, or "4 (F 1, M 2, S 1)" -- lines per SEC code --
+ * when ko.io reported the codes. The header stays "Lines" either way, so the
+ * table's contract does not depend on the upstream version.
+ */
+function linesCell(r: InsiderDayRow): string {
+  const total = fmtIntExact(r.total_transactions);
+  const brk = Array.isArray(r.transaction_code_breakdown) ? r.transaction_code_breakdown : null;
+  if (!brk || brk.length === 0) return total;
+  const per = new Map<string, number>();
+  for (const b of brk) {
+    const code = b.code ? String(b.code) : "?";
+    per.set(code, (per.get(code) ?? 0) + (int(b.lines) ?? 0));
+  }
+  const parts = [...per.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([c, n]) => `${c} ${n}`);
+  return `${total} (${parts.join(", ")})`;
+}
+
 /** /api/v1/insider/:cik/transactions -- one Form 4 line. */
 interface Form4TxnRow {
   transaction_date: string;
@@ -360,6 +405,16 @@ interface InsiderDayRow {
   ps_shares_sold?: number | string | null;
   first_filed_date?: string | null;
   last_filed_date?: string | null;
+  // include=codes (ko-api#340); absent on an API that predates it.
+  transaction_codes?: string[] | null;
+  transaction_code_breakdown?: Array<{
+    code: string | null;
+    acquired_disposed: string;
+    derivative: boolean;
+    lines: number | string | null;
+    shares: number | string | null;
+    value: number | string | null;
+  }> | null;
 }
 
 interface InsiderTraderRow {

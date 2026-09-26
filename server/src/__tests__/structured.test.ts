@@ -122,7 +122,39 @@ describe("get_insider_trades never collapses a day into one SELL", () => {
     });
     const [, path, params] = mock.mock.calls[0];
     expect(path).toBe("/api/v1/insider-trades");
-    expect(params).toMatchObject({ ticker: "AAPL", period: "1Q", include: "detail", per_page: 50 });
+    expect(params).toMatchObject({ ticker: "AAPL", period: "1Q", include: "detail,codes", per_page: 50 });
+    // an API without include=codes: the Lines cell is the bare count, codes are null (unknown)
+    expect(t).toContain("| SVP, GC and Government Affairs | 4 | — |");
+    expect(row).toMatchObject({ transaction_codes: null, transaction_code_breakdown: null });
+  });
+
+  it("aggregate view with codes (ko-api#340): Lines cell and structuredContent carry the day's SEC codes", async () => {
+    // A1 2026-09-26, the four lines of that day.
+    const withCodes = {
+      ...newsteadDay,
+      transaction_codes: ["F", "M", "S"],
+      transaction_code_breakdown: [
+        { code: "F", acquired_disposed: "D", derivative: false, lines: 1, shares: 16228, value: 5376985.52 },
+        { code: "M", acquired_disposed: "A", derivative: false, lines: 1, shares: 30104, value: null },
+        { code: "M", acquired_disposed: "D", derivative: true, lines: 1, shares: 30104, value: null },
+        { code: "S", acquired_disposed: "D", derivative: false, lines: 1, shares: 1438, value: 474813.22 },
+      ],
+    };
+    mock.mockResolvedValue({ data: [withCodes], meta: { total_count: 7, page: 1, per_page: 50, softwall: KEYLESS_WINDOW("trade_date", 1) } } as never);
+    const r = await call("get_insider_trades", { ticker: "AAPL" });
+    expect(r.isError).toBeFalsy();
+    const t = text(r);
+    expect(t).toContain("| 4 (F 1, M 2, S 1) |");
+    // the table header does not move with the upstream version
+    expect(t).toContain("| Date | Insider (CIK) | Title | Lines | Open-Mkt Bought (sh / $) |");
+    const row = r.structuredContent!.rows[0];
+    expect(row.transaction_codes).toEqual(["F", "M", "S"]);
+    expect(row.transaction_code_breakdown).toHaveLength(4);
+    expect(row.transaction_code_breakdown[0]).toEqual({
+      code: "F", code_meaning: "Shares withheld to pay exercise price or tax", acquired_disposed: "D",
+      is_derivative: false, lines: 1, shares: "16228", value: "5376985.52",
+    });
+    expect(row.transaction_code_breakdown[2]).toMatchObject({ code: "M", acquired_disposed: "D", is_derivative: true, value: null });
   });
 
   it("with executive_cik: one row per Form 4 line, with its code", async () => {
@@ -150,7 +182,7 @@ describe("get_insider_trades never collapses a day into one SELL", () => {
     expect(text(r)).toContain("Shares withheld to pay exercise price or tax");
   });
 
-  it("period=ALL does not send include=detail (ko-api refuses the pair)", async () => {
+  it("period=ALL sends neither detail nor codes (ko-api refuses both with ALL)", async () => {
     mock.mockResolvedValue({ data: [], meta: {} } as never);
     await call("get_insider_trades", { ticker: "AAPL", period: "ALL" });
     expect((mock.mock.calls[0][2] as Record<string, unknown>).include).toBeUndefined();
