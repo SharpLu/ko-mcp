@@ -1,8 +1,12 @@
-"""Short-squeeze stress check: fails-to-deliver + Reg SHO threshold list.
+"""Settlement-stress check: fails-to-deliver + Reg SHO threshold list.
 
-Persistent settlement failures (FTDs) plus a spot on the Reg SHO threshold
-list are the classic footprints of shorting stress. This checks both for a
-ticker in one pass.
+Read the FTD numbers for what they are. Each SEC fails-to-deliver quantity is
+the aggregate BALANCE of shares still undelivered on that settlement date --
+not the fails that arose that day -- so balances carry over and must never be
+summed across dates. Fails have many causes (processing delays, long sales,
+market-maker activity); FTDs on their own are not evidence of naked short
+selling. A persistently high balance plus a spot on the Reg SHO threshold list
+is a sign of settlement stress worth reading the filings behind.
 
     python cookbook/07_ftd_short_stress.py [TICKER]
 """
@@ -24,7 +28,10 @@ def main() -> None:
         date = row.get("settlement_date") or row.get("date", "?")
         qty = float(row.get("quantity") or row.get("ftd_shares") or 0)
         price = row.get("price", "")
-        print(f"  {date}  {qty:>12,.0f} shares failed  @ {price}")
+        print(f"  {date}  {qty:>12,.0f} shares outstanding (fail balance)  @ {price}")
+
+    if ftds:
+        print("  (balances, not daily new fails -- compare levels, never sum across dates)")
 
     print(f"\n=== Reg SHO threshold list appearances for {ticker} ===\n")
     threshold = ko.short.reg_sho(symbol=ticker, per_page=10)

@@ -12,7 +12,7 @@
 
 | 目录 | 是什么 | 发布到 | 版本 |
 |------|--------|--------|------|
-| `server/` | **mcp.ko.io** 的 Cloudflare Worker 本体（唯一 MCP 入口，**24 tools**，Streamable HTTP） | CF Worker `ko-mcp-server` | server.json + package.json + src/index.ts = 1.1.0 |
+| `server/` | **mcp.ko.io** 的 Cloudflare Worker 本体（唯一 MCP 入口，**24 tools**，Streamable HTTP） | CF Worker `ko-mcp-server` | server.json + package.json + src/index.ts = 1.2.0 |
 | `python/` | `ko-edgar` PyPI SDK（httpx，同步+异步） | PyPI `ko-edgar` | 0.1.0 |
 | `typescript/sdk/` | `@ko-io/sdk`（TS REST 客户端） | npm | 0.1.0 |
 | `typescript/mcp-proxy/` | `@ko-io/mcp-sec-data`（stdio→mcp.ko.io 代理，**动态转发 tool 列表**） | npm | 0.1.0 |
@@ -48,14 +48,15 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 | 8 | **版本 lockstep 三处**：`server/server.json` + `server/package.json` + **`server/src/index.ts` 的 `new McpServer({version})`** 一起动（registry id `io.github.SharpLu/ko-mcp`）。第三处最容易漏——它才是 `initialize` 回给客户端的版本号（2026-09-12 审计实测：前两处 1.0.0、线上自报 1.1.0）。三个 SDK 包各自独立，但应保持同一版本号齐步走 | registry / 发布一致性 | 人工 / PR review |
 | 9 | **黄金契约不许钉 bug**：`src/contract/golden/` 里任何一条已知缺陷的用例必须带 `knownDefect` + probe（断言"缺陷仍在"），或在 `EXCLUDED` 里写明理由。把今天的错答案钉成契约 = 这道门会挡住它自己的修复。修好缺陷时在**同一个 PR** 里删注解 + `npm run golden:capture` 重钉 | M1 黄金契约门（ko-api#231 / #236 的同形教训） | `golden.test.ts`（注解/排除/原值三道断言）+ `golden-gate.mjs`（缺陷被修 = 红） |
 | 10 | **出站 fetch 必须有界，且界要小于上游**：每个 `fetch`（含 tool 层的裸 fetch）带 `AbortSignal.timeout()`，默认 `KO_FETCH_TIMEOUT_MS`=20s，**必须小于上游 route 声明的 `timeoutMs`(30s)**——代理要先于被代理者失败，否则拿回来的是别人的 5xx。超时抛独立的 `KoTimeoutError`（"我们不等了"），绝不能和 `ko.io API error (5xx)`（"上游坏了"）同形。配套：**hang 测试必须真 hang**——mock 立即 reject 的 "no hang" 测试对零超时实现同样绿（#127 的假绿正是如此），要用只听 signal、自己永不 settle 的 fetch | #127：单次调用实测阻塞 60,222 ms；同一输入跑出 404 / 502 两种错误类，卡死过一次 main 部署 | `registry-defects.test.ts`（AbortSignal + 上界断言）+ `mcp-errors.test.ts`（真 hang，2s 内红） |
-| 11 | **分页参数叫 `per_page`，不叫 `limit`**：ko-api 的 list route 绝大多数只读 `per_page`；只有 4 条读 `limit`（`/search`、`/filings/:cik`，以及 `per_page ?? limit` 的 `/congress-trades`、`/stock-holders/:ticker`）。发 `limit` 过去 = 没人读 = 静默回落到路由自己的 50 行默认值，而表格照样渲染满，从输出里看不出来。规矩三条：**一律 `per_page: limit`**；调分页路由必须发行数参数（没有“不传就好”）；渲染层不准再加第二道硬编码截断（`truncate(rows, 50)` 就是 #126 的第二层，参数修好了它还在吃）。一页拉满要在输出里说出来——但只说边界，别说你拿不到的总数（`koFetch` 把 `meta` 剥掉了） | ko-bastion#126（`limit:5` 渲染 50 行；`get_ftd_data{GME,days:1825}` 渲染 50/1025 行且零提示） | `src/registry/tools.ts` 门 (b)(d)(e)（参数层）+ `__tests__/paging.test.ts`（渲染层）|
+| 11 | **分页参数叫 `per_page`，不叫 `limit`**：ko-api 的 list route 绝大多数只读 `per_page`；只有 4 条读 `limit`（`/search`、`/filings/:cik`，以及 `per_page ?? limit` 的 `/congress-trades`、`/stock-holders/:ticker`）。发 `limit` 过去 = 没人读 = 静默回落到路由自己的 50 行默认值，而表格照样渲染满，从输出里看不出来。规矩三条：**一律 `per_page: limit`**；调分页路由必须发行数参数（没有“不传就好”）；渲染层不准再加第二道硬编码截断（`truncate(rows, 50)` 就是 #126 的第二层，参数修好了它还在吃）。一页拉满要在输出里说出来；有 `meta.total_count` 时说真实范围（`koFetch(..., { envelope: true })` + `src/paging.ts`），没有时只说边界 | ko-bastion#126（`limit:5` 渲染 50 行；`get_ftd_data{GME,days:1825}` 渲染 50/1025 行且零提示） | `src/registry/tools.ts` 门 (b)(d)(e)（参数层）+ `__tests__/paging.test.ts`（渲染层）|
+| 12 | **套餐限制是 isError，不是"没有数据"；粒度必须写明**：ko-api 软墙（Free / 无 key）会把 200 响应里的序列清空或截断（`meta.softwall`），或对超窗参数回 403 `PLAN_REQUIRED` / `SIGNIN_REQUIRED`。tool 读 envelope：被套餐清空的结果返回 `isError:true` 并点名套餐；无 key 的答案**永远不提示打不开的 `page=2`**；默认参数不得超出调用方套餐（`get_stock_activity` 不传 `quarters` 让上游注入）。聚合行必须写明粒度（内部人按人按日 vs 逐笔 Form 4；持仓 filer vs family、证券 vs 发行人合并），数值精确值放 `structuredContent`（声明 `outputSchema` 的 tool 每条成功路径都必须给，SDK 会拒） | final-eval 2026-09-26（EVAL_CODEX_TECH #1/#2/#4/#6：年报被说成"无数据"、4 笔交易渲染成 1 笔 SELL、GOOG 发行人合计冒充单一证券） | `structured.test.ts`（真 McpServer+Client 校验 outputSchema）+ `paging.test.ts` + 黄金契约 |
 
 ## 4. 任务怎么做（新 tool 五步）
 
 Claude Code 用户可用 `/new-tool` skill（同一内容的快捷入口）。
 
 1. **核对 ko-api 路径**：tool 要代理的 `/api/v1/...` 在 ko-api 存在且 live——**先 curl 一次**（`https://api.ko.io/api/v1/... ?demo=true` 或带 key）。路径不对/没上线，别写 tool（铁律 #3）。
-2. **写 tool**：在 `server/src/tools/<area>.ts` 加 `server.tool(name, desc, schema, handler)`。金额/份额字段先 `num()` 再 `fmt*`（铁律 #2）；列表响应做 `Array.isArray()` 双形态分支（铁律 #5）。
+2. **写 tool**：在 `server/src/tools/<area>.ts` 加 `defineTool(server, name, desc, schema, handler, { outputSchema? })`（`src/tool-def.ts`：统一带 readOnly/openWorld annotations）。金额/份额字段先 `num()` 再 `fmt*`（铁律 #2）；列表响应做 `Array.isArray()` 双形态分支（铁律 #5）。
 3. **登记注册表 + 24-count 契约**：把新 tool 加进 `server/src/registry/tools.ts` 的 `TOOL_REGISTRY`（上游 route / 参数 / plan）和 `src/__tests__/registry/probes.ts` 的 `PROBES`，再加进 `tools-proxy.test.ts` 的 `EXPECTED_TOOLS` 并改数字断言（铁律 #1）。注册表的门会告诉你缺什么：**tool 发出而上游 handler 不读的参数 = 红门**（不是注释）。
 4. **写单测**：`vi.mock("../ko-fetch.js")`，断言代理路径 + 参数 + 渲染（`crypto.test.ts` / `stocks.test.ts` 是模板）。禁触网（铁律 #6）。
 5. **本地门 + 部署后实测**：`server` 目录 `npm run type-check && npm test` 全绿 → 新 tool 进 `src/contract/cases.mjs` 三个用例（normal/empty/error）并 `npm run golden:capture` → `npm run golden:gate` 绿 → merge `server/**` → deploy-server.yml 先跑黄金契约门再部署，最后 `tools/list>=24` 健康门 → 对 live mcp.ko.io 打一次该 tool（铁律 #7）。

@@ -58,15 +58,17 @@ const files = {};
 // ── 1. the two declaration files: auth / cache / pagination / timeout + plans ─
 const routesSrc = fileAt(repo, REV, DERIVED_FROM.routes);
 const authSrc = fileAt(repo, REV, DERIVED_FROM.auth);
+const catalogSrc = fileAt(repo, REV, DERIVED_FROM.catalog);
 files[DERIVED_FROM.routes] = blobSha(repo, REV, DERIVED_FROM.routes);
 files[DERIVED_FROM.auth] = blobSha(repo, REV, DERIVED_FROM.auth);
+files[DERIVED_FROM.catalog] = blobSha(repo, REV, DERIVED_FROM.catalog);
 
 const allRoutes = parseRouteRegistry(routesSrc);
 if (allRoutes.length < 100 || allRoutes.some((r) => !r.id || !r.path || !r.auth)) {
   console.error(`FATAL: routes.ts parser produced ${allRoutes.length} entries / incomplete fields.`);
   process.exit(1);
 }
-const freeBlockedPrefixes = parseFreeBlockedPrefixes(authSrc);
+const freeBlockedPrefixes = parseFreeBlockedPrefixes(authSrc, catalogSrc);
 if (freeBlockedPrefixes.length === 0) {
   console.error('FATAL: api-auth.ts parser found no free blockedPrefixes.');
   process.exit(1);

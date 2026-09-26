@@ -1,15 +1,21 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { koFetch, type KoConfig } from "../ko-fetch.js";
+import { defineTool } from "../tool-def.js";
+import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
+import { dec, planLimitOf } from "../paging.js";
+import { STOCK_FINANCIALS_OUTPUT } from "../output-schemas.js";
 import { fmtMoney } from "../format.js";
 
 export function registerFinancialTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // Tool: get_stock_financials
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "get_stock_financials",
-    "Get quarterly or annual financial statements for a company (revenue, net income, EPS, margins, cash flow, debt ratios) from SEC 10-K/10-Q filings.",
+    "Get quarterly or annual financial statements for a company (revenue, net income, EPS, margins, cash flow, debt ratios) from SEC 10-K/10-Q filings. " +
+      "Plan limits: the Free plan and keyless access return only the latest quarterly statement; annual statements and " +
+      "earlier quarters require Pro (a request for them returns an explicit plan-limit error, never 'no data'). " +
+      "structuredContent carries the exact reported values.",
     {
       ticker: z.string().max(200).describe("Stock ticker symbol (e.g. 'AAPL', 'MSFT')"),
       period_type: z
@@ -27,24 +33,57 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
         .describe("Number of periods to return (default 8)"),
     },
     async ({ ticker, period_type, limit }) => {
+      const t = ticker.toUpperCase();
       // The endpoint returns { quarterly: [...], annual: [...] } (oldest->newest),
       // NOT a flat array. Pick the requested series and take the most recent `limit`.
-      const result = await koFetch<{ quarterly?: FinancialRow[]; annual?: FinancialRow[] }>(
-        config,
-        `/api/v1/stocks/${encodeURIComponent(ticker.toUpperCase())}/financials/historical`,
-        { period_type }
+      //
+      // ENVELOPE, because `meta.softwall` is the only evidence of WHY a series is
+      // short. For a Free/keyless caller ko-api's soft wall (softwall policy
+      // 'v1.stocks.ticker.financials.historical') EMPTIES `annual` and keeps only
+      // the latest quarterly statement -- a 200 with annual: []. This tool used
+      // to render that as "No financial data found for AAPL.", a false statement
+      // of fact about Apple (EVAL_CODEX_TECH #4). A plan limit is now an error
+      // that names the plan.
+      const env = asEnvelope<{ quarterly?: FinancialRow[]; annual?: FinancialRow[] }>(
+        await koFetch<unknown>(
+          config,
+          `/api/v1/stocks/${encodeURIComponent(t)}/financials/historical`,
+          { period_type },
+          { envelope: true },
+        ),
       );
+      const result = env.data;
+      const walled = Boolean(env.meta.softwall);
       const series = (period_type === "annual" ? result?.annual : result?.quarterly) ?? [];
       const rows = series.slice(-limit).reverse(); // newest first
 
-      if (rows.length === 0) {
+      if (walled && period_type === "annual") {
         return {
-          content: [{ type: "text", text: `No financial data found for ${ticker.toUpperCase()}.` }],
+          isError: true,
+          content: [{
+            type: "text",
+            text:
+              `ko.io plan limit (PLAN_REQUIRED): annual financial statements for ${t} require Pro. ` +
+              "The Free plan and keyless access return only the latest quarterly statement, so the annual series " +
+              "was withheld -- this is a limit of the caller's plan, not an absence of data. " +
+              "Use period_type='quarterly' for the latest quarter, or a Pro API key (https://ko.io/pricing).",
+          }],
         };
       }
 
+      if (rows.length === 0) {
+        return {
+          content: [{ type: "text", text: `No ${period_type} financial data found for ${t}.` }],
+          structuredContent: { ticker: t, period_type, periods: [], plan_note: null, plan_limit: planLimitOf(env.meta) },
+        };
+      }
+
+      const planNote = walled
+        ? "Free plan / keyless access: only the latest quarterly statement is returned; earlier quarters and all annual statements require Pro (they exist -- they are withheld, not missing)."
+        : null;
+
       const lines: string[] = [
-        `## ${ticker.toUpperCase()} Financials — ${period_type === "annual" ? "Annual" : "Quarterly"}`,
+        `## ${t} Financials — ${period_type === "annual" ? "Annual" : "Quarterly"}`,
         "",
         "| Period | Revenue | Net Income | EPS | Gross Margin | Op Margin | Op Cash Flow | D/E |",
         "|--------|---------|------------|-----|-------------|-----------|--------------|-----|",
@@ -59,9 +98,32 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
           `| ${r.period_end ?? "N/A"} | ${fmtMoney(r.revenue)} | ${fmtMoney(r.net_income)} | ${fmtEps(r.eps_diluted ?? r.eps_basic)} | ${fmtPctVal(gm)} | ${fmtPctVal(om)} | ${fmtMoney(r.operating_cashflow)} | ${fmtRatio(de)} |`
         );
       }
+      if (planNote) lines.push("", `*${planNote}*`);
 
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          ticker: t,
+          period_type,
+          periods: rows.map((r) => ({
+            period_end: r.period_end ?? null,
+            revenue: dec(r.revenue),
+            net_income: dec(r.net_income),
+            eps_basic: dec(r.eps_basic),
+            eps_diluted: dec(r.eps_diluted),
+            gross_profit: dec(r.gross_profit),
+            operating_income: dec(r.operating_income),
+            operating_cashflow: dec(r.operating_cashflow),
+            long_term_debt: dec(r.long_term_debt),
+            short_term_debt: dec(r.short_term_debt),
+            stockholders_equity: dec(r.stockholders_equity),
+          })),
+          plan_note: planNote,
+          plan_limit: planLimitOf(env.meta),
+        },
+      };
+    },
+    { outputSchema: STOCK_FINANCIALS_OUTPUT },
   );
 }
 

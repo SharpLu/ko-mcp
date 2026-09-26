@@ -16,6 +16,9 @@ import { resolve } from 'node:path';
 export const DERIVED_FROM = {
   routes: 'src/registry/routes.ts',
   auth: 'src/lib/api-auth.ts',
+  // Since ko-api's entitlements refactor, PLAN_GATES in api-auth.ts is a
+  // DERIVED view and the free plan's blockedPrefixes live here.
+  catalog: 'src/lib/entitlements/catalog.ts',
 };
 
 /**
@@ -31,8 +34,8 @@ export const MCP_UPSTREAM_ROUTES = [
   'GET /api/v1/stocks/:ticker/financials/historical',
   'GET /api/v1/stock-holders/:ticker',
   'GET /api/v1/stock-price/:ticker',
-  'GET /api/v1/executive-trades/:ticker',
   'GET /api/v1/insider-trades',
+  'GET /api/v1/insider/:cik/transactions',
   'GET /api/v1/congress-trades',
   'GET /api/v1/congress-trades/:member',
   'GET /api/v1/search',
@@ -64,8 +67,8 @@ export const SCANNED_ROUTE_FILES = [
   'src/routes/v1/stock.ts',
   'src/routes/v1/stock-holders.ts',
   'src/routes/v1/stock-price.ts',
-  'src/routes/v1/executive-trades.ts',
   'src/routes/v1/insider-trades.ts',
+  'src/routes/v1/insider.ts',
   'src/routes/v1/congress-trades.ts',
   'src/routes/v1/congress-member.ts',
   'src/routes/v1/search.ts',
@@ -199,9 +202,33 @@ export function parseRouteRegistry(source) {
   });
 }
 
-/** Parse PLAN_GATES.free.blockedPrefixes out of a verbatim ko-api api-auth.ts. */
-export function parseFreeBlockedPrefixes(source) {
-  const m = source.match(/free:\s*\{[\s\S]*?blockedPrefixes:\s*\[([\s\S]*?)\]/);
-  if (!m) throw new Error('PLAN_GATES.free.blockedPrefixes not found in snapshot');
-  return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
+/**
+ * Parse the free plan's blockedPrefixes.
+ *
+ * Two layouts, both verbatim ko-api:
+ *   - legacy: api-auth.ts `PLAN_GATES = { free: { ..., blockedPrefixes: ['...'] } }`
+ *   - current: api-auth.ts derives PLAN_GATES from lib/entitlements/catalog.ts,
+ *     where `free: { ... gate: { ..., blockedPrefixes: FREE_BLOCKED } }` names a
+ *     `const FREE_BLOCKED = [...] as const` declared in the same file.
+ * Pass the catalog source as the second argument; it is tried only when the
+ * legacy literal is absent, and a layout neither parser recognises throws
+ * rather than pinning an empty list.
+ */
+export function parseFreeBlockedPrefixes(authSource, catalogSource = null) {
+  const legacy = authSource.match(/free:\s*\{[^}]*?blockedPrefixes:\s*\[([\s\S]*?)\]/);
+  if (legacy) return [...legacy[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
+  if (catalogSource) {
+    const free = catalogSource.match(/\bfree:\s*\{[\s\S]*?gate:\s*\{[^}]*?blockedPrefixes:\s*([A-Za-z_$][\w$]*|\[[\s\S]*?\])/);
+    if (free) {
+      let list = free[1];
+      if (!list.startsWith('[')) {
+        const decl = catalogSource.match(new RegExp(`const\\s+${list}\\s*=\\s*\\[([\\s\\S]*?)\\]`));
+        if (!decl) throw new Error(`catalog.ts: free gate names ${list}, but its declaration was not found`);
+        list = `[${decl[1]}]`;
+      }
+      const out = [...list.matchAll(/'([^']+)'/g)].map((x) => x[1]);
+      if (out.length) return out;
+    }
+  }
+  throw new Error('PLAN_GATES.free.blockedPrefixes not found in snapshot (neither api-auth.ts nor entitlements/catalog.ts)');
 }

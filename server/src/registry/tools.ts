@@ -93,7 +93,7 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
   {
     tool: 'get_institution_holdings',
     file: 'src/tools/institutions.ts',
-    inputs: ['institution', 'page', 'limit'],
+    inputs: ['institution', 'ticker', 'entity', 'page', 'limit'],
     paginationInputs: ['page', 'limit'],
     plan: 'free',
     planReason: 'apiKey; /api/v1/holdings is on no free blockedPrefix',
@@ -103,8 +103,19 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
         transport: 'koFetch', role: 'name-resolution',
         conditional: 'only when `institution` is free text, not a CIK or slug (resolve.ts isIdentifier)',
       },
-      { path: '/api/v1/holdings/:cik', method: 'GET', params: ['page', 'per_page'], transport: 'koFetch', role: 'primary' },
+      {
+        path: '/api/v1/holdings/:cik', method: 'GET',
+        params: ['ticker', 'raw_share_classes', 'single_entity', 'page', 'per_page'],
+        transport: 'koFetch', role: 'primary',
+        conditional:
+          '`ticker` + `raw_share_classes=true` only when the caller filters to one security (security grain); ' +
+          '`single_entity=true` only when entity="filer"; page/per_page always',
+      },
     ],
+    notes:
+      'Grain fields from ko-api SPEC C1-C3 (entity_grain, requested_cik, family, security_grain, tickers, ' +
+      'share_classes, equity/call/put legs, position_basis) are read when present and derived from today\'s ' +
+      'fields otherwise; no new query param is needed for them.',
   },
   {
     tool: 'list_institutions',
@@ -150,7 +161,12 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
     plan: 'free',
     planReason: 'apiKey; no free blockedPrefix',
     upstreamRoutes: [
-      { path: '/api/v1/stock-holders/:ticker', method: 'GET', params: ['type', 'quarters'], transport: 'koFetch', role: 'primary' },
+      {
+        path: '/api/v1/stock-holders/:ticker', method: 'GET', params: ['type', 'quarters'], transport: 'koFetch', role: 'primary',
+        conditional:
+          '`quarters` is omitted for a keyless caller (always Free: ko-api injects the plan maximum) and, with a key, ' +
+          'dropped on the one retry that follows a PLAN_REQUIRED on `quarters` when the caller did not choose it',
+      },
     ],
   },
   {
@@ -182,13 +198,26 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
   {
     tool: 'get_insider_trades',
     file: 'src/tools/insiders.ts',
-    inputs: ['ticker', 'executive_cik', 'page', 'limit'],
+    inputs: ['ticker', 'executive_cik', 'period', 'page', 'limit'],
     paginationInputs: ['page', 'limit'],
     plan: 'free',
     planReason: 'apiKey; no free blockedPrefix',
     upstreamRoutes: [
-      { path: '/api/v1/executive-trades/:ticker', method: 'GET', params: ['page', 'per_page', 'executive_cik'], transport: 'koFetch', role: 'primary' },
+      {
+        path: '/api/v1/insider-trades', method: 'GET', params: ['ticker', 'period', 'include', 'page', 'per_page'],
+        transport: 'koFetch', role: 'primary',
+        conditional: 'when executive_cik is omitted: one row per insider per trade date (include=detail except period=ALL)',
+      },
+      {
+        path: '/api/v1/insider/:cik/transactions', method: 'GET', params: ['ticker', 'page', 'per_page'],
+        transport: 'koFetch', role: 'primary',
+        conditional: 'when executive_cik is given: one row per Form 4 transaction line',
+      },
     ],
+    notes:
+      'Was /api/v1/executive-trades/:ticker until 2026-09-26: that mart holds one row per insider per day with a ' +
+      'single action, which rendered four Form 4 lines (sale + RSU vest + tax withholding) as one SELL. Neither ' +
+      'leg can be reached by one probe, so the behaviour gate runs PROBE_VARIANTS too.',
   },
   {
     tool: 'list_insider_traders',
@@ -529,12 +558,10 @@ export const BEHAVIOURAL_DEFECTS: readonly BehaviouralDefect[] = [
     what: 'ko-fetch.ts:36-38 says it does NOT pass ko-api error bodies through; line 42 appends error.message verbatim (observed leaking an upstream data.sec.gov URL). Today the leak is public data -- the risk is that the comment tells the next reader the opposite of what the code does.',
     stillTrue: 'src/ko-fetch.ts both claims "do NOT pass through" and assigns detail from j.error.message',
   },
-  {
-    id: 'filing-document-plan-undeclared',
-    issue: null,
-    what: 'sec_get_filing_document is the one paid-only tool, and neither its description nor its success envelope says so: on free it returns isError=false, an unsigned link and "(excerpt unavailable: 403)", which a model will report as "I fetched the document".',
-    stillTrue: 'the tool description mentions no plan/paid/subscription requirement',
-  },
+  // RETIRED 2026-09-26 -- 'filing-document-plan-undeclared'. The description
+  // now states the Pro requirement, and a Free/keyless refusal of both paid
+  // legs returns isError with the plan message instead of a success envelope
+  // holding an unsigned link and "(excerpt unavailable: 403)".
   {
     id: 'headed-empty-table',
     issue: null,

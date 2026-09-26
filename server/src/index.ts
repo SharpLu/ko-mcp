@@ -16,7 +16,7 @@ import type { KoConfig } from "./ko-fetch.js";
 function createServer(env: Env, userApiKey?: string): McpServer {
   const server = new McpServer({
     name: "ko-sec-data",
-    version: "1.1.0",
+    version: "1.2.0",
   });
 
   const config: KoConfig = {

@@ -1,9 +1,9 @@
 {
   "tool": "list_institutions",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:50885",
+    "source": "http://127.0.0.1:59747",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -39,7 +39,7 @@
               "THEAD # | Name | CIK | Rank | Category | Portfolio Value | Stocks",
               "TBODY",
               "BLANK",
-              "TEXT *More results available — use <VAL>"
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {

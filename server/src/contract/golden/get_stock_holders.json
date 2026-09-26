@@ -1,11 +1,11 @@
 {
   "tool": "get_stock_holders",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:59747",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -25,6 +25,49 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "string",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "position_basis": "null",
+              "quarter_date": "string",
+              "rows": {
+                "_array": {
+                  "action": "string",
+                  "call_shares": "null",
+                  "cik": "string",
+                  "equity_shares": "null",
+                  "has_option_legs": "null",
+                  "holding_value": "string",
+                  "name": "string",
+                  "portfolio_weight_pct": "string",
+                  "put_shares": "null",
+                  "rank": "number",
+                  "share_change": "string",
+                  "shares_held": "string"
+                }
+              },
+              "ticker": "string",
+              "total_institutions": "number"
             }
           }
         },
@@ -37,11 +80,13 @@
             "lines": [
               "H2 Institutional Holders of AAPL — <VAL>",
               "TEXT **Total institutions:** <VAL>",
+              "TEXT *Shares and Value are the <VAL> totals over all legs (common + shares underlying calls + puts); rows marked (opt) include option legs.*",
+              "TEXT *ko.io Free-plan window: quarter_date <DATE> to <DATE> (period <DATE>). Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
               "THEAD # | Institution | Value | Shares | Weight | Change | Action",
               "TBODY",
               "BLANK",
-              "TEXT *Page <VAL> — use <VAL> for more.*"
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {
@@ -78,17 +123,18 @@
                 "text": "string",
                 "type": "string"
               }
-            }
+            },
+            "isError": "boolean"
           }
         },
-        "isError": false,
+        "isError": true,
         "contentTypes": [
           "text"
         ],
         "blocks": [
           {
             "lines": [
-              "TEXT No institutional holders found for AAPL. Check the ticker symbol."
+              "TEXT ko.io API error (403): Access forbidden (check your plan): Sign in (free) to see more rows. [SIGNIN_REQUIRED (continuation); parameter `page`] This is a limit of keyless (anonymous) access, not missing data: without an API key ko.io serves only the first page, capped at <VAL> rows. Send a free ko.io API key (Authorization: Bearer ko_...) to page further."
             ],
             "tables": []
           }
@@ -111,6 +157,36 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "string",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "position_basis": "null",
+              "quarter_date": "string",
+              "rows": {
+                "_array": null
+              },
+              "ticker": "string",
+              "total_institutions": "number"
             }
           }
         },

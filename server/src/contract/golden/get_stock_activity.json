@@ -1,11 +1,11 @@
 {
   "tool": "get_stock_activity",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:59747",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -13,7 +13,7 @@
       "arguments": {
         "ticker": "AAPL"
       },
-      "why": "Summary bullets plus the quarterly-trend table.",
+      "why": "Summary bullets plus the quarterly-trend table. EVAL_CODEX_TECH #6: the old default quarters=8 is a 403 for a keyless caller; the default now omits `quarters` so ko-api injects the plan maximum, and the answer says the multi-quarter trend is Pro.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -23,6 +23,47 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "latest": {
+                "institutions_decreased": "number",
+                "institutions_exited": "number",
+                "institutions_increased": "number",
+                "institutions_new": "number",
+                "institutions_total": "number",
+                "net_shares": "string",
+                "net_value": "string",
+                "quarter": "string",
+                "shares_added": "string",
+                "shares_removed": "string",
+                "value_added": "string",
+                "value_removed": "string"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "string",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "plan_note": "string",
+              "quarters_requested": "null",
+              "quarters_returned": "number",
+              "ticker": "string",
+              "trend": {
+                "_array": {
+                  "institutions_decreased": "number",
+                  "institutions_exited": "number",
+                  "institutions_increased": "number",
+                  "institutions_new": "number",
+                  "net_shares": "string",
+                  "net_value": "string",
+                  "quarter": "string"
+                }
               }
             }
           }
@@ -44,7 +85,9 @@
               "H3 Quarterly Trend",
               "BLANK",
               "THEAD Quarter | Increased | Decreased | New | Exited | Net Shares | Net Value",
-              "TBODY"
+              "TBODY",
+              "BLANK",
+              "TEXT *Free plan / keyless access: latest <VAL> quarter only; the multi-quarter trend requires Pro.*"
             ],
             "tables": [
               {
@@ -57,7 +100,7 @@
                   "Net Shares",
                   "Net Value"
                 ],
-                "dataRows": 4
+                "dataRows": 1
               }
             ]
           }
@@ -79,6 +122,26 @@
               "_array": {
                 "text": "string",
                 "type": "string"
+              }
+            },
+            "structuredContent": {
+              "latest": "null",
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "string",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "plan_note": "null",
+              "quarters_requested": "null",
+              "quarters_returned": "number",
+              "ticker": "string",
+              "trend": {
+                "_array": null
               }
             }
           }

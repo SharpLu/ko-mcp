@@ -34,7 +34,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { z } from "zod";
 
-vi.mock("../ko-fetch.js", () => ({ koFetch: vi.fn() }));
+// importActual first (iron rule #6): a hand-listed factory made every new
+// ko-fetch export (asEnvelope, KoApiError) undefined in the tools under test.
+vi.mock("../ko-fetch.js", async () => ({
+  ...(await vi.importActual<typeof import("../ko-fetch.js")>("../ko-fetch.js")),
+  koFetch: vi.fn(),
+}));
 import { koFetch } from "../ko-fetch.js";
 
 import { registerInsiderTools } from "../tools/insiders.js";
@@ -59,13 +64,18 @@ function tools() {
 const dataRows = (text: string, prefix: string) =>
   text.split("\n").filter((l) => l.startsWith(prefix)).length;
 
-beforeEach(() => mock.mockReset());
+// Braces matter: an arrow that RETURNS the mock is taken by vitest as a cleanup
+// callback and the mock gets called after every test.
+beforeEach(() => { mock.mockReset(); });
 
 describe("get_insider_trades renders the page it asked for", () => {
+  // /api/v1/insider-trades row (one insider, one trade date).
   const row = (i: number) => ({
-    ticker: "AAPL", company_name: "Apple", executive_name: `Exec ${i}`, executive_cik: String(i),
-    officer_title: "CFO", is_ceo: false, is_director: false, trade_date: "2026-01-02",
-    action: "SELL", shares: 100, value: 1000, price: 10, is_derivative: false,
+    ticker: "AAPL", company_name: "Apple", person_name: `Exec ${i}`, person_cik: String(i),
+    officer_title: "CFO", is_director: 0, is_officer: 1, is_ten_percent_owner: 0, trade_date: "2026-01-02",
+    stock_shares_bought: null, stock_value_bought: null, stock_shares_sold: 100, stock_value_sold: 1000,
+    om_value_bought: null, om_value_sold: 1000, om_buy_tx: "0", om_sell_tx: "1", total_transactions: "1",
+    shares_owned_after: 5000, ps_shares_bought: null, ps_shares_sold: 100,
   });
 
   it("renders all 120 rows of a 120-row page (no second, hardcoded 50-row cap)", async () => {
@@ -146,5 +156,49 @@ describe("the three `days`-window tools disclose a full page instead of hiding i
       const params = mock.mock.calls[0][2] as Record<string, unknown>;
       expect(params).toEqual({ days: 90 });
     }
+  });
+});
+
+describe("paging never advertises a page the caller cannot open (EVAL_CODEX_TECH #6)", () => {
+  const ftdRow = (i: number) => ({ settlement_date: `2026-09-${String((i % 28) + 1).padStart(2, "0")}`, ticker: "GME", quantity: 57727, price: 25 });
+  const keyless = (returned: number, total: number) => ({
+    total_count: String(total), page: 1, per_page: 25,
+    softwall: {
+      policy_version: "softwall-v1", window_start: "2026-06-26", window_end: "2026-09-26", date_basis: "settlement_date",
+      row_cap: 25, truncated: returned < total, returned, continuation: "SIGNIN_REQUIRED",
+    },
+  });
+
+  it("a keyless full page says sign-in is needed instead of 'use page=2'", async () => {
+    mock.mockResolvedValue({ data: Array.from({ length: 25 }, (_, i) => ftdRow(i)), meta: keyless(25, 61) } as unknown as never);
+    const res = await tools().get("get_ftd_data")!.handler({ ticker: "GME", days: 90, page: 1, limit: 100 });
+    const text = res.content[0].text as string;
+    expect(text).not.toMatch(/use page=2/);
+    expect(text).toContain("SIGNIN_REQUIRED");
+    expect(text).toContain("rows 1-25 of 61");
+    const sc = res.structuredContent as { paging: { next_page: number | null; continuation: string; truncated_by_plan: boolean } };
+    expect(sc.paging.next_page).toBeNull();
+    expect(sc.paging.continuation).toBe("SIGNIN_REQUIRED");
+    expect(sc.paging.truncated_by_plan).toBe(true);
+  });
+
+  it("names the plan window so a 92-day slice is not read as the whole history", async () => {
+    mock.mockResolvedValue({ data: [ftdRow(0)], meta: keyless(1, 1) } as unknown as never);
+    const res = await tools().get("get_ftd_data")!.handler({ ticker: "GME", days: 90, page: 1, limit: 100 });
+    expect(res.content[0].text as string).toMatch(/Free-plan window: settlement_date 2026-06-26 to 2026-09-26/);
+  });
+
+  it("a paid caller with a known total gets a real range and the next page", async () => {
+    mock.mockResolvedValue({ data: Array.from({ length: 25 }, (_, i) => ftdRow(i)), meta: { total_count: "61", page: 1, per_page: 25 } } as unknown as never);
+    const res = await tools().get("get_ftd_data")!.handler({ ticker: "GME", days: 1825, page: 1, limit: 25 });
+    const text = res.content[0].text as string;
+    expect(text).toContain("rows 1-25 of 61");
+    expect(text).toContain("use page=2");
+  });
+
+  it("the last page of a known total says nothing about more", async () => {
+    mock.mockResolvedValue({ data: Array.from({ length: 11 }, (_, i) => ftdRow(i)), meta: { total_count: "61", page: 3, per_page: 25 } } as unknown as never);
+    const res = await tools().get("get_ftd_data")!.handler({ ticker: "GME", days: 1825, page: 3, limit: 25 });
+    expect(res.content[0].text as string).not.toContain("use page=");
   });
 });

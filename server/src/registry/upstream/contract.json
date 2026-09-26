@@ -1,8 +1,8 @@
 {
   "_comment": "DERIVED from ko-api at the commit in pin.json -- do not hand-edit; src/__tests__/registry/upstream-pin.test.ts hashes this file and compares it with pin.json.contractSha256. Regenerate with: npm run registry:refresh-pin.",
   "koApiRepo": "SharpLu/ko-api",
-  "koApiCommit": "ff434864f40405a04ba5653087612c1349d0b54e",
-  "sourceRouteCount": 123,
+  "koApiCommit": "9b844c7d2901919c240e2ffcaee1b19fcba19037",
+  "sourceRouteCount": 176,
   "freeBlockedPrefixes": [
     "/api/v1/treasury",
     "/api/v1/fed",
@@ -30,9 +30,15 @@
       "timeoutMs": 20000,
       "readParams": [
         "category",
+        "cik",
+        "ciks",
+        "exclude_ciks",
+        "order",
         "page",
         "per_page",
-        "search"
+        "rule",
+        "search",
+        "sort"
       ]
     },
     "GET /api/v1/holdings/:cik": {
@@ -90,6 +96,7 @@
         "per_page",
         "quarter",
         "quarters",
+        "sort",
         "type"
       ]
     },
@@ -112,24 +119,6 @@
         "start_date"
       ]
     },
-    "GET /api/v1/executive-trades/:ticker": {
-      "auth": "apiKey",
-      "cache": "hourly",
-      "pagination": {
-        "style": "page",
-        "params": [
-          "page",
-          "per_page"
-        ]
-      },
-      "timeoutMs": 20000,
-      "readParams": [
-        "action",
-        "executive_cik",
-        "page",
-        "per_page"
-      ]
-    },
     "GET /api/v1/insider-trades": {
       "auth": "apiKey",
       "cache": "hourly",
@@ -143,11 +132,35 @@
       "timeoutMs": 20000,
       "readParams": [
         "include",
+        "min_value",
         "page",
         "per_page",
         "period",
+        "person_cik",
         "role",
         "search",
+        "side",
+        "sort",
+        "ticker",
+        "trade_date"
+      ]
+    },
+    "GET /api/v1/insider/:cik/transactions": {
+      "auth": "apiKey",
+      "cache": "hourly",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "page",
+        "per_page",
+        "side",
+        "signal",
         "ticker"
       ]
     },

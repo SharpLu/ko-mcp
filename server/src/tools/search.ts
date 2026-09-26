@@ -1,10 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { defineTool } from "../tool-def.js";
 import { koFetch, type KoConfig } from "../ko-fetch.js";
 import { fmtMoney } from "../format.js";
 
 export function registerSearchTool(server: McpServer, config: KoConfig) {
-  server.tool(
+  defineTool(server, 
     "search",
     "Search across institutions, stocks, and insider traders in the ko.io SEC database. Institutions match by firm name OR manager name ('Seth Klarman' -> Baupost, 'Ackman' -> Pershing Square; person hits carry matched_person). Use this first when you have a name but need the CIK number, ticker, or slug to use with other tools.",
     {

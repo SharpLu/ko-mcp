@@ -1,9 +1,9 @@
 {
   "tool": "list_insider_traders",
   "planGated": false,
-  "capturedAt": "2026-09-25",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:52309",
+    "source": "http://127.0.0.1:59747",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -36,22 +36,26 @@
           {
             "lines": [
               "H2 Insider Traders — Page <VAL>",
+              "TEXT *Grain: one row per insider per trade date. Open-market = SEC codes P/S; All Disposed also counts tax withholding, gifts and other non-market dispositions.*",
+              "TEXT *ko.io Free-plan window: trade_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
-              "THEAD Ticker | Company | Person | Title | Trade Date | Bought | Sold | Shares Owned",
+              "THEAD Ticker | Company | Person (CIK) | Title | Trade Date | Lines | Open-Mkt Bought | Open-Mkt Sold | All Disposed | Shares Owned",
               "TBODY",
               "BLANK",
-              "TEXT *More results — use <VAL>"
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {
                 "columns": [
                   "Ticker",
                   "Company",
-                  "Person",
+                  "Person (CIK)",
                   "Title",
                   "Trade Date",
-                  "Bought",
-                  "Sold",
+                  "Lines",
+                  "Open-Mkt Bought",
+                  "Open-Mkt Sold",
+                  "All Disposed",
                   "Shares Owned"
                 ],
                 "dataRows": 5
@@ -88,8 +92,10 @@
           {
             "lines": [
               "H2 Insider Traders — Page <VAL>",
+              "TEXT *Grain: one row per insider per trade date. Open-market = SEC codes P/S; All Disposed also counts tax withholding, gifts and other non-market dispositions.*",
+              "TEXT *ko.io Free-plan window: trade_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
-              "THEAD Ticker | Company | Person | Title | Trade Date | Bought | Sold | Shares Owned",
+              "THEAD Ticker | Company | Person (CIK) | Title | Trade Date | Lines | Open-Mkt Bought | Open-Mkt Sold | All Disposed | Shares Owned",
               "TBODY"
             ],
             "tables": [
@@ -97,11 +103,13 @@
                 "columns": [
                   "Ticker",
                   "Company",
-                  "Person",
+                  "Person (CIK)",
                   "Title",
                   "Trade Date",
-                  "Bought",
-                  "Sold",
+                  "Lines",
+                  "Open-Mkt Bought",
+                  "Open-Mkt Sold",
+                  "All Disposed",
                   "Shares Owned"
                 ],
                 "dataRows": 0

@@ -47,7 +47,8 @@ describe('registry gate (g): declared defects still exist', () => {
   it('the defect table has an entry per known non-param defect', () => {
     expect(BEHAVIOURAL_DEFECTS.map((d) => d.id).sort()).toEqual([
       'error-passthrough-contradicts-comment',
-      'filing-document-plan-undeclared',
+      // 'filing-document-plan-undeclared' retired 2026-09-26; the test below
+      // now guards the FIX.
       'headed-empty-table',
       // 'no-timeout' retired when ko-bastion#127 shipped; the assertion below
       // now guards the FIX rather than the defect.
@@ -85,13 +86,31 @@ describe('registry gate (g): declared defects still exist', () => {
     ).toEqual([true, true]);
   });
 
-  it('filing-document-plan-undeclared: the description still hides that it is paid-only', () => {
-    const d = defect('filing-document-plan-undeclared');
-    const description = registerAllTools().get('sec_get_filing_document')!.description;
-    expect(
-      /\b(paid|pro plan|subscription|requires a plan|api key required)\b/i.test(description),
-      `sec_get_filing_document now states its plan requirement -- retire "${d.id}".`,
-    ).toBe(false);
+  /**
+   * The inverse of the retired 'filing-document-plan-undeclared' gate. On a
+   * Free/keyless caller both paid legs refuse; the tool used to answer with a
+   * SUCCESS envelope holding an unsigned link and "(excerpt unavailable: 403)".
+   * It must now say it is paid-only, and a refusal must be an error that names
+   * the plan -- a future edit that brings the success envelope back fails here.
+   */
+  it('sec_get_filing_document states its plan and turns a plan refusal into isError', async () => {
+    expect(BEHAVIOURAL_DEFECTS.find((d) => d.id === 'filing-document-plan-undeclared')).toBeUndefined();
+    const tool = registerAllTools().get('sec_get_filing_document')!;
+    expect(/\b(paid|pro)\b/i.test(tool.description)).toBe(true);
+
+    const { KoApiError } = await vi.importActual<typeof import('../../ko-fetch.js')>('../../ko-fetch.js');
+    mock.mockReset();
+    mock.mockRejectedValue(new KoApiError('ko.io API error (403): Access forbidden (check your plan)', 403, 'PLAN_REQUIRED', null) as never);
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => ({ ok: false, status: 403, text: async () => '', json: async () => ({}) })) as unknown as typeof fetch;
+    try {
+      const res = await tool.handler(PROBES.sec_get_filing_document);
+      expect(res.isError).toBe(true);
+      expect(res.content[0].text).toMatch(/plan limit/i);
+      expect(res.content[0].text).toMatch(/not a missing document/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   it('headed-empty-table: the two odd tools still render an empty table with a header', async () => {

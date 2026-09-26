@@ -20,7 +20,10 @@ def main() -> None:
 
     buyers_by_ticker: defaultdict = defaultdict(set)
     for t in rows:
-        bought = float(t.get("om_value_bought") or 0) + float(t.get("stock_value_bought") or 0)
+        # Open-market purchases only (SEC code P). `stock_value_bought` also
+        # counts awards, option exercises and other non-market acquisitions --
+        # adding it in turned RSU vests into "buyers".
+        bought = float(t.get("om_value_bought") or 0)
         if bought <= 0:
             continue
         ticker = t.get("ticker")

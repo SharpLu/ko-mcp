@@ -1,11 +1,11 @@
 {
   "tool": "get_fed_rates",
   "planGated": true,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:59795",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -33,7 +33,7 @@
         "blocks": [
           {
             "lines": [
-              "TEXT ko.io API error (403): Access forbidden (check your plan): This endpoint requires a paid plan. Upgrade at <URL>"
+              "TEXT ko.io API error (403): Access forbidden (check your plan): This endpoint requires a paid plan. Upgrade at <URL> [PLAN_REQUIRED] This endpoint is not included in the caller's ko.io plan; it is a plan limit, not missing data."
             ],
             "tables": []
           }
@@ -67,7 +67,7 @@
         "blocks": [
           {
             "lines": [
-              "TEXT ko.io API error (403): Access forbidden (check your plan): This endpoint requires a paid plan. Upgrade at <URL>"
+              "TEXT ko.io API error (403): Access forbidden (check your plan): This endpoint requires a paid plan. Upgrade at <URL> [PLAN_REQUIRED] This endpoint is not included in the caller's ko.io plan; it is a plan limit, not missing data."
             ],
             "tables": []
           }

@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { koFetch, KO_FETCH_TIMEOUT_MS, type KoConfig } from "../ko-fetch.js";
+import { defineTool } from "../tool-def.js";
+import { koFetch, KoApiError, KO_FETCH_TIMEOUT_MS, type KoConfig } from "../ko-fetch.js";
 
 /**
  * SEC source-document gateway tools (ko-api#104).
@@ -20,7 +21,7 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // sec_list_filings
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "sec_list_filings",
     "List an entity's SEC filings from EDGAR (most recent first), each with its accession number. Provide the company's CIK (use search or get_stock_profile to find it). Returns accession numbers to pass to sec_get_filing_index / sec_get_filing_document.",
     {
@@ -51,7 +52,7 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // sec_get_filing_index
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "sec_get_filing_index",
     "Enumerate every file in a single SEC filing (primary document, exhibits, images, XBRL, the full .txt submission). Pass a file name from here to sec_get_filing_document.",
     {
@@ -79,9 +80,11 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   // sec_get_filing_document
   // ---------------------------------------------------------------------------
-  server.tool(
+  defineTool(server, 
     "sec_get_filing_document",
-    "Get a source document from a SEC filing, served by ko.io. Returns a ko.io LINK to the rendered document (open in a browser) plus, optionally, an extracted text excerpt. Never returns the whole file — for full content, open the link or request a specific section.",
+    "Get a source document from a SEC filing, served by ko.io. Returns a ko.io LINK to the rendered document (open in a browser) plus, optionally, an extracted text excerpt. Never returns the whole file — for full content, open the link or request a specific section. " +
+      "Requires a paid ko.io plan (Pro): on Free or keyless access the call returns an explicit plan-limit error. " +
+      "Use sec_list_filings / sec_get_filing_index (open on every plan) to find filings and their files.",
     {
       cik: z.string().max(200).describe("Company CIK number"),
       accession_no: z.string().max(200).describe("Accession number, e.g. '0000320193-23-000106'"),
@@ -97,6 +100,12 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
       // Fall back to the bare URL (works for API clients) if share fails.
       let htmlLink = new URL(`${base}${q}`, config.baseUrl).toString();
       let linkNote = "";
+      // Both legs are paid upstream (/share = apiKeyPaid, /file =
+      // signedTokenOrApiKeyPaid). A Free/keyless caller used to get a SUCCESS
+      // envelope holding an unsigned link it could not open and
+      // "(excerpt unavailable: 403)" -- which a model reports as "I fetched the
+      // document". A plan refusal is now an error that names the plan.
+      let planDenied: string | null = null;
       try {
         const share = await koFetch<{ url: string; expires_at: string }>(
           config,
@@ -105,7 +114,8 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
         );
         htmlLink = share.url;
         linkNote = ` *(link valid until ${share.expires_at})*`;
-      } catch {
+      } catch (e) {
+        if (e instanceof KoApiError && (e.status === 401 || e.status === 403)) planDenied = e.message;
         linkNote = " *(unsigned link — requires an API key to open)*";
       }
 
@@ -130,6 +140,9 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
               : { "User-Agent": "ko-mcp-worker/1.0" },
             signal: AbortSignal.timeout(KO_FETCH_TIMEOUT_MS),
           });
+          if ((res.status === 401 || res.status === 403) && planDenied) {
+            return planLimitResult(planDenied);
+          }
           if (res.ok) {
             const text = await res.text();
             const excerpt = text.slice(0, MAX_EXCERPT);
@@ -142,9 +155,25 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
         }
       }
 
+      if (planDenied && !include_excerpt) return planLimitResult(planDenied);
+
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }
   );
+}
+
+function planLimitResult(upstream: string) {
+  return {
+    isError: true,
+    content: [{
+      type: "text" as const,
+      text:
+        "ko.io plan limit (PLAN_REQUIRED): sec_get_filing_document requires a paid ko.io plan (Pro). " +
+        "This caller is on the Free plan or keyless, so neither the signed link nor the excerpt can be served -- " +
+        "this is a plan limit, not a missing document. sec_list_filings and sec_get_filing_index work on every plan; " +
+        `SEC's own copy is on https://www.sec.gov/. Upstream said: ${upstream}`,
+    }],
+  };
 }
 
 // ---------------------------------------------------------------------------

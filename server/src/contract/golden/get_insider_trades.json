@@ -1,9 +1,9 @@
 {
   "tool": "get_insider_trades",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:50885",
+    "source": "http://127.0.0.1:59747",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -14,7 +14,7 @@
         "ticker": "AAPL",
         "limit": 5
       },
-      "why": "Per-ticker insider table, five rows for limit=5 (#126). This tool also carried a SECOND truncation -- a hardcoded truncate(trades, 50) in the rendering -- so limit=200 rendered 50 even once per_page landed; both are gone, and a full page now says so.",
+      "why": "Per-insider-per-day AGGREGATE table from /insider-trades (include=detail), with the grain line and the open-market vs all-dispositions columns (EVAL_CODEX_TECH #2: four Form 4 lines used to render as one SELL). limit=5 so a full page and its paging line survive window decay (#126).",
       "contract": {
         "envelope": {
           "id": "number",
@@ -25,6 +25,55 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "executive_cik": "null",
+              "grain": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "period": "string",
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": {
+                  "all_shares_acquired": "null",
+                  "all_shares_disposed": "string",
+                  "all_value_acquired": "null",
+                  "all_value_disposed": "string",
+                  "first_filed_date": "string",
+                  "form4_lines": "number",
+                  "last_filed_date": "string",
+                  "officer_title": "string",
+                  "open_market_buy_lines": "number",
+                  "open_market_sell_lines": "number",
+                  "open_market_shares_bought": "null",
+                  "open_market_shares_sold": "string",
+                  "open_market_value_bought": "null",
+                  "open_market_value_sold": "string",
+                  "person_cik": "string",
+                  "person_name": "string",
+                  "shares_owned_after": "string",
+                  "trade_date": "string"
+                }
+              },
+              "ticker": "string"
             }
           }
         },
@@ -35,24 +84,129 @@
         "blocks": [
           {
             "lines": [
-              "H2 Insider Trades — AAPL",
-              "TEXT <VAL> trades returned*",
+              "H2 Insider Trades — AAPL (period <VAL>",
+              "TEXT *Grain: one row per insider per trade date, AGGREGATING every Form <VAL> line that day (`Lines`). Open-market = SEC codes P/S only (the discretionary trading signal). All acquired/disposed also count grants, option/RSU exercises (M), shares withheld for tax (F), gifts (G), etc. -- never read those as a sale decision. For the individual lines, call again with executive_cik = the insider's CIK.*",
+              "TEXT *ko.io Free-plan window: trade_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
-              "THEAD Date | Executive | Title | Action | Shares | Value | Price",
+              "THEAD Date | Insider (CIK) | Title | Lines | Open-Mkt Bought (sh / $) | Open-Mkt Sold (sh / $) | All Acquired (sh) | All Disposed (sh / $) | Owned After",
               "TBODY",
               "BLANK",
-              "TEXT *Full page of <VAL> rows — more may exist; use <VAL>"
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {
                 "columns": [
                   "Date",
-                  "Executive",
+                  "Insider (CIK)",
                   "Title",
-                  "Action",
+                  "Lines",
+                  "Open-Mkt Bought (sh / $)",
+                  "Open-Mkt Sold (sh / $)",
+                  "All Acquired (sh)",
+                  "All Disposed (sh / $)",
+                  "Owned After"
+                ],
+                "dataRows": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "transactions",
+      "arguments": {
+        "ticker": "AAPL",
+        "executive_cik": "1780525",
+        "limit": 5
+      },
+      "why": "The per-transaction grain: one row per Form 4 line with its SEC code, via /insider/:cik/transactions. CIK 1780525 (Jennifer Newstead, Apple GC) files monthly 10b5-1 sales, so the keyless 92-day window keeps rows.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "executive_cik": "string",
+              "grain": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "period": "null",
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": {
+                  "acquired_disposed": "string",
+                  "code_meaning": "string",
+                  "is_derivative": "boolean",
+                  "open_market": "boolean",
+                  "person_cik": "string",
+                  "person_name": "null",
+                  "price": "string",
+                  "security_title": "string",
+                  "shares": "string",
+                  "shares_owned_after": "string",
+                  "trade_date": "string",
+                  "transaction_code": "string",
+                  "value": "string"
+                }
+              },
+              "ticker": "string"
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Form <VAL> Transactions — AAPL · insider CIK <VAL>",
+              "TEXT *Grain: one row per Form <VAL> transaction line (newest first). Code = SEC transaction code; only P (open-market purchase) and S (open-market sale) are discretionary market trades.*",
+              "TEXT *ko.io Free-plan window: filing_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
+              "BLANK",
+              "THEAD Date | Code | Meaning | Security | Deriv. | Acq/Disp | Shares | Price | Value | Owned After",
+              "TBODY",
+              "BLANK",
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Date",
+                  "Code",
+                  "Meaning",
+                  "Security",
+                  "Deriv.",
+                  "Acq/Disp",
                   "Shares",
+                  "Price",
                   "Value",
-                  "Price"
+                  "Owned After"
                 ],
                 "dataRows": 5
               }
@@ -77,6 +231,36 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "executive_cik": "null",
+              "grain": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "period": "string",
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": null
+              },
+              "ticker": "string"
             }
           }
         },
@@ -87,10 +271,11 @@
         "blocks": [
           {
             "lines": [
-              "H2 Insider Trades — ZZZQQ",
-              "TEXT <VAL> trades returned*",
+              "H2 Insider Trades — ZZZQQ (period <VAL>",
+              "TEXT *Grain: one row per insider per trade date, AGGREGATING every Form <VAL> line that day (`Lines`). Open-market = SEC codes P/S only (the discretionary trading signal). All acquired/disposed also count grants, option/RSU exercises (M), shares withheld for tax (F), gifts (G), etc. -- never read those as a sale decision. For the individual lines, call again with executive_cik = the insider's CIK.*",
+              "TEXT *ko.io Free-plan window: trade_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
-              "TEXT No insider trades found."
+              "TEXT No insider trades found for ZZZQQ in period <VAL> inside the Free-plan window."
             ],
             "tables": []
           }

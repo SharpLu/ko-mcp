@@ -102,9 +102,14 @@ export const CASES = [
       { name: 'normal', arguments: { institution: BERKSHIRE_CIK, limit: 5 },
         why: 'A CIK (not a name) so no resolveInstitution preamble line; the 13F holdings table.' },
       { name: 'empty', arguments: { institution: BERKSHIRE_CIK, page: 99999 },
-        why: 'A page past the end: the soft-empty path, "Quarter: Unknown" and no table at all.' },
+        why: 'A page past the end. Since ko-api\'s soft wall went on (2026-09-24) a KEYLESS page>1 is a 403 ' +
+             'SIGNIN_REQUIRED, and the gate is keyless -- so this pins that refusal as a plan-limit isError whose ' +
+             'text says it is a sign-in limit, not missing data (EVAL_CODEX_TECH #6).' },
       { name: 'error', arguments: {},
         why: 'Required `institution` missing -- zod -32602, pinned verbatim.' },
+      { name: 'security', arguments: { institution: BERKSHIRE_CIK, ticker: 'GOOG' },
+        why: 'SPEC R2/C3: a ticker asks for the SECURITY grain (raw_share_classes=true). Pins the entity- and ' +
+             'security-grain lines; before 2026-09-26 the tool rendered Alphabet\'s issuer total under "GOOG".' },
     ],
   },
   {
@@ -145,7 +150,10 @@ export const CASES = [
   {
     tool: 'get_stock_activity',
     cases: [
-      { name: 'normal', arguments: { ticker: 'AAPL' }, why: 'Summary bullets plus the quarterly-trend table.' },
+      { name: 'normal', arguments: { ticker: 'AAPL' },
+        why: 'Summary bullets plus the quarterly-trend table. EVAL_CODEX_TECH #6: the old default quarters=8 is a ' +
+             '403 for a keyless caller; the default now omits `quarters` so ko-api injects the plan maximum, and ' +
+             'the answer says the multi-quarter trend is Pro.' },
       { name: 'empty', arguments: { ticker: NO_SUCH_TICKER }, why: 'Soft sentence, no table.' },
       { name: 'error', arguments: { ticker: 'AAPL', quarters: 99 }, why: 'Above the quarters clamp (max 40).' },
     ],
@@ -165,9 +173,13 @@ export const CASES = [
     tool: 'get_insider_trades',
     cases: [
       { name: 'normal', arguments: { ticker: 'AAPL', limit: 5 },
-        why: 'Per-ticker insider table, five rows for limit=5 (#126). This tool also carried a SECOND ' +
-             'truncation -- a hardcoded truncate(trades, 50) in the rendering -- so limit=200 rendered 50 ' +
-             'even once per_page landed; both are gone, and a full page now says so.' },
+        why: 'Per-insider-per-day AGGREGATE table from /insider-trades (include=detail), with the grain line ' +
+             'and the open-market vs all-dispositions columns (EVAL_CODEX_TECH #2: four Form 4 lines used to ' +
+             'render as one SELL). limit=5 so a full page and its paging line survive window decay (#126).' },
+      { name: 'transactions', arguments: { ticker: 'AAPL', executive_cik: '1780525', limit: 5 },
+        why: 'The per-transaction grain: one row per Form 4 line with its SEC code, via ' +
+             '/insider/:cik/transactions. CIK 1780525 (Jennifer Newstead, Apple GC) files monthly 10b5-1 sales, ' +
+             'so the keyless 92-day window keeps rows.' },
       { name: 'empty', arguments: { ticker: NO_SUCH_TICKER },
         why: 'Unknown ticker: a soft sentence in a SUCCESS envelope, no table, isError absent.' },
       { name: 'error', arguments: {}, why: 'Required `ticker` missing.' },
@@ -208,8 +220,12 @@ export const CASES = [
         why: 'One member history, five rows for limit=5 (#126). NOTE the sibling collection route ' +
              '/api/v1/congress-trades is the one route in this surface that accepts `limit` ' +
              '(`per_page ?? limit`), which is why get_congress_trades above was never affected.' },
-      { name: 'empty', arguments: { member: 'nancy-pelosi', page: 9999 }, knownDefect: DEFECT_EMPTY_TABLE,
-        why: 'Page past the end renders a headed empty table (audit warning 5).' },
+      { name: 'empty', arguments: { member: 'nancy-pelosi', page: 9999 },
+        why: 'Page past the end. Since the soft wall went on (2026-09-24) a KEYLESS page>1 is refused with 403 ' +
+             'SIGNIN_REQUIRED before the handler runs, so this pins that plan-limit isError. The headed-empty-table ' +
+             'defect (audit warning 5) this case used to annotate is NOT fixed -- it is simply unreachable from ' +
+             'the keyless gate (an unknown member is a 404, not an empty page). It stays asserted offline by ' +
+             'registry-defects.test.ts (BEHAVIOURAL_DEFECTS headed-empty-table).' },
       { name: 'error', arguments: {}, why: 'Required `member` missing.' },
     ],
   },
@@ -263,20 +279,28 @@ export const CASES = [
   },
   {
     tool: 'sec_get_filing_document',
+    // Paid-only upstream (both legs), so from the keyless gate it is a plan gate
+    // exactly like the four macro tools -- flagged so nobody reads it as coverage.
+    planGated: true,
     cases: [
       { name: 'normal', arguments: { cik: APPLE_CIK, accession_no: APPLE_10K },
-        why: 'The free-tier path: an UNSIGNED link and "(excerpt unavailable: 403)" inside a SUCCESS ' +
-             'envelope (audit warning 7). Pinned because the shape is the contract a model sees, and the ' +
-             '403 in it is one of only two digits normalisation keeps.' },
+        why: 'PLAN GATE, NOT DATA. The free-tier path. Until 2026-09-26 an UNSIGNED link and "(excerpt unavailable: 403)" inside a ' +
+             'SUCCESS envelope (audit warning 7); both legs are paid upstream, so it is now an isError plan-limit ' +
+             'answer naming Pro -- the retired filing-document-plan-undeclared defect.' },
       { name: 'empty', arguments: { cik: APPLE_CIK, accession_no: APPLE_10K, file: 'nosuchfile.htm' },
-        why: 'A file that is not in the filing -- still a success envelope with a link.' },
+        why: 'A file that is not in the filing. Keyless, the paid legs refuse before the file is looked up, so ' +
+             'this is the same plan-limit isError as `normal`.' },
       { name: 'error', arguments: { cik: APPLE_CIK }, why: 'Required `accession_no` missing.' },
     ],
   },
   {
     tool: 'get_stock_financials',
     cases: [
-      { name: 'normal', arguments: { ticker: 'AAPL' }, why: 'Quarterly financials table.' },
+      { name: 'normal', arguments: { ticker: 'AAPL' },
+        why: 'Quarterly financials table; keyless, the soft wall keeps only the latest statement and the answer says so.' },
+      { name: 'plan_limit', arguments: { ticker: 'AAPL', period_type: 'annual' },
+        why: 'EVAL_CODEX_TECH #4: keyless annual is emptied by the soft wall (annual: []). It used to render ' +
+             '"No financial data found for AAPL." in a success envelope; it is now an isError naming Pro.' },
       { name: 'empty', arguments: { ticker: NO_SUCH_TICKER }, why: 'Upstream 404 as isError.' },
       { name: 'error', arguments: { ticker: 'AAPL', period_type: 'monthly' },
         why: 'Outside the period_type enum -- zod -32602 listing the two allowed values.' },
@@ -323,13 +347,16 @@ export const CASES = [
     cases: [
       { name: 'empty', arguments: { ticker: NO_SUCH_TICKER }, why: 'Soft sentence, no table.' },
       { name: 'error', arguments: { ticker: 'GME', days: 9999 }, why: 'Above the days clamp (max 1825).' },
-      { name: 'truncation', arguments: { ticker: 'GME', days: 1825 },
-        why: 'The 1,025-row window. This case used to demonstrate the defect -- the tool sent no ' +
-             '`per_page` at all, ko-api capped the answer at its 50-row default, and the rendering said ' +
-             'nothing about it -- and it now pins the OPPOSITE: a page the caller controls plus the ' +
-             'disclosure line that says the page is full and names the next one (#126). The line is what ' +
-             'is pinned; the row count still is not, because row counts are data. Also carries this ' +
-             'tool\'s populated-table contract, since the recorded `normal` case is excluded above.' },
+      { name: 'truncation', arguments: { ticker: 'AAPL', days: 90, limit: 5 },
+        why: 'A page boundary the caller controls, and its disclosure (#126). Was {GME, days:1825}: since the ' +
+             'soft wall went on (2026-09-24) a keyless 1825-day window is a 403 PLAN_REQUIRED, so it could no ' +
+             'longer carry the populated-table contract. AAPL has settlement fails on most dates, so 5 rows ' +
+             'inside the keyless 92-day window keep the page full; the pinned footer is the keyless one ' +
+             '(SIGNIN_REQUIRED instead of "use page=2"). Also carries this tool\'s populated-table contract, ' +
+             'since the recorded `normal` case is excluded above.' },
+      { name: 'plan_limit', arguments: { ticker: 'GME', days: 1825 },
+        why: 'The old truncation arguments, kept for what they now demonstrate: a window past the Free plan is ' +
+             'an isError that names PLAN_REQUIRED, the parameter and the window -- not an empty table.' },
     ],
   },
   {
@@ -368,7 +395,9 @@ export const CASES = [
 ];
 
 /**
- * The 4 macro tools free/demo callers cannot reach.
+ * The 5 tools free/demo callers cannot reach: the 4 macro tools, plus
+ * sec_get_filing_document (both of its legs are paid upstream; flagged since
+ * 2026-09-26, when its plan refusal stopped hiding inside a success envelope).
  *
  * Their `normal` and `empty` fixtures pin a 403 PLAN GATE and contain no data
  * whatsoever. That is a real contract and worth pinning -- the day the gate

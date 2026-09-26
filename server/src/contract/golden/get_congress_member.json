@@ -1,9 +1,9 @@
 {
   "tool": "get_congress_member",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "http://127.0.0.1:50885",
+    "source": "http://127.0.0.1:59932",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -41,7 +41,7 @@
               "THEAD Date | Ticker | Asset | Type | Amount | Disclosed | Owner",
               "TBODY",
               "BLANK",
-              "TEXT *Showing <VAL> trades — use <VAL> for more.*"
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*"
             ],
             "tables": [
               {
@@ -67,7 +67,7 @@
         "member": "nancy-pelosi",
         "page": 9999
       },
-      "why": "Page past the end renders a headed empty table (audit warning 5).",
+      "why": "Page past the end. Since the soft wall went on (2026-09-24) a KEYLESS page>1 is refused with 403 SIGNIN_REQUIRED before the handler runs, so this pins that plan-limit isError. The headed-empty-table defect (audit warning 5) this case used to annotate is NOT fixed -- it is simply unreachable from the keyless gate (an unknown member is a 404, not an empty page). It stays asserted offline by registry-defects.test.ts (BEHAVIOURAL_DEFECTS headed-empty-table).",
       "contract": {
         "envelope": {
           "id": "number",
@@ -78,45 +78,22 @@
                 "text": "string",
                 "type": "string"
               }
-            }
+            },
+            "isError": "boolean"
           }
         },
-        "isError": false,
+        "isError": true,
         "contentTypes": [
           "text"
         ],
         "blocks": [
           {
             "lines": [
-              "H2 nancy-pelosi — Trading History",
-              "TEXT <VAL> trades returned*",
-              "BLANK",
-              "THEAD Date | Ticker | Asset | Type | Amount | Disclosed | Owner",
-              "TBODY"
+              "TEXT ko.io API error (403): Access forbidden (check your plan): Sign in (free) to see more rows. [SIGNIN_REQUIRED (continuation); parameter `page`] This is a limit of keyless (anonymous) access, not missing data: without an API key ko.io serves only the first page, capped at <VAL> rows. Send a free ko.io API key (Authorization: Bearer ko_...) to page further."
             ],
-            "tables": [
-              {
-                "columns": [
-                  "Date",
-                  "Ticker",
-                  "Asset",
-                  "Type",
-                  "Amount",
-                  "Disclosed",
-                  "Owner"
-                ],
-                "dataRows": 0
-              }
-            ]
+            "tables": []
           }
         ]
-      },
-      "knownDefect": {
-        "issue": "KO_MCP_TOOL_MATRIX_20260912.md section 3, warning 5 (no issue filed)",
-        "summary": "An empty result is rendered as a table header with no rows, unlike the soft \"no results\" sentence the other 22 tools use. A model reads a well-formed empty table as a real answer. Annotated, not pinned: when this is changed to a soft-empty sentence the probe stops holding and the case is re-pinned.",
-        "probe": {
-          "kind": "headerWithoutRows"
-        }
       }
     },
     {

@@ -1,11 +1,11 @@
 {
   "tool": "get_stock_financials",
   "planGated": false,
-  "capturedAt": "2026-09-12",
+  "capturedAt": "2026-09-26",
   "provenance": {
-    "source": "/private/tmp/claude-501/-Users-l-KO/ed6d936a-c54f-4b0f-a677-a64dedf780dd/scratchpad/mcp-recordings",
-    "mode": "recordings",
-    "note": "Verbatim JSON-RPC bodies captured from https://mcp.ko.io by the M0 audit on 2026-09-12; pretty-printed only, never edited. Arguments were reconstructed into src/contract/cases.mjs and confirmed by replaying each one against a locally built Worker."
+    "source": "http://127.0.0.1:59747",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -13,7 +13,7 @@
       "arguments": {
         "ticker": "AAPL"
       },
-      "why": "Quarterly financials table.",
+      "why": "Quarterly financials table; keyless, the soft wall keeps only the latest statement and the answer says so.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -24,6 +24,36 @@
                 "text": "string",
                 "type": "string"
               }
+            },
+            "structuredContent": {
+              "period_type": "string",
+              "periods": {
+                "_array": {
+                  "eps_basic": "string",
+                  "eps_diluted": "string",
+                  "gross_profit": "string",
+                  "long_term_debt": "string",
+                  "net_income": "string",
+                  "operating_cashflow": "string",
+                  "operating_income": "string",
+                  "period_end": "string",
+                  "revenue": "string",
+                  "short_term_debt": "string",
+                  "stockholders_equity": "string"
+                }
+              },
+              "plan_limit": {
+                "continuation": "null",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "null",
+                "truncated": "null",
+                "window_end": "null",
+                "window_start": "null"
+              },
+              "plan_note": "string",
+              "ticker": "string"
             }
           }
         },
@@ -37,7 +67,9 @@
               "H2 AAPL Financials — Quarterly",
               "BLANK",
               "THEAD Period | Revenue | Net Income | EPS | Gross Margin | Op Margin | Op Cash Flow | D/E",
-              "TBODY"
+              "TBODY",
+              "BLANK",
+              "TEXT *Free plan / keyless access: only the latest quarterly statement is returned; earlier quarters and all annual statements require Pro (they exist -- they are withheld, not missing).*"
             ],
             "tables": [
               {
@@ -51,9 +83,44 @@
                   "Op Cash Flow",
                   "D/E"
                 ],
-                "dataRows": 4
+                "dataRows": 1
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "plan_limit",
+      "arguments": {
+        "ticker": "AAPL",
+        "period_type": "annual"
+      },
+      "why": "EVAL_CODEX_TECH #4: keyless annual is emptied by the soft wall (annual: []). It used to render \"No financial data found for AAPL.\" in a success envelope; it is now an isError naming Pro.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io plan limit (PLAN_REQUIRED): annual financial statements for AAPL require Pro. The Free plan and keyless access return only the latest quarterly statement, so the annual series was withheld -- this is a limit of the caller's plan, not an absence of data. Use period_type='quarterly' for the latest quarter, or a Pro API key (<URL>)."
+            ],
+            "tables": []
           }
         ]
       }
