@@ -5,7 +5,7 @@ import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
 import { pagingOf, pagingLines, planLimitOf, dec, int, str } from "../paging.js";
 import { CRYPTO_EXPOSURE_OUTPUT, CRYPTO_HOLDERS_OUTPUT, CRYPTO_HOLDER_OUTPUT } from "../output-schemas.js";
 import { resolveInstitution } from "../resolve.js";
-import { fmtMoney, fmtShares, num } from "../format.js";
+import { fmtMoney, fmtShares, fmtPct2, num } from "../format.js";
 
 // Institutional exposure to US spot crypto ETFs (BTC complex: IBIT, FBTC, GBTC,
 // ...), derived from 13F filings. Proxies ko-api /api/v1/crypto/*. USD-exact,
@@ -161,7 +161,7 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
       lines.push(`## ${inst?.name || `CIK ${cik}`} — Spot Crypto-ETF Holdings`);
       lines.push(`**Latest quarter:** ${inst?.latest_quarter ?? "—"}`);
       lines.push(`**Total crypto-ETF USD:** ${fmtMoney(num(inst?.total_usd))} (QoQ ${qoq(inst?.qoq_change)})`);
-      lines.push(`**Rank:** ${inst?.rank ?? "—"} of ${inst?.total_holders ?? "—"} holders · **Portfolio weight:** ${inst?.portfolio_weight_pct?.toFixed(2) ?? "—"}%\n`);
+      lines.push(`**Rank:** ${inst?.rank ?? "—"} of ${inst?.total_holders ?? "—"} holders · **Portfolio weight:** ${fmtPct2(inst?.portfolio_weight_pct)}%\n`);
 
       if (positions.length > 0) {
         lines.push("| ETF | Name | Shares | USD Held | QoQ | Action |");
