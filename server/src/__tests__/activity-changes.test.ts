@@ -3,8 +3,9 @@
  *
  * Two replays of the ko-api response for NVDA 2026-06-30:
  *   - OLD = live api.ko.io `?type=activity&demo=true` captured 2026-09-26 (no `changes`);
- *   - NEW = the same plus `changes` per PLAN_DATA 2A (counts + net_shares measured
- *     read-only on A1; the amounts marked in `_replay` are placeholders).
+ *   - NEW = the REAL payload of the ko-api branch handlers (fix/data-api-consistency)
+ *     run on A1 data (codex-studio/final-review2/replays/nvda_activity_new.json):
+ *     the same legacy fields plus `changes` and meta.definitions.
  * The OLD replay must render byte-identically to the pre-change tool (the expected
  * snapshot was produced by the unmodified handler), and in both replays every
  * number in the text must equal the number in structuredContent.
@@ -110,16 +111,24 @@ describe("get_stock_activity NEW replay (ko-api with `changes`)", () => {
     const { sc } = await callReal(envOf(NEW));
     expect(sc.latest.changes).toEqual(NEW.data.summary.changes);
     expect(sc.trend.map((r: J) => r.changes)).toEqual(NEW.data.trend.map((r: J) => r.changes));
-    expect(sc.latest.changes).toMatchObject({
-      basis: "equity_filer_baseline", new: 211, added: 3001, trimmed: 2353, exited: 114,
-      no_baseline: 93, holders: 5980, net_shares: 116566186,
-    });
+    const REAL = {
+      basis: "equity_filer_baseline", new: 211, added: 3001, trimmed: 2353, exited: 114, unchanged: 322,
+      no_baseline: 93, holders: 5980, shares_added: 518713045, shares_removed: 402146859, net_shares: 116566186,
+      value_added: 103789291274, value_removed: 80465563545, net_value: 23323727729,
+    };
+    expect(sc.latest.changes).toStrictEqual(REAL);
+    expect(sc.trend[0].changes).toStrictEqual(REAL);
+    // The replay's own legacy fields are the live (old) ones, untouched by the new basis.
+    expect(NEW.data.summary).toMatchObject(OLD.data.summary);
   });
 
   it("first text line states the basis; changes are listed first, legacy counts kept as a note", async () => {
     const { text } = await callReal(envOf(NEW));
     const lines = text.split("\n");
-    expect(lines[0]).toBe(`Basis: equity_filer_baseline -- ${NEW.meta.definitions.changes}`);
+    expect(NEW.meta.definitions.changes.startsWith("changes (basis equity_filer_baseline): ")).toBe(true);
+    expect(lines[0]).toBe(
+      `Basis: equity_filer_baseline -- ${NEW.meta.definitions.changes.slice("changes (basis equity_filer_baseline): ".length)}`,
+    );
     const iChanges = lines.findIndex((l) => l.startsWith("- New positions:"));
     const iLegacy = lines.findIndex((l) => l.startsWith("- Note -- legacy counts"));
     expect(iChanges).toBeGreaterThan(0);

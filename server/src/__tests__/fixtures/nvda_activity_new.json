@@ -23,12 +23,12 @@
         "unchanged": 322,
         "no_baseline": 93,
         "holders": 5980,
-        "shares_added": 533705417,
-        "shares_removed": 417139231,
+        "shares_added": 518713045,
+        "shares_removed": 402146859,
         "net_shares": 116566186,
-        "value_added": 106789114912,
-        "value_removed": 83465387186,
-        "net_value": 23323727726
+        "value_added": 103789291274,
+        "value_removed": 80465563545,
+        "net_value": 23323727729
       }
     },
     "trend": [
@@ -55,22 +55,28 @@
           "unchanged": 322,
           "no_baseline": 93,
           "holders": 5980,
-          "shares_added": 533705417,
-          "shares_removed": 417139231,
+          "shares_added": 518713045,
+          "shares_removed": 402146859,
           "net_shares": 116566186,
-          "value_added": 106789114912,
-          "value_removed": 83465387186,
-          "net_value": 23323727726
+          "value_added": 103789291274,
+          "value_removed": 80465563545,
+          "net_value": 23323727729
         }
       }
     ]
   },
   "meta": {
-    "query_time_ms": 44,
+    "query_time_ms": 1889,
     "grain": "ticker",
     "entity_grain": "filer",
     "position_basis": "13f_reported_all_legs",
     "position_basis_note": "shares_held and holding_value are both the 13F-reported total over all legs (common + shares underlying calls + shares underlying puts); equity_shares / call_shares / put_shares break it down.",
+    "basis": "reported",
+    "excluded": [],
+    "definitions": {
+      "changes": "changes (basis equity_filer_baseline): common shares only, option legs excluded; one filer CIK counts once per ticker; a filer is classified (new / added / trimmed / exited / unchanged) only when it filed a 13F in this dataset for the previous quarter-end. Filers with shares but no previous-quarter filing are counted in no_baseline and in holders, never as buyers. shares_added / shares_removed / net_shares and value_* sum only classified filers; value = |share change| x the quarter-end close.",
+      "dealer": "DEALER marks filers on a hand-checked list of market makers and proprietary dealer desks (src/lib/dealer-filers.ts); their 13F positions are mostly hedge or market-making inventory. The list is curated, not inferred, so dealers missing from it are not flagged. Flagged rows are never removed unless the request says exclude=dealers."
+    },
     "softwall": {
       "policy_version": "softwall-v1",
       "window_start": "2026-06-30",
@@ -80,32 +86,6 @@
       "row_cap": 25,
       "truncated": false,
       "continuation": "SIGNIN_REQUIRED"
-    },
-    "definitions": {
-      "changes": "Common stock only (option legs excluded); one holder per filer CIK; only filers with a usable prior-quarter baseline in fact_holdings_by_ticker are classified as new/added/trimmed/exited/unchanged; filers without one are counted as no_baseline."
     }
-  },
-  "_replay": {
-    "source": "old = live https://api.ko.io/api/v1/stock-holders/NVDA?type=activity&demo=true captured 2026-09-26; changes added per PLAN_DATA.md section 2A",
-    "measured_read_only_A1_2026-09-26": [
-      "new",
-      "added",
-      "trimmed",
-      "exited",
-      "no_baseline",
-      "holders",
-      "net_shares"
-    ],
-    "derived": {
-      "unchanged": "holders - new - added - trimmed - no_baseline (exited rows have eq=0)"
-    },
-    "PLACEHOLDERS_not_measured": [
-      "shares_added",
-      "shares_removed",
-      "value_added",
-      "value_removed",
-      "net_value",
-      "meta.definitions.changes wording"
-    ]
   }
 }

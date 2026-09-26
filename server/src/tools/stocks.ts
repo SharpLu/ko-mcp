@@ -668,8 +668,10 @@ function changesLines(c: ActivityChanges): string[] {
 function changesDefinition(meta: KoMeta): string {
   const defs = meta.definitions;
   const d = defs && typeof defs === "object" ? (defs as Record<string, unknown>).changes : undefined;
-  // "Basis: <name> -- <definition>": drop a leading "<name>:" so it is not said twice.
-  const text = typeof d === "string" ? d.trim().replace(new RegExp(`^${CHANGES_BASIS}\\s*[:\\-]+\\s*`), "") : "";
+  // "Basis: <name> -- <definition>": drop a leading "<name>:" or
+  // "changes (basis <name>):" so the basis is not said twice.
+  const lead = new RegExp(`^(?:changes\\s*\\(basis\\s+${CHANGES_BASIS}\\)|${CHANGES_BASIS})\\s*[:\\-]+\\s*`);
+  const text = typeof d === "string" ? d.trim().replace(lead, "") : "";
   return text || CHANGES_DEFINITION;
 }
 
