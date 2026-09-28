@@ -174,7 +174,7 @@ describe("get_stock_activity NEW replay (ko-api with `changes`)", () => {
     const c = t.changes;
     expect(rows[0]).toEqual([
       t.quarter, ...[c.new, c.added, c.trimmed, c.exited, c.unchanged, c.no_baseline, c.holders].map(String),
-      fmtShares(c.net_shares), fmtMoney(c.net_value),
+      fmtShares(c.net_shares), fmtMoney(c.net_value), "—", // comparability: not stated by this (pre-guard) replay
     ]);
     expect(rows[1]).toEqual([
       t.quarter, String(t.institutions_increased), String(t.institutions_decreased), String(t.institutions_new),
@@ -199,7 +199,7 @@ describe("get_stock_activity NEW replay (ko-api with `changes`)", () => {
     const { text, sc } = await callReal({ data, meta: NEW.meta }, { ticker: "NVDA", quarters: 2 });
     expect(sc.trend[1].changes).toBeUndefined();
     expect(sc.trend[1].institutions_increased).toBe(3292);
-    expect(text).toContain("| 2026-03-31 | — | — | — | — | — | — | — | — | — |");
+    expect(text).toContain("| 2026-03-31 | — | — | — | — | — | — | — | — | — | — |\n");
     expect(text).toContain("| 2026-03-31 | 3292 | 2480 | 274 | 115 | 194.70M | $38.96B |");
   });
 });

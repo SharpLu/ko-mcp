@@ -265,6 +265,13 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
             has_option_legs: optionFlag(h),
             family: familyRef(h.family),
             reported_by_members: int(h.reported_by_members),
+            // equity_filer_baseline view of the same row (common shares only,
+            // split-restated). Passed through only when ko-api sent it; a null
+            // equity_share_change means no usable prior-quarter baseline
+            // (flags carries NO_BASELINE) -- unknown, never zero.
+            ...("equity_share_change" in h ? { equity_share_change: dec(h.equity_share_change) } : {}),
+            ...("equity_action" in h ? { equity_action: typeof h.equity_action === "string" ? h.equity_action : null } : {}),
+            ...(Array.isArray(h.flags) ? { flags: h.flags.filter((f): f is string => typeof f === "string") } : {}),
           })),
           paging,
           plan_limit: planLimitOf(env.meta),
@@ -293,7 +300,9 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
     "get_stock_activity",
     "Get institutional buying/selling activity trend for a stock over multiple quarters. Shows how many institutions are buying vs selling, net share changes, and value flows — useful for detecting accumulation or distribution patterns. " +
       "Plan limits: Free/keyless access covers the latest 13F quarter only; the multi-quarter trend requires Pro. " +
-      "Omit `quarters` to get the most your plan allows. structuredContent carries the exact net shares/values.",
+      "Omit `quarters` to get the most your plan allows. structuredContent carries the exact net shares/values. " +
+      "Each quarter carries ko.io's comparability state (comparable / split_adjusted with its split factor / " +
+      "not_comparable / first_reported): a null share or value flow means UNKNOWN (withheld), never zero.",
     {
       ticker: z.string().max(200).describe("Stock ticker symbol"),
       quarters: z
@@ -355,6 +364,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       // ko-api does not send it, the text below is byte-identical to the
       // legacy rendering and no basis line is shown.
       const latestChanges = changesOf(data.summary.changes);
+      const latestComparability = comparabilityOf(data.summary);
       const lines: string[] = latestChanges
         ? [
             `Basis: ${latestChanges.basis ?? CHANGES_BASIS} -- ${changesDefinition(env.meta)}`,
@@ -362,15 +372,16 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
             `## Institutional Activity — ${data.ticker}`,
             "",
             `**Latest Quarter (${data.summary.quarterDate}):**`,
+            ...comparabilityLines(latestComparability),
             ...changesLines(latestChanges),
             `- Note -- legacy counts (all filers, including those without a prior-quarter baseline): ` +
               `Institutions increased (incl. new): ${data.summary.institutionsIncreased} | Decreased (incl. exited): ${data.summary.institutionsDecreased} | ` +
               `New: ${data.summary.institutionsNew} | Exited: ${data.summary.institutionsExited} | ` +
-              `Net shares: ${fmtShares(num(data.summary.netShares))} | Net value: ${fmtMoney(num(data.summary.netValue))}`,
+              `Net shares: ${flowShares(data.summary.netShares)} | Net value: ${flowMoney(data.summary.netValue)}`,
             "",
             `### Quarterly Trend (${CHANGES_BASIS})\n`,
-            "| Quarter | New | Added | Trimmed | Exited | Unchanged | No baseline | Holders | Net Shares | Net Value |",
-            "|---------|-----|-------|---------|--------|-----------|-------------|---------|------------|-----------|",
+            "| Quarter | New | Added | Trimmed | Exited | Unchanged | No baseline | Holders | Net Shares | Net Value | Comparability |",
+            "|---------|-----|-------|---------|--------|-----------|-------------|---------|------------|-----------|---------------|",
           ]
         : [
             `## Institutional Activity — ${data.ticker}`,
@@ -378,7 +389,8 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
             `**Latest Quarter (${data.summary.quarterDate}):**`,
             `- Institutions increased: ${data.summary.institutionsIncreased} | Decreased: ${data.summary.institutionsDecreased}`,
             `- New positions: ${data.summary.institutionsNew} | Exited: ${data.summary.institutionsExited}`,
-            `- Net shares: ${fmtShares(num(data.summary.netShares))} | Net value: ${fmtMoney(num(data.summary.netValue))}`,
+            ...comparabilityLines(latestComparability),
+            `- Net shares: ${flowShares(data.summary.netShares)} | Net value: ${flowMoney(data.summary.netValue)}`,
             "",
             "### Quarterly Trend\n",
             "| Quarter | Increased | Decreased | New | Exited | Net Shares | Net Value |",
@@ -388,10 +400,11 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       if (latestChanges) {
         for (const r of trend) {
           const c = changesOf(r.changes);
+          const cmp = comparabilityCell(comparabilityOf(r));
           lines.push(
             c
-              ? `| ${r.quarter} | ${cnt(c.new)} | ${cnt(c.added)} | ${cnt(c.trimmed)} | ${cnt(c.exited)} | ${cnt(c.unchanged)} | ${cnt(c.no_baseline)} | ${cnt(c.holders)} | ${fmtShares(c.net_shares)} | ${fmtMoney(c.net_value)} |`
-              : `| ${r.quarter} | — | — | — | — | — | — | — | — | — |`,
+              ? `| ${r.quarter} | ${cnt(c.new)} | ${cnt(c.added)} | ${cnt(c.trimmed)} | ${cnt(c.exited)} | ${cnt(c.unchanged)} | ${cnt(c.no_baseline)} | ${cnt(c.holders)} | ${flowShares(c.net_shares)} | ${flowMoney(c.net_value)} | ${cmp} |`
+              : `| ${r.quarter} | — | — | — | — | — | — | — | — | — | ${cmp} |`,
           );
         }
         lines.push(
@@ -403,7 +416,7 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
       }
       for (const r of trend) {
         lines.push(
-          `| ${r.quarter} | ${r.institutionsIncreased} | ${r.institutionsDecreased} | ${r.institutionsNew} | ${r.institutionsExited} | ${fmtShares(num(r.netShares))} | ${fmtMoney(num(r.netValue))} |`
+          `| ${r.quarter} | ${r.institutionsIncreased} | ${r.institutionsDecreased} | ${r.institutionsNew} | ${r.institutionsExited} | ${flowShares(r.netShares)} | ${flowMoney(r.netValue)} |`
         );
       }
       if (planNote) lines.push("", `*${planNote}*`);
@@ -416,7 +429,8 @@ export function registerStockTools(server: McpServer, config: KoConfig) {
         institutions_exited: int(r.institutionsExited),
         net_shares: dec(r.netShares),
         net_value: dec(r.netValue),
-        ...withChanges(r.changes),
+        ...passThrough(r as unknown as Record<string, unknown>, ROW_PASS_THROUGH),
+        ...withChanges(r),
       });
       const sm = data.summary;
       return {
@@ -607,6 +621,9 @@ interface HolderRow extends LegFields {
   share_change: number | string;
   action: string;
   portfolio_weight_pct: number | null;
+  equity_share_change?: number | string | null;
+  equity_action?: string | null;
+  flags?: unknown[];
 }
 
 // ---------------------------------------------------------------------------
@@ -636,31 +653,151 @@ function jnum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** ko-api's `changes` object normalised, or null when absent / not an object. */
-function changesOf(v: unknown): ActivityChanges | null {
+// Comparability guard (ko-api split-guard): each quarter says whether its flows
+// can be compared with other quarters -- comparable | split_adjusted (with
+// split_factor) | not_comparable (flows null) | first_reported (no filer held
+// it last quarter) | unknown (flows null). These fields are passed through
+// VERBATIM and only when ko-api sent them (older builds: key absent, so the
+// structuredContent of an old response is unchanged). A null flow is UNKNOWN:
+// it is never coerced to 0, in structuredContent or in the text.
+/** REST camelCase row key -> structuredContent snake_case key. */
+const ROW_PASS_THROUGH = { comparability: "comparability", nullReason: "null_reason" } as const;
+
+type ChangeMeta = {
+  comparability?: string | null;
+  comparability_reason?: string | null;
+  split_factor?: number | null;
+  price_corrected?: boolean | null;
+  null_reason?: string | null;
+  flow_excluded_filers?: number | null;
+};
+
+/** Copy the listed keys that ko-api actually sent (null stays null; absent stays absent). */
+function passThrough(o: Record<string, unknown>, keys: Readonly<Record<string, string>>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [from, to] of Object.entries(keys)) {
+    if (!(from in o)) continue;
+    const v = o[from];
+    out[to] = v === undefined ? null : v;
+  }
+  return out;
+}
+
+function changeMetaOf(o: Record<string, unknown>): ChangeMeta {
+  const out: ChangeMeta = {};
+  if ("comparability" in o) out.comparability = typeof o.comparability === "string" ? o.comparability : null;
+  if ("comparability_reason" in o) out.comparability_reason = typeof o.comparability_reason === "string" ? o.comparability_reason : null;
+  if ("split_factor" in o) out.split_factor = jnum(o.split_factor);
+  if ("price_corrected" in o) out.price_corrected = typeof o.price_corrected === "boolean" ? o.price_corrected : null;
+  if ("null_reason" in o) out.null_reason = typeof o.null_reason === "string" ? o.null_reason : null;
+  if ("flow_excluded_filers" in o) out.flow_excluded_filers = int(o.flow_excluded_filers);
+  return out;
+}
+
+/** ko-api's `changes` object normalised, or null when absent / null / not an object. */
+function changesOf(v: unknown): (ActivityChanges & ChangeMeta) | null {
   if (!v || typeof v !== "object" || Array.isArray(v)) return null;
   const o = v as Record<string, unknown>;
-  const out = { basis: typeof o.basis === "string" ? o.basis : null } as ActivityChanges;
+  const out = { basis: typeof o.basis === "string" ? o.basis : null } as ActivityChanges & ChangeMeta;
   for (const k of CHANGE_COUNTS) out[k] = int(o[k]);
+  Object.assign(out, changeMetaOf(o));
   for (const k of CHANGE_AMOUNTS) out[k] = jnum(o[k]);
   return out;
 }
 
-/** `{ changes }` when ko-api sent it, `{}` otherwise (keeps legacy structuredContent unchanged). */
-function withChanges(v: unknown): { changes?: ActivityChanges } {
-  const c = changesOf(v);
-  return c ? { changes: c } : {};
+/**
+ * `{ changes }` from a REST row: the normalised object when ko-api sent one,
+ * `{ changes: null }` when it sent an explicit null (unknown for that quarter),
+ * `{}` when the key is absent (keeps legacy structuredContent unchanged).
+ */
+function withChanges(row: { changes?: unknown }): { changes?: (ActivityChanges & ChangeMeta) | null } {
+  if (!("changes" in row)) return {};
+  const c = changesOf(row.changes);
+  return c ? { changes: c } : row.changes === null ? { changes: null } : {};
+}
+
+interface Comparability {
+  comparability: string;
+  reason: string | null;
+  splitFactor: number | null;
+  priceCorrected: boolean;
+  nullReason: string | null;
+}
+
+/** The quarter's comparability, from `changes` first, then the row itself; null when ko-api did not state it. */
+function comparabilityOf(r: { comparability?: unknown; nullReason?: unknown; changes?: unknown }): Comparability | null {
+  const c = changesOf(r.changes);
+  const state = c?.comparability ?? (typeof r.comparability === "string" ? r.comparability : null);
+  if (!state) return null;
+  return {
+    comparability: state,
+    reason: c?.comparability_reason ?? null,
+    splitFactor: c?.split_factor ?? null,
+    priceCorrected: c?.price_corrected === true,
+    nullReason: c?.null_reason ?? (typeof r.nullReason === "string" ? r.nullReason : null),
+  };
+}
+
+const fmtFactor = (k: number): string => (Number.isInteger(k) ? String(k) : k.toFixed(4).replace(/0+$/, ""));
+
+/** Short state for a table cell. */
+function comparabilityCell(c: Comparability | null): string {
+  if (!c) return "—";
+  if (c.comparability === "split_adjusted" && c.splitFactor !== null) return `split_adjusted (x${fmtFactor(c.splitFactor)})`;
+  return c.comparability;
+}
+
+/** The summary bullet(s): state, what it means for the numbers, ko.io's reason. */
+function comparabilityLines(c: Comparability | null): string[] {
+  if (!c) return [];
+  const reason = c.reason ? ` Reason: ${c.reason}` : "";
+  const price = c.priceCorrected ? " Values use the holders' median implied price (the quarter-end close was off by > 50%)." : "";
+  switch (c.comparability) {
+    case "comparable":
+      return [`- Comparability: comparable${price ? ` --${price}` : ""}`];
+    case "split_adjusted":
+      return [
+        `- Comparability: split_adjusted -- ` +
+          (c.splitFactor !== null
+            ? `split factor ${fmtFactor(c.splitFactor)}: last quarter's shares were multiplied by ${fmtFactor(c.splitFactor)} before classifying.`
+            : "last quarter's shares were split-restated before classifying.") +
+          price,
+      ];
+    case "first_reported":
+      return [
+        "- Comparability: first_reported -- first reported this quarter: no 13F filer held it last quarter, so there is " +
+          "no prior-quarter baseline; every holder is new and the flows are not comparable with other quarters." + price,
+      ];
+    case "not_comparable":
+      return [
+        `- Comparability: not_comparable -- share and value flows are withheld as unknown (${c.nullReason ?? "no reason given"}), not zero.${reason}`,
+      ];
+    default:
+      return [
+        `- Comparability: ${c.comparability} -- share and value flows are unknown${c.nullReason ? ` (${c.nullReason})` : ""}, not zero.${reason}`,
+      ];
+  }
 }
 
 const cnt = (v: number | null): string => (v === null ? "—" : String(v));
+
+/**
+ * A share/value FLOW for the text. null/absent = unknown (withheld by ko-api:
+ * not comparable, above the sanity cap, not recomputable) -- rendered as the
+ * word, never as 0. Numeric strings (Int64) are coerced as before.
+ */
+const UNKNOWN_FLOW = "unknown";
+const isMissing = (v: unknown): boolean => v === null || v === undefined || v === "";
+const flowShares = (v: unknown): string => (isMissing(v) ? UNKNOWN_FLOW : fmtShares(num(v)));
+const flowMoney = (v: unknown): string => (isMissing(v) ? UNKNOWN_FLOW : fmtMoney(num(v)));
 
 function changesLines(c: ActivityChanges): string[] {
   const exact = c.net_shares === null ? "" : ` (${fmtIntExact(c.net_shares)})`;
   return [
     `- New positions: ${cnt(c.new)} | Added: ${cnt(c.added)} | Trimmed: ${cnt(c.trimmed)} | Exited: ${cnt(c.exited)} | Unchanged: ${cnt(c.unchanged)}`,
     `- No prior-quarter baseline (not classified): ${cnt(c.no_baseline)} | Holders: ${cnt(c.holders)}`,
-    `- Net shares: ${fmtShares(c.net_shares)}${exact} | Net value: ${fmtMoney(c.net_value)}`,
-    `- Shares added: ${fmtShares(c.shares_added)} | Shares removed: ${fmtShares(c.shares_removed)} | Value added: ${fmtMoney(c.value_added)} | Value removed: ${fmtMoney(c.value_removed)}`,
+    `- Net shares: ${flowShares(c.net_shares)}${exact} | Net value: ${flowMoney(c.net_value)}`,
+    `- Shares added: ${flowShares(c.shares_added)} | Shares removed: ${flowShares(c.shares_removed)} | Value added: ${flowMoney(c.value_added)} | Value removed: ${flowMoney(c.value_removed)}`,
   ];
 }
 
@@ -688,12 +825,14 @@ interface ActivitySummary {
   institutionsNew: number;
   institutionsExited: number;
   institutionsTotal: number;
-  sharesAdded: number | string;
-  sharesRemoved: number | string;
-  netShares: number | string;
-  valueAdded: number | string;
-  valueRemoved: number | string;
-  netValue: number | string;
+  sharesAdded: number | string | null;
+  sharesRemoved: number | string | null;
+  netShares: number | string | null;
+  valueAdded: number | string | null;
+  valueRemoved: number | string | null;
+  netValue: number | string | null;
+  nullReason?: string | null;
+  comparability?: string | null;
   changes?: unknown;
 }
 
@@ -703,8 +842,10 @@ interface ActivityTrend {
   institutionsDecreased: number;
   institutionsNew: number;
   institutionsExited: number;
-  netShares: number | string;
-  netValue: number | string;
+  netShares: number | string | null;
+  netValue: number | string | null;
+  nullReason?: string | null;
+  comparability?: string | null;
   changes?: unknown;
 }
 
