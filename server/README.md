@@ -67,8 +67,8 @@ Once connected, just ask your assistant:
 ## Plans
 
 - **Free** — 200 calls/day, no card required
-- **Pro ($29/mo)** — 20K calls/day, full history, all macro tools
-- Higher tiers at [ko.io](https://ko.io)
+- **Pro** — 20K calls/day, full history, all macro tools
+- Current prices and higher tiers: <https://ko.io/pricing/>
 
 ## Links
 

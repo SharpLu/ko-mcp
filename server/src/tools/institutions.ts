@@ -330,7 +330,7 @@ export function registerInstitutionTools(server: McpServer, config: KoConfig) {
     },
     async ({ search, page, limit }) => {
       // koFetch returns the array directly.
-      // PAGE SIZE IS `per_page`, NOT `limit` (ko-bastion#126): /api/v1/institutions
+      // PAGE SIZE IS `per_page`, NOT `limit` (internal#126): /api/v1/institutions
       // reads only `per_page` and silently falls back to its own 50-row default
       // for anything else, so sending `limit` here rendered 50 rows however small
       // a page the caller asked for. get_institution_holdings above is the pattern.

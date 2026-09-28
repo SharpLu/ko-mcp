@@ -9,7 +9,7 @@
  * that koFetch had been called with a path matching /^\/api\//, and never looked
  * at the third argument. So a tool could send a param no upstream handler reads
  * and nothing failed -- which is exactly what four of them do today, one of them
- * (`list_insider_traders.search`, ko-bastion#125) in a way that makes the model
+ * (`list_insider_traders.search`, internal#125) in a way that makes the model
  * state something false: the unfiltered site-wide feed rendered under a heading
  * that claims it was searched.
  *
@@ -440,7 +440,7 @@ export interface InertParam {
   /** The upstream route template the param is sent to. */
   path: string;
   param: string;
-  /** ko-bastion issue tracking it. */
+  /** Internal tracker issue for it (internal#N). */
   issue: string;
   /** What the model / caller loses or is told wrongly. */
   why: string;
@@ -452,12 +452,12 @@ export interface InertParam {
  * Params a tool puts on the wire that NO upstream handler reads. Two severities:
  *   - FALSE FILTER: the tool advertises a filter, the response is unfiltered,
  *     and the rendering claims the filter was applied  -> the model states
- *     something false. ko-bastion#125 is the archetype.
+ *     something false. internal#125 is the archetype.
  *   - INERT ROW COUNT: `limit` where the route reads only `per_page` -> the
- *     caller always gets the upstream default of 50 rows. ko-bastion#126.
+ *     caller always gets the upstream default of 50 rows. internal#126.
  */
 export const INERT_PARAMS: readonly InertParam[] = [
-  // -- inert row counts (ko-bastion#126) -----------------------------------
+  // -- inert row counts (internal#126) -----------------------------------
   //
   // The four PRIMARY legs that used to be here -- list_institutions,
   // get_insider_trades, list_insider_traders, get_congress_member -- now send
@@ -466,22 +466,22 @@ export const INERT_PARAMS: readonly InertParam[] = [
   // internal candidate lookup, shared by the two tools that accept a free-text
   // institution name.
   {
-    tool: 'get_institution_holdings', path: '/api/v1/institutions', param: 'limit', issue: 'ko-bastion#126',
+    tool: 'get_institution_holdings', path: '/api/v1/institutions', param: 'limit', issue: 'internal#126',
     why: 'resolve.ts asks for 5 candidates and gets 50; it then uses matches[0], so the cost is bandwidth, not correctness. NOT fixed with the rest: /api/v1/institutions orders by portfolio_value DESC, so honouring the 5 would SHRINK the candidate set and could change which institution a free-text name resolves to. That is a behaviour change needing its own evidence, and no fixture covers the name path today',
   },
   {
-    tool: 'get_crypto_holder', path: '/api/v1/institutions', param: 'limit', issue: 'ko-bastion#126',
+    tool: 'get_crypto_holder', path: '/api/v1/institutions', param: 'limit', issue: 'internal#126',
     why: 'same resolve.ts leg as get_institution_holdings',
   },
 
-  // -- false filters (ko-bastion#125 class) --------------------------------
+  // -- false filters (internal#125 class) --------------------------------
   //
   // ALL FOUR RETIRED 2026-09-12. Two were fixed upstream, two were deleted:
   //
-  //   search         -> ko-api#260 binds it on reporting_person_name.
+  //   search         -> internal#260 binds it on reporting_person_name.
   //                     Live: search=Cook -> total_count 24 ("Cook Steven L."),
   //                     search=zzzqqq -> 0, no search -> 17,744.
-  //   executive_cik  -> ko-api#260 binds it (digits only).
+  //   executive_cik  -> internal#260 binds it (digits only).
   //                     Live: 1214128 -> 79 ("LEVINSON ARTHUR D"), 9999999 -> 0,
   //                     no filter -> 1,348.
   //   party, state   -> REMOVED from the tool schema instead of implemented.
@@ -489,7 +489,7 @@ export const INERT_PARAMS: readonly InertParam[] = [
   //                     BOTH columns blank (38.6% fill; 41.8% trade-weighted).
   //                     The join is perfect -- 350 vs 350, zero unmatched -- the
   //                     dimension is empty. A filter covering at most 41.8%
-  //                     without saying so is ko-bastion#126 in a new place.
+  //                     without saying so is internal#126 in a new place.
   //
   // A note for whoever adds the next entry here: the #125 defect PROBE
   // (`identicalToCase: 'empty'`) went on passing after the bug was fixed,
@@ -500,12 +500,12 @@ export const INERT_PARAMS: readonly InertParam[] = [
 
   // -- inert but harmless (no wrong claim reaches the model) ---------------
   {
-    tool: 'get_congress_member', path: '/api/v1/congress-trades/:member', param: 'type', issue: 'ko-bastion#125',
+    tool: 'get_congress_member', path: '/api/v1/congress-trades/:member', param: 'type', issue: 'internal#125',
     why: 'hardcoded type="trades" is read by nobody; the route only ever returns trades, so the result happens to match the intent',
     firstSeen: 'M2 registry gate, 2026-09-12 -- not named in the #125 text',
   },
   {
-    tool: 'get_stock_financials', path: '/api/v1/stocks/:ticker/financials/historical', param: 'period_type', issue: 'ko-bastion#125',
+    tool: 'get_stock_financials', path: '/api/v1/stocks/:ticker/financials/historical', param: 'period_type', issue: 'internal#125',
     why: 'the route reads no query params at all and returns { quarterly, annual } together; the tool picks the series client-side, so the inert param costs nothing today but hides the fact that the selection is not server-side',
     firstSeen: 'M2 registry gate, 2026-09-12 -- not named in the #125 text',
   },
@@ -546,7 +546,7 @@ export interface BehaviouralDefect {
 
 /** Known non-param defects, each asserted to still exist by gate (g). */
 export const BEHAVIOURAL_DEFECTS: readonly BehaviouralDefect[] = [
-  // RETIRED 2026-09-12 -- 'no-timeout' (ko-bastion#127). koFetch now bounds every
+  // RETIRED 2026-09-12 -- 'no-timeout' (internal#127). koFetch now bounds every
   // call with AbortSignal.timeout(KO_FETCH_TIMEOUT_MS = 20s), under the 30s the
   // upstream route declares, and raises KoTimeoutError instead of inheriting a
   // 5xx. The measured 60,222 ms worst case is no longer reachable. Retry and

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 // Mock ONLY the transport. Spreading importActual keeps the module's real
 // constants (KO_FETCH_TIMEOUT_MS) and classes (KoTimeoutError) in place: a
 // factory that lists exports by hand silently yields `undefined` for any new
-// one, which is how the ko-bastion#127 timeout constant first read as undefined
+// one, which is how the internal#127 timeout constant first read as undefined
 // inside filings.ts and made a declared upstream leg vanish from this gate.
 vi.mock('../../ko-fetch.js', async () => ({
   ...(await vi.importActual<typeof import('../../ko-fetch.js')>('../../ko-fetch.js')),

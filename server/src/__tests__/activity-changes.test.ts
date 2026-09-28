@@ -4,7 +4,7 @@
  * Two replays of the ko-api response for NVDA 2026-06-30:
  *   - OLD = live api.ko.io `?type=activity&demo=true` captured 2026-09-26 (no `changes`);
  *   - NEW = the REAL payload of the ko-api branch handlers (fix/data-api-consistency)
- *     run on A1 data (codex-studio/final-review2/replays/nvda_activity_new.json):
+ *     run on A1 data (replay file kept outside this repo):
  *     the same legacy fields plus `changes` and meta.definitions.
  * The OLD replay must render byte-identically to the pre-change tool (the expected
  * snapshot was produced by the unmodified handler), and in both replays every

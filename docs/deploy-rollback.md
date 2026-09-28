@@ -7,10 +7,11 @@ This page is what you do when the automation is the thing that broke.
 
 | Step | Command | Why |
 |------|---------|-----|
+| golden gate (pre-deploy, blocking) | `npm run golden:gate` | Replays the golden contract against the **local build** before anything is uploaded; a red gate stops the deploy. |
 | capture | `node scripts/deploy-guard.mjs capture` | Reads `wrangler deployments status --json` **before the upload** and prints the full rollback command to the log. `versions list` answers "what was uploaded", not "what is serving" — and after the upload the new version is in the list, so any positional "previous" assumption inverts. |
 | upload | `... upload` | `wrangler versions upload`, version id parsed in JS (not `grep -oP`, which is GNU-only and dies on a BSD/macOS self-hosted runner). |
 | deploy | `... deploy --version-id <id>` | `wrangler versions deploy <id>@100% -y`. |
-| verify | `... verify --deployed <id> --previous <id>` | `/health`, `tools/list >= 24`, golden contract (wave M1 — SKIPPED, never silently passed, until its runner exists). On failure: roll back, **re-verify the rolled-back Worker**, post to Discord `#deploys`, exit non-zero. |
+| verify | `... verify --deployed <id> --previous <id>` | `/health`, `tools/list >= 24`, post-deploy golden contract not wired yet (reported SKIPPED, never silently passed; the blocking golden gate runs pre-deploy). On failure: roll back, **re-verify the rolled-back Worker**, post to Discord `#deploys`, exit non-zero. |
 
 Exit codes from `verify`: `0` green · `20` rolled back and verified healthy ·
 `21` rolled back but still unhealthy · `22` no rollback target was captured.

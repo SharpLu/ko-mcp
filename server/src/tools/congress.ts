@@ -18,7 +18,7 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
         .optional()
         .default("all")
         .describe("Congressional chamber: house, senate, or all (default all)"),
-      // party / state REMOVED 2026-09-12 (ko-bastion#125). They were advertised
+      // party / state REMOVED 2026-09-12 (internal#125). They were advertised
       // and silently discarded. The fix was not to implement them: party and
       // state live on marts.dim_congress_members, where 215 of 350 members have
       // BOTH columns blank -- 38.6% fill, 41.8% trade-weighted. A filter that
@@ -104,7 +104,7 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
       const memberSlug = encodeURIComponent(member.toLowerCase().trim());
 
       // koFetch returns the array directly.
-      // PAGE SIZE IS `per_page`, NOT `limit` (ko-bastion#126): the :member route
+      // PAGE SIZE IS `per_page`, NOT `limit` (internal#126): the :member route
       // reads only `per_page` and falls back to its own 50-row default otherwise.
       // NOTE the sibling /api/v1/congress-trades collection route above is the one
       // route in this surface that DOES accept `limit` (`per_page ?? limit`), which

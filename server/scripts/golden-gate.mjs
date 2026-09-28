@@ -16,7 +16,7 @@
  *
  * WHY THIS GATE CANNOT GRADE A STALE ARTEFACT
  * -------------------------------------------
- * ko-api#231: its golden gate probed a public URL, Cloudflare served
+ * internal#231: its golden gate probed a public URL, Cloudflare served
  * `cf-cache-status: HIT, age: 15290`, and the gate graded the PREVIOUS deploy
  * while reporting on the new one. The fix there was to purge the edge first --
  * a mitigation that depends on remembering to do it.

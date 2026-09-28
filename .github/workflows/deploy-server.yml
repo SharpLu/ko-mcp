@@ -42,7 +42,7 @@ jobs:
       # type, headings, table columns, section order, error class. Values are
       # never compared, so a data refresh is a no-op.
       #
-      # It runs pre-deploy on purpose. ko-api#231's gate probed a public URL and
+      # It runs pre-deploy on purpose. internal#231's gate probed a public URL and
       # graded the PREVIOUS build out of the edge cache; this one boots
       # `wrangler dev` on an ephemeral loopback port (no Cloudflare credentials
       # needed) and refuses any non-loopback base outright, so there is no
@@ -84,8 +84,9 @@ jobs:
         run: node scripts/deploy-guard.mjs deploy --version-id ${{ steps.upload.outputs.version_id }}
 
       # -----------------------------------------------------------------------
-      # Health + tools/list >= 24 + golden contract (wave M1; SKIPPED, never
-      # silently passed, until its runner lands). On failure this step rolls
+      # Health + tools/list >= 24. Post-deploy golden is not wired yet (reported
+      # SKIPPED, never silently passed); the blocking golden gate runs
+      # pre-deploy on the local build (step above). On failure this step rolls
       # back to the pre-upload version, RE-RUNS the same checks against the
       # rolled-back Worker, posts the detail to Discord #deploys and exits
       # non-zero (20 rolled back and healthy / 21 rollback not healthy / 22 no

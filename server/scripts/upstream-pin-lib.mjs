@@ -120,7 +120,7 @@ export function commitSha(repo, rev) {
  * ko-api's own registry declares `tables` per file, but a param read by a
  * SIBLING handler is not a param this route reads -- `/insider-trades/summary`
  * reads `search`, `/insider-trades` does not, and that difference is exactly
- * defect ko-bastion#125.
+ * defect internal#125.
  */
 export function splitHandlers(source) {
   const out = [];

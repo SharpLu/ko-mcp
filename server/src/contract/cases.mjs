@@ -189,7 +189,7 @@ export const CASES = [
     tool: 'list_insider_traders',
     cases: [
       { name: 'normal', arguments: { search: 'Cook', limit: 5 },
-        why: 'ko-bastion#125 FIXED (ko-api#260, live 2026-09-12): `search` now reaches ko-api and ' +
+        why: 'internal#125 FIXED (internal#260, live 2026-09-12): `search` now reaches ko-api and ' +
              'filters on reporting_person_name. The term was changed from "Musk" to "Cook" on purpose ' +
              '-- it returns rows live, so this case exercises a WORKING filter. Pinning a term that ' +
              'returns nothing would have made the normal case indistinguishable from the empty one, ' +
@@ -266,7 +266,7 @@ export const CASES = [
       { name: 'normal', arguments: { cik: APPLE_CIK, accession_no: APPLE_10K },
         why: 'The file index of an immutable EDGAR filing.' },
       { name: 'empty', arguments: { cik: APPLE_CIK, accession_no: NO_SUCH_ACCESSION },
-        why: 'RE-PINNED 2026-09-12 when ko-bastion#127 shipped. This case was excluded because its error ' +
+        why: 'RE-PINNED 2026-09-12 when internal#127 shipped. This case was excluded because its error ' +
              'CLASS was nondeterministic: the same well-formed but nonexistent accession returned a 404 in ' +
              'one M0 recording and a 502-after-60.2s in another, and on 2026-09-12 it blocked a main deploy ' +
              'by moving 404 -> 502 between the local run and CI (run 34711440107). The cause was that ' +

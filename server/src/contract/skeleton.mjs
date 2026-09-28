@@ -32,7 +32,7 @@
  * Both are ko-api's, both written up in ko-api/docs/SLO.md section 6d, and both
  * apply verbatim to a Worker sitting behind the same edge.
  *
- * 1. "The golden gate was grading the previous build" (ko-api#231). ko-api's
+ * 1. "The golden gate was grading the previous build" (internal#231). ko-api's
  *    gate probed a public URL, Cloudflare answered from cache
  *    (cf-cache-status: HIT, age: 15290), and the gate graded the PREVIOUS
  *    deploy while reporting on the new one. Here the gate never has a public
@@ -42,7 +42,7 @@
  *    and no previously-deployed version reachable from the gate at all. It also
  *    runs BEFORE the upload, so a red gate means nothing was deployed.
  *
- * 2. "The meta.cached case" (ko-api#236). A field emitted only on a cache hit
+ * 2. "The meta.cached case" (internal#236). A field emitted only on a cache hit
  *    turned the gate into a coin flip -- 03:22Z cold passed, 03:41Z warm
  *    failed, code byte-identical. The defence here is structural rather than
  *    hopeful: normalizeLine erases every digit-bearing token, so no captured
@@ -346,7 +346,7 @@ function diffLines(expected, actual, at) {
  * today's wrong answer as the contract is worse than no gate, because it blocks
  * the fix. So the skeleton never carries the defect (row counts collapse,
  * values are erased) and the defect lives in a probe that asserts the bug is
- * STILL THERE. When someone fixes ko-bastion#125 the probe stops holding, the
+ * STILL THERE. When someone fixes internal#125 the probe stops holding, the
  * gate goes red naming the issue, and the fixture has to be re-pinned by a
  * human who then deletes the annotation. A silent re-pin is unreachable.
  *
@@ -358,7 +358,7 @@ function diffLines(expected, actual, at) {
 export function checkDefect(probe, caseName, live, texts) {
   switch (probe.kind) {
     // A page size that is not honoured: the probe pins the row count the DEFECT
-    // produces, so the fix fails the gate. Used by ko-bastion#126 (a `limit` no
+    // produces, so the fix fails the gate. Used by internal#126 (a `limit` no
     // upstream route read, so every page was the 50-row default) until that was
     // fixed; kept because it is the general shape of "the caller asked for N and
     // got M", which is invisible in a skeleton that deliberately drops counts.
@@ -428,7 +428,7 @@ export async function loadFixtures(dir) {
  * Hard guard behind anti-staleness property #1.
  *
  * The gate may only ever talk to a Worker this job just built and is running on
- * loopback. Pointing it at mcp.ko.io -- which is what made ko-api#231 possible,
+ * loopback. Pointing it at mcp.ko.io -- which is what made internal#231 possible,
  * an edge cache answering with a 15,290-second-old body from the PREVIOUS
  * build -- is not a configuration mistake here. It is refused.
  */
@@ -438,7 +438,7 @@ export function assertLoopback(base) {
     throw new Error(
       'golden gate base must be loopback, got ' + base + '.\n' +
       'This gate grades the Worker built from THIS working tree, running in this job.\n' +
-      'A remote base would let a CDN answer from a previous build (ko-api#231).',
+      'A remote base would let a CDN answer from a previous build (internal#231).',
     );
   }
 }

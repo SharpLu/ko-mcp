@@ -125,28 +125,28 @@ describe('registry gate (d): no tool sends a param nobody reads', () => {
   });
 
   it('the exception table is the size it should be, and only shrinks', () => {
-    // 8 -> 4: ko-bastion#125 retired four in one move on 2026-09-12 -- `search`
-    // and `executive_cik` were FIXED upstream (ko-api#260, verified live), and
+    // 8 -> 4: internal#125 retired four in one move on 2026-09-12 -- `search`
+    // and `executive_cik` were FIXED upstream (internal#260, verified live), and
     // `party`/`state` were DELETED from the tool schema because the dimension
     // behind them is 38.6% filled. Only `type`, `period_type` and the two
     // resolve.ts `limit` legs remain. This number only ever shrinks.
     expect(INERT_PARAMS.length).toBe(4);
     // Was 6 (the M0 audit's 4 rendered truncations + the 2 shared resolve.ts
-    // legs). ko-bastion#126 retired the 4; what is left is resolve.ts's internal
+    // legs). internal#126 retired the 4; what is left is resolve.ts's internal
     // candidate lookup, shared by the two tools that take a free-text name --
     // bandwidth, not a rendered truncation, and shrinking it would change which
     // institution a name resolves to. See its INERT_PARAMS entry.
     expect(INERT_PARAMS.filter((e) => e.param === 'limit').length).toBe(2);
-    expect(INERT_PARAMS.filter((e) => e.issue === 'ko-bastion#126').map((e) => e.tool).sort())
+    expect(INERT_PARAMS.filter((e) => e.issue === 'internal#126').map((e) => e.tool).sort())
       .toEqual(['get_crypto_holder', 'get_institution_holdings']);
     // Params the tool ADVERTISES as filters that upstream never reads.
     // 6 -> 2. Four of the six #125 entries were retired on 2026-09-12:
-    // `search` and `executive_cik` fixed upstream by ko-api#260 (verified
+    // `search` and `executive_cik` fixed upstream by internal#260 (verified
     // live), `party` and `state` deleted from the tool schema because the
     // dimension behind them is 38.6% filled. What remains is the two that
     // were always harmless: a hardcoded `type` nobody can set, and a
     // `period_type` the tool applies client-side.
-    expect(INERT_PARAMS.filter((e) => e.issue === 'ko-bastion#125').length).toBe(2);
+    expect(INERT_PARAMS.filter((e) => e.issue === 'internal#125').length).toBe(2);
   });
 });
 
@@ -192,7 +192,7 @@ describe('registry gate (e): paginated routes get a row count', () => {
   });
 
   it('nothing is excused: every tool on a paginated route sends a row count', () => {
-    // ko-bastion#126. The three days-window macro tools that used to be excused
+    // internal#126. The three days-window macro tools that used to be excused
     // here (get_ftd_data, get_economic_indicators, get_financial_stress) now
     // send page + per_page. An empty table means the gate above is enforcing the
     // rule with no carve-outs, which is the only state worth having.

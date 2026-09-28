@@ -3,7 +3,7 @@
 > 无论你是 Claude、Codex 还是其他 agent，无论在哪台机器、哪个 session：
 > **开始任何任务前先读完本文件**。这是一个 monorepo，一份 AGENTS.md 管全仓。
 >
-> 任何事实只写一处。运维全景（服务器 / 集群 / 域名）见 `/Users/l/KO/CLAUDE.md`（运维手册）。
+> 任何事实只写一处。运维全景（服务器 / 集群 / 域名）在私有运维手册（不在本仓）。
 > serving 端点的合约在另一个 repo：`ko-api/AGENTS.md`（tool 代理到的 ko-api 路径以那边为准）。
 
 ## 1. 这个仓库是什么
@@ -24,9 +24,9 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 
 - **分支纪律**：永远 `git fetch && git switch -c <type>/<slug> origin/main`。一分支 = 一任务 = 一 PR，squash merge。
 - **部署**：
-  - **server** = push `server/**` 到 main → `.github/workflows/deploy-server.yml`（`wrangler versions deploy 100%` + 部署后 `tools/list >= 24` 健康门）。没有手动部署这回事。
+  - **server** = push `server/**` 到 main → `.github/workflows/deploy-server.yml`（部署**前**在本地构建上跑黄金契约阻断门 `npm run golden:gate` → `wrangler versions deploy 100%` → 部署后 `/health` + `tools/list >= 24` 健康门；部署**后**的 golden 检查尚未接线，报 SKIPPED）。没有手动部署这回事。
     健康门失败 = **自动 rollback**：部署前先抓当前 serving 版本 id 并把 rollback 命令打进日志，失败后 `wrangler rollback <id>`（**不是** `wrangler versions rollback`，该子命令不存在）→ 重新跑健康门 → Discord `#deploys`。坏版本永不删除。运维细节见 `docs/deploy-rollback.md`。
-  - **SDK（python + 2 个 npm 包）** = 发 GitHub Release 才 publish（`publish-python.yml` / `publish-npm.yml`，各自带 test 门：`pytest` / `npm test`）。`publish-mcp-registry.yml` 由 tag `v*` 触发。
+  - **SDK（python + 2 个 npm 包）** = 发 GitHub Release 触发 publish（`publish-python.yml` / `publish-npm.yml`，各自带 test 门：`pytest` / `npm test`）。**PyPI 自动发布未打通**：`publish-python.yml` 仅有的两次运行（2026-07-11）都以 `invalid-publisher` 失败——pypi.org 上 Trusted Publisher 未配置（需 owner SharpLu / repo ko-mcp / workflow `publish-python.yml` / environment `pypi`）；PyPI 上的 `ko-edgar` 0.1.0 是手动上传的。查：`gh run list -R SharpLu/ko-mcp --workflow publish-python.yml`。`publish-mcp-registry.yml` 由 tag `v*` 触发。
   - **CI 跑在 GitHub-hosted `ubuntu-latest`**（`ci.yml` 三个 job + `deploy-server.yml` 全部如此）。**ko-mcp 是 public repo，Actions 分钟数免费**，私仓那次 Actions 账单中断从未波及它——这正是 PR #12 revert 掉 PR #8（迁 A3 自建 runner）的理由。别再把本仓的 gate 往自建 runner 上搬。
 - **`KO_API_URL = https://api.ko.io` 是正确的**——`api.ko.io` 本身就是地理路由 Worker（`api-geo-router`），不是某个 origin。**不要改成 origin IP / origin-api-eu 之类**。
 - **ko-api envelope**：ko-api 把响应包成 `{ data, meta }`；`koFetch` 自动剥掉顶层 `data`。**Int64/UInt64 列以字符串到达**（net_value / shares_held / holding_value…）。
@@ -46,9 +46,9 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 | 6 | **单测禁触网**：单元测试一律 `vi.mock("../ko-fetch.js")` / `vi.stubGlobal("fetch", …)`，不连真 CH/ko-api。live 探测归 deploy 后的健康门。**模块 mock 必须 `...(await vi.importActual(...))` 打底再覆盖那一个导出**——手写导出清单的工厂会让新导出静默变 `undefined`（#127 的 `KO_FETCH_TIMEOUT_MS` 就这样在 `filings.ts` 里读成 undefined，令一条已声明的上游腿从 registry 行为门里凭空消失） | dev 机活服务让坏测试假绿；#127 的残缺 mock | `no-network` 守卫（如已挂） |
 | 7 | **验证必须真跑**：SDK / worker 改动 `npm test`（server）/`pytest`（python）绿；新/改 tool 的 ko-api 路径**部署后 curl 过**。眼看 ≠ verified——从没 curl 过的 tool 路径上线后可能全 500 | #191 教训（ko-api） | PR 模板"验证证据"必填 |
 | 8 | **版本 lockstep 三处**：`server/server.json` + `server/package.json` + **`server/src/index.ts` 的 `new McpServer({version})`** 一起动（registry id `io.github.SharpLu/ko-mcp`）。第三处最容易漏——它才是 `initialize` 回给客户端的版本号（2026-09-12 审计实测：前两处 1.0.0、线上自报 1.1.0）。三个 SDK 包各自独立，但应保持同一版本号齐步走 | registry / 发布一致性 | 人工 / PR review |
-| 9 | **黄金契约不许钉 bug**：`src/contract/golden/` 里任何一条已知缺陷的用例必须带 `knownDefect` + probe（断言"缺陷仍在"），或在 `EXCLUDED` 里写明理由。把今天的错答案钉成契约 = 这道门会挡住它自己的修复。修好缺陷时在**同一个 PR** 里删注解 + `npm run golden:capture` 重钉 | M1 黄金契约门（ko-api#231 / #236 的同形教训） | `golden.test.ts`（注解/排除/原值三道断言）+ `golden-gate.mjs`（缺陷被修 = 红） |
+| 9 | **黄金契约不许钉 bug**：`src/contract/golden/` 里任何一条已知缺陷的用例必须带 `knownDefect` + probe（断言"缺陷仍在"），或在 `EXCLUDED` 里写明理由。把今天的错答案钉成契约 = 这道门会挡住它自己的修复。修好缺陷时在**同一个 PR** 里删注解 + `npm run golden:capture` 重钉 | M1 黄金契约门（internal#231 / #236 的同形教训） | `golden.test.ts`（注解/排除/原值三道断言）+ `golden-gate.mjs`（缺陷被修 = 红） |
 | 10 | **出站 fetch 必须有界，且界要小于上游**：每个 `fetch`（含 tool 层的裸 fetch）带 `AbortSignal.timeout()`，默认 `KO_FETCH_TIMEOUT_MS`=20s，**必须小于上游 route 声明的 `timeoutMs`(30s)**——代理要先于被代理者失败，否则拿回来的是别人的 5xx。超时抛独立的 `KoTimeoutError`（"我们不等了"），绝不能和 `ko.io API error (5xx)`（"上游坏了"）同形。配套：**hang 测试必须真 hang**——mock 立即 reject 的 "no hang" 测试对零超时实现同样绿（#127 的假绿正是如此），要用只听 signal、自己永不 settle 的 fetch | #127：单次调用实测阻塞 60,222 ms；同一输入跑出 404 / 502 两种错误类，卡死过一次 main 部署 | `registry-defects.test.ts`（AbortSignal + 上界断言）+ `mcp-errors.test.ts`（真 hang，2s 内红） |
-| 11 | **分页参数叫 `per_page`，不叫 `limit`**：ko-api 的 list route 绝大多数只读 `per_page`；只有 4 条读 `limit`（`/search`、`/filings/:cik`，以及 `per_page ?? limit` 的 `/congress-trades`、`/stock-holders/:ticker`）。发 `limit` 过去 = 没人读 = 静默回落到路由自己的 50 行默认值，而表格照样渲染满，从输出里看不出来。规矩三条：**一律 `per_page: limit`**；调分页路由必须发行数参数（没有“不传就好”）；渲染层不准再加第二道硬编码截断（`truncate(rows, 50)` 就是 #126 的第二层，参数修好了它还在吃）。一页拉满要在输出里说出来；有 `meta.total_count` 时说真实范围（`koFetch(..., { envelope: true })` + `src/paging.ts`），没有时只说边界 | ko-bastion#126（`limit:5` 渲染 50 行；`get_ftd_data{GME,days:1825}` 渲染 50/1025 行且零提示） | `src/registry/tools.ts` 门 (b)(d)(e)（参数层）+ `__tests__/paging.test.ts`（渲染层）|
+| 11 | **分页参数叫 `per_page`，不叫 `limit`**：ko-api 的 list route 绝大多数只读 `per_page`；只有 4 条读 `limit`（`/search`、`/filings/:cik`，以及 `per_page ?? limit` 的 `/congress-trades`、`/stock-holders/:ticker`）。发 `limit` 过去 = 没人读 = 静默回落到路由自己的 50 行默认值，而表格照样渲染满，从输出里看不出来。规矩三条：**一律 `per_page: limit`**；调分页路由必须发行数参数（没有“不传就好”）；渲染层不准再加第二道硬编码截断（`truncate(rows, 50)` 就是 #126 的第二层，参数修好了它还在吃）。一页拉满要在输出里说出来；有 `meta.total_count` 时说真实范围（`koFetch(..., { envelope: true })` + `src/paging.ts`），没有时只说边界 | internal#126（`limit:5` 渲染 50 行；`get_ftd_data{GME,days:1825}` 渲染 50/1025 行且零提示） | `src/registry/tools.ts` 门 (b)(d)(e)（参数层）+ `__tests__/paging.test.ts`（渲染层）|
 | 12 | **套餐限制是 isError，不是"没有数据"；粒度必须写明**：ko-api 软墙（Free / 无 key）会把 200 响应里的序列清空或截断（`meta.softwall`），或对超窗参数回 403 `PLAN_REQUIRED` / `SIGNIN_REQUIRED`。tool 读 envelope：被套餐清空的结果返回 `isError:true` 并点名套餐；无 key 的答案**永远不提示打不开的 `page=2`**；默认参数不得超出调用方套餐（`get_stock_activity` 不传 `quarters` 让上游注入）。聚合行必须写明粒度（内部人按人按日 vs 逐笔 Form 4；持仓 filer vs family、证券 vs 发行人合并），数值精确值放 `structuredContent`（声明 `outputSchema` 的 tool 每条成功路径都必须给，SDK 会拒） | final-eval 2026-09-26（EVAL_CODEX_TECH #1/#2/#4/#6：年报被说成"无数据"、4 笔交易渲染成 1 笔 SELL、GOOG 发行人合计冒充单一证券） | `structured.test.ts` + `structured-all.test.ts`（真 McpServer+Client，24 个 tool 满/空两态逐一校验 outputSchema）+ `paging.test.ts` + 黄金契约 |
 
 ## 4. 任务怎么做（新 tool 五步）

@@ -185,14 +185,14 @@ describe("fixtures", () => {
   /**
    * The mechanical half of the anti-flake property.
    *
-   * ko-api#236 shipped a fixture containing `meta.cached`, a field emitted only
+   * internal#236 shipped a fixture containing `meta.cached`, a field emitted only
    * on a cache hit, and the gate became a coin flip the same night. Nothing
    * caught it because nothing looked at the committed fixture. This does: every
    * skeleton line of every case, scanned for a token that still carries a
    * digit. A price, a total, a date or a row count in a fixture fails HERE,
    * offline, before it can ever be a 03:41Z failure on a byte-identical build.
    */
-  it("no committed skeleton carries a raw value (the meta.cached class, ko-api#236)", () => {
+  it("no committed skeleton carries a raw value (the meta.cached class, internal#236)", () => {
     const leaks: string[] = [];
     for (const { fixture, c } of allCases) {
       for (const b of c.contract.blocks) {
@@ -259,7 +259,7 @@ describe("known defects are annotated, never pinned", () => {
   const annotated = allCases.filter(({ c }) => c.knownDefect);
 
   it("every annotation names an issue or an audit section and gives a real reason", () => {
-    // Was 7 at capture. ko-bastion#126 retired 4 of them -- the three inert-`limit`
+    // Was 7 at capture. internal#126 retired 4 of them -- the three inert-`limit`
     // cases and get_ftd_data's silent-truncation case -- by fixing the bug and
     // re-pinning the corrected rendering, which is the only way an annotation is
     // ever allowed to leave this set. The floor only moves DOWN, and only in the
@@ -284,18 +284,18 @@ describe("known defects are annotated, never pinned", () => {
   it("the still-open audited defects are represented, and the fixed one is not", () => {
     const issues = new Set(annotated.map(({ c }) => c.knownDefect!.issue));
     expect([...issues].some((i) => i.includes("warning 5"))).toBe(true); // headed empty table
-    // ko-bastion#125 is FIXED (search + executive_cik bound by ko-api#260) or
+    // internal#125 is FIXED (search + executive_cik bound by internal#260) or
     // DELETED (party/state removed from the schema). Same absence assertion as
     // #126 below: a fixture that starts claiming #125 again is a regression or a
     // stale annotation, and both must fail here rather than read as normal.
     expect([...issues].some((i) => i.includes("#125"))).toBe(false);
-    // ko-bastion#126 (inert `limit` / silent days-window truncation) is FIXED, so
+    // internal#126 (inert `limit` / silent days-window truncation) is FIXED, so
     // no fixture may still claim it is live. Asserting its ABSENCE is the same
     // trick the annotations themselves use, pointed the other way: a fixture that
     // starts annotating #126 again is either a regression someone papered over or
     // a stale annotation, and both should fail here rather than read as normal.
     expect([...issues].some((i) => i.includes("#126"))).toBe(false);
-    // ko-bastion#127 (no timeout) was never annotated -- it has no signature in
+    // internal#127 (no timeout) was never annotated -- it has no signature in
     // a response body, only in latency -- and its case was excluded instead.
     // Now that koFetch is bounded, the case is PINNED rather than excluded, and
     // this asserts the exclusion is gone so it cannot quietly come back.
@@ -325,7 +325,7 @@ describe("known defects are annotated, never pinned", () => {
   });
 
   it("the #125 pair now DIFFERS, which is what the fix looks like from here", () => {
-    // Before ko-api#260 these two cases rendered the same unfiltered feed, and
+    // Before internal#260 these two cases rendered the same unfiltered feed, and
     // that equality was the defect probe. The probe could not survive its own
     // fix: after the repair both sides are byte-identical AGAIN, because both
     // are now EMPTY -- an equality is invariant under "both sides became
@@ -363,7 +363,7 @@ describe("exclusions", () => {
 
   it("there are exactly the two structural exclusions left", () => {
     // Was three. `sec_get_filing_index.empty` came back on 2026-09-12 when
-    // ko-bastion#127 bounded koFetch: the 404-vs-502 split it was excluded for
+    // internal#127 bounded koFetch: the 404-vs-502 split it was excluded for
     // was an unbounded wait, not a property of the input, and a bounded proxy
     // answers 404 or names its own timeout -- never an inherited 5xx. The two
     // that remain are structural (a tool with no empty input; a result that
@@ -378,7 +378,7 @@ describe("exclusions", () => {
 // ---------------------------------------------------------------------------
 
 describe("the gate cannot grade a stale artefact", () => {
-  it("refuses any base that is not loopback (ko-api#231 is unreachable, not mitigated)", () => {
+  it("refuses any base that is not loopback (internal#231 is unreachable, not mitigated)", () => {
     expect(() => assertLoopback("https://mcp.ko.io")).toThrow(/loopback/);
     expect(() => assertLoopback("https://example.com:8787")).toThrow(/loopback/);
     expect(() => assertLoopback("http://127.0.0.1:1234")).not.toThrow();

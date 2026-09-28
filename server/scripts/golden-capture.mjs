@@ -9,7 +9,7 @@
  *
  *   node scripts/golden-capture.mjs --tool <name> [--tool <name> ...]
  *       Re-pin ONLY the named tools, from the build, leaving every other
- *       fixture on disk untouched. Added 2026-09-12 with ko-bastion#127: that
+ *       fixture on disk untouched. Added 2026-09-12 with internal#127: that
  *       PR re-pins one case, and without a filter the only way to do it was a
  *       full sweep, which rewrites all 24 files' `provenance` from `recordings`
  *       to `build` and buries a one-case change in a 24-file diff. A reviewer
@@ -104,7 +104,7 @@ async function captureFromBuild() {
     for (const spec of SELECTED) {
       const cases = [];
       for (const c of spec.cases) {
-        // TWO independent probes. ko-api#236 pinned `meta.cached`, a field that
+        // TWO independent probes. internal#236 pinned `meta.cached`, a field that
         // exists only on a cache hit: the capture happened to be cold, the gate
         // happened to be warm, and the build was byte-identical in between. A
         // field that is not stable across two calls is not a contract and must
@@ -147,7 +147,7 @@ function buildCase(spec, c, contract) {
   if (leaked.length) {
     throw new Error(
       `${spec.tool}.${c.name}: skeleton still carries raw values [${leaked.slice(0, 5).join(', ')}].\n` +
-      `Every one of those moves on its own and would turn this gate into a coin flip (ko-api#236). ` +
+      `Every one of those moves on its own and would turn this gate into a coin flip (internal#236). ` +
       `Extend normalizeLine in src/contract/skeleton.mjs.`,
     );
   }

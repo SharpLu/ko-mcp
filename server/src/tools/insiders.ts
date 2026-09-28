@@ -72,7 +72,7 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
       const cik = (executive_cik ?? "").trim();
 
       if (cik) {
-        // PAGE SIZE IS `per_page` (ko-bastion#126); the route has no period filter.
+        // PAGE SIZE IS `per_page` (internal#126); the route has no period filter.
         const env = asEnvelope<Form4TxnRow[]>(
           await koFetch<unknown>(
             config,
@@ -134,7 +134,7 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
 
       // Per-insider-per-day aggregate. include=detail adds the P/S-only share
       // counts; include=codes adds the day's Form 4 transaction codes
-      // (ko-api#340). ko-api refuses both together with period=ALL (unbounded
+      // (internal#340). ko-api refuses both together with period=ALL (unbounded
       // read), so ALL goes without them: the P/S shares render as unknown and
       // the Lines cell shows the count alone, exactly as before codes existed.
       // An API that does not know `codes` ignores it -- same fallback.
@@ -250,7 +250,7 @@ export function registerInsiderTools(server: McpServer, config: KoConfig) {
       limit: z.number().int().min(1).max(50).optional().default(20),
     },
     async ({ search, role, page, limit }) => {
-      // PAGE SIZE IS `per_page`, NOT `limit` (ko-bastion#126).
+      // PAGE SIZE IS `per_page`, NOT `limit` (internal#126).
       const env = asEnvelope<InsiderTraderRow[]>(
         await koFetch<unknown>(
           config,
@@ -451,7 +451,7 @@ interface InsiderDayRow {
   ps_sell_unpriced_lines?: number | string | null;
   first_filed_date?: string | null;
   last_filed_date?: string | null;
-  // include=codes (ko-api#340); absent on an API that predates it.
+  // include=codes (internal#340); absent on an API that predates it.
   transaction_codes?: string[] | null;
   transaction_code_breakdown?: Array<{
     code: string | null;
