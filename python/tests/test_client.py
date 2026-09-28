@@ -67,3 +67,8 @@ async def test_async_client_mirrors_sync(make_async_client) -> None:
     assert result.rows == [{"ticker": "NVDA"}]
     assert handler.requests[0].url.path == "/api/v1/stock-holders/NVDA"
     await client.close()
+
+
+def test_branch_protection_negative_probe():
+    # Deliberately failing: proves the required checks block a merge. Never merge.
+    assert 1 == 2
