@@ -1,9 +1,9 @@
 {
   "tool": "get_stock_activity",
   "planGated": false,
-  "capturedAt": "2026-09-26",
+  "capturedAt": "2026-09-28",
   "provenance": {
-    "source": "http://127.0.0.1:53816",
+    "source": "http://127.0.0.1:50896",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -30,19 +30,26 @@
                 "changes": {
                   "added": "number",
                   "basis": "string",
+                  "comparability": "string",
+                  "comparability_reason": "null",
                   "exited": "number",
+                  "flow_excluded_filers": "number",
                   "holders": "number",
                   "net_shares": "number",
                   "net_value": "number",
                   "new": "number",
                   "no_baseline": "number",
+                  "null_reason": "null",
+                  "price_corrected": "boolean",
                   "shares_added": "number",
                   "shares_removed": "number",
+                  "split_factor": "null",
                   "trimmed": "number",
                   "unchanged": "number",
                   "value_added": "number",
                   "value_removed": "number"
                 },
+                "comparability": "string",
                 "institutions_decreased": "number",
                 "institutions_exited": "number",
                 "institutions_increased": "number",
@@ -50,6 +57,7 @@
                 "institutions_total": "number",
                 "net_shares": "string",
                 "net_value": "string",
+                "null_reason": "null",
                 "quarter": "string",
                 "shares_added": "string",
                 "shares_removed": "string",
@@ -75,25 +83,33 @@
                   "changes": {
                     "added": "number",
                     "basis": "string",
+                    "comparability": "string",
+                    "comparability_reason": "null",
                     "exited": "number",
+                    "flow_excluded_filers": "number",
                     "holders": "number",
                     "net_shares": "number",
                     "net_value": "number",
                     "new": "number",
                     "no_baseline": "number",
+                    "null_reason": "null",
+                    "price_corrected": "boolean",
                     "shares_added": "number",
                     "shares_removed": "number",
+                    "split_factor": "null",
                     "trimmed": "number",
                     "unchanged": "number",
                     "value_added": "number",
                     "value_removed": "number"
                   },
+                  "comparability": "string",
                   "institutions_decreased": "number",
                   "institutions_exited": "number",
                   "institutions_increased": "number",
                   "institutions_new": "number",
                   "net_shares": "string",
                   "net_value": "string",
+                  "null_reason": "null",
                   "quarter": "string"
                 }
               }
@@ -107,11 +123,12 @@
         "blocks": [
           {
             "lines": [
-              "TEXT Basis: equity_filer_baseline -- common shares only, option legs excluded; one filer CIK counts once per ticker; a filer is classified (new / added / trimmed / exited / unchanged) only when it filed a <VAL> in this dataset for the previous quarter-end. Filers with shares but no previous-quarter filing are counted in no_baseline and in holders, never as buyers. shares_added / shares_removed / net_shares and value_* sum only classified filers; value = |share change| x the quarter-end close.",
+              "TEXT Basis: equity_filer_baseline -- common shares only, option legs excluded; one filer CIK counts once per ticker; a filer is classified (new / added / trimmed / exited / unchanged) only when it filed a <VAL> in this dataset for the previous quarter-end. Filers with shares but no previous-quarter filing are counted in no_baseline and in holders, never as buyers. shares_added / shares_removed / net_shares and value_* sum only classified filers; value = |share change| x the quarter-end close. Stock splits are adjusted using the holders' median share ratio; securities first held this quarter (new listings) are excluded from flow rankings. A filer whose traded value exceeds <VAL> the larger of its two reported holding values (share count and dollar value disagree) is left out of share and value flows; it is still counted as a holder. (flow_excluded_filers counts them.) comparability: comparable | split_adjusted (last quarter's shares x split_factor before classifying) | not_comparable (share and value flows are null) | first_reported (no filer held it last quarter). A null flow means unknown, never zero.",
               "BLANK",
               "H2 Institutional Activity — AAPL",
               "BLANK",
               "TEXT **Latest Quarter (<DATE>):**",
+              "TEXT - Comparability: comparable",
               "TEXT - New positions: <VAL> | Added: <VAL> | Trimmed: <VAL> | Exited: <VAL> | Unchanged: <VAL>",
               "TEXT - No prior-quarter baseline (not classified): <VAL> | Holders: <VAL>",
               "TEXT - Net shares: <VAL> <VAL> | Net value: <MONEY>",
@@ -120,7 +137,7 @@
               "BLANK",
               "H3 Quarterly Trend (equity_filer_baseline)",
               "BLANK",
-              "THEAD Quarter | New | Added | Trimmed | Exited | Unchanged | No baseline | Holders | Net Shares | Net Value",
+              "THEAD Quarter | New | Added | Trimmed | Exited | Unchanged | No baseline | Holders | Net Shares | Net Value | Comparability",
               "TBODY",
               "BLANK",
               "TEXT *Note -- legacy counts (all filers, including those without a prior-quarter baseline; Increased includes New, Decreased includes Exited):*",
@@ -142,7 +159,8 @@
                   "No baseline",
                   "Holders",
                   "Net Shares",
-                  "Net Value"
+                  "Net Value",
+                  "Comparability"
                 ],
                 "dataRows": 1
               },

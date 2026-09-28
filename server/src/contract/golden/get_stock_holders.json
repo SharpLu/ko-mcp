@@ -1,9 +1,9 @@
 {
   "tool": "get_stock_holders",
   "planGated": false,
-  "capturedAt": "2026-09-26",
+  "capturedAt": "2026-09-28",
   "provenance": {
-    "source": "http://127.0.0.1:53816",
+    "source": "http://127.0.0.1:50896",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -59,8 +59,13 @@
                   "action": "string",
                   "call_shares": "string",
                   "cik": "string",
+                  "equity_action": "string",
+                  "equity_share_change": "string",
                   "equity_shares": "string",
                   "family": "null",
+                  "flags": {
+                    "_array": null
+                  },
                   "has_option_legs": "boolean",
                   "holding_value": "string",
                   "name": "string",

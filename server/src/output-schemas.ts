@@ -198,6 +198,11 @@ export const STOCK_HOLDERS_OUTPUT = {
       has_option_legs: z.boolean().nullable(),
       family: z.object({ slug: Str, name: Str, canonical_cik: Str }).nullable().describe("The manager family this holder belongs to, when ko.io attributes it"),
       reported_by_members: Int,
+      equity_share_change: Dec.optional().describe(
+        "Common-share change on the equity_filer_baseline basis (split-restated); null = no usable prior-quarter baseline (unknown, never zero). Absent when ko.io did not send it",
+      ),
+      equity_action: Str.optional().describe("NEW | ADDED | TRIMMED | EXITED | UNCHANGED on the equity_filer_baseline basis; null = not classified"),
+      flags: z.array(z.string()).optional().describe("e.g. NO_BASELINE (no prior-quarter 13F in ko.io), DEALER (market maker / dealer desk)"),
     }),
   ),
   paging: PAGING,
@@ -210,6 +215,18 @@ export const STOCK_HOLDERS_OUTPUT = {
 // The legacy institutions_* fields keep their old meaning (all filers, increased
 // includes new, decreased includes exited).
 const Num = z.number().nullable();
+// ko-api's quarter-level comparability guard. Passed through verbatim (a
+// string, not an enum, so a new upstream state cannot fail validation).
+// Present only when ko.io sent it.
+const COMPARABILITY = Str.optional().describe(
+  "comparable | split_adjusted (last quarter's shares x split_factor before classifying) | not_comparable " +
+    "(share and value flows withheld -> null) | first_reported (no 13F filer held it last quarter: no prior-quarter " +
+    "baseline, every holder is new) | unknown (flows could not be recomputed -> null)",
+);
+const NULL_REASON = Str.optional().describe(
+  "Why the share/value flows are null (e.g. share_ratio_not_a_split_factor, price_conflict_insufficient_samples, " +
+    "value_above_sanity_cap, not_recomputable); null when they are not",
+);
 const ACTIVITY_CHANGES = z
   .object({
     basis: Str.describe('"equity_filer_baseline"'),
@@ -220,6 +237,18 @@ const ACTIVITY_CHANGES = z
     unchanged: Int,
     no_baseline: Int.describe("Filers with no usable prior-quarter baseline: not classified as new/added/..."),
     holders: Int,
+    comparability: COMPARABILITY,
+    comparability_reason: Str.optional().describe("ko.io's prose for the comparability state; null when comparable"),
+    split_factor: Num.optional().describe(
+      "split_adjusted only: last quarter's shares were multiplied by this factor before classifying (e.g. 10 = 10-for-1); null otherwise",
+    ),
+    price_corrected: z
+      .boolean()
+      .nullable()
+      .optional()
+      .describe("true when values use the holders' median implied price instead of a quarter-end close that was off by > 50%"),
+    null_reason: NULL_REASON,
+    flow_excluded_filers: Int.optional().describe("Classified filers left out of share/value flows (implausible row); still counted as holders"),
     shares_added: Num,
     shares_removed: Num,
     net_shares: Num,
@@ -227,10 +256,12 @@ const ACTIVITY_CHANGES = z
     value_removed: Num,
     net_value: Num,
   })
+  .nullable()
   .optional()
   .describe(
     "equity_filer_baseline: common stock only (option legs excluded); one holder per filer CIK; only filers with a " +
-      "usable prior-quarter baseline are classified. Same names/values as ko.io REST `changes`. Absent when ko.io did not send it.",
+      "usable prior-quarter baseline are classified. Same names/values as ko.io REST `changes`. A null share/value flow " +
+      "means UNKNOWN (withheld), never zero. null = ko.io could not compute `changes` for this quarter; absent when ko.io did not send it.",
   );
 
 const ACTIVITY_ROW = z.object({
@@ -239,8 +270,10 @@ const ACTIVITY_ROW = z.object({
   institutions_decreased: Int,
   institutions_new: Int,
   institutions_exited: Int,
-  net_shares: Dec,
-  net_value: Dec,
+  net_shares: Dec.describe("null = unknown (withheld, see null_reason), never zero"),
+  net_value: Dec.describe("null = unknown (withheld, see null_reason), never zero"),
+  comparability: COMPARABILITY,
+  null_reason: NULL_REASON,
   changes: ACTIVITY_CHANGES,
 });
 
