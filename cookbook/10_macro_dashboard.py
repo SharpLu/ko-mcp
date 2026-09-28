@@ -16,7 +16,7 @@ def main() -> None:
     try:
         yields = ko.macro.treasury_yields(days=5)
     except PlanRequiredError:
-        print("Macro endpoints require a Pro plan ($29/mo) → https://ko.io/pricing")
+        print("Macro endpoints require a Pro plan → https://ko.io/pricing/")
         print("Everything else in this cookbook runs on the free tier.")
         return
 

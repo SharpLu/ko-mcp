@@ -128,7 +128,7 @@ describe("get_insider_trades never collapses a day into one SELL", () => {
     expect(row).toMatchObject({ transaction_codes: null, transaction_code_breakdown: null });
   });
 
-  it("aggregate view with codes (ko-api#340): Lines cell and structuredContent carry the day's SEC codes", async () => {
+  it("aggregate view with codes (internal#340): Lines cell and structuredContent carry the day's SEC codes", async () => {
     // A1 2026-09-26, the four lines of that day.
     const withCodes = {
       ...newsteadDay,

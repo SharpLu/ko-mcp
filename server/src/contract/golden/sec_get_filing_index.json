@@ -73,7 +73,7 @@
         "cik": "320193",
         "accession_no": "0000000000-00-000000"
       },
-      "why": "RE-PINNED 2026-09-12 when ko-bastion#127 shipped. This case was excluded because its error CLASS was nondeterministic: the same well-formed but nonexistent accession returned a 404 in one M0 recording and a 502-after-60.2s in another, and on 2026-09-12 it blocked a main deploy by moving 404 -> 502 between the local run and CI (run 34711440107). The cause was that koFetch waited without a bound, so a stalled EDGAR miss surfaced as somebody else's 5xx instead of the 404 the input deserves. koFetch is now bounded at 20s, under the 30s the upstream route declares, and a stall raises KoTimeoutError -- named, ours, and never a `ko.io API error (5xx)` line that this file could mistake for a contract.",
+      "why": "RE-PINNED 2026-09-12 when internal#127 shipped. This case was excluded because its error CLASS was nondeterministic: the same well-formed but nonexistent accession returned a 404 in one M0 recording and a 502-after-60.2s in another, and on 2026-09-12 it blocked a main deploy by moving 404 -> 502 between the local run and CI (run 34711440107). The cause was that koFetch waited without a bound, so a stalled EDGAR miss surfaced as somebody else's 5xx instead of the 404 the input deserves. koFetch is now bounded at 20s, under the 30s the upstream route declares, and a stall raises KoTimeoutError -- named, ours, and never a `ko.io API error (5xx)` line that this file could mistake for a contract.",
       "contract": {
         "envelope": {
           "id": "number",

@@ -24,7 +24,7 @@ afterEach(() => vi.unstubAllGlobals());
  *
  * This is the whole negative control. The test this replaces mocked an INSTANT
  * rejection and called itself "no hang" -- so it passed against a koFetch with
- * no timeout at all, which is exactly the code ko-bastion#127 describes. Against
+ * no timeout at all, which is exactly the code internal#127 describes. Against
  * an unbounded koFetch no signal is ever passed here, nothing rejects, and the
  * test hangs until vitest kills it. Against the bounded one, AbortSignal.timeout
  * fires and koFetch converts it into KoTimeoutError.
@@ -37,7 +37,7 @@ const neverSettles = (_url: string, init?: { signal?: AbortSignal }) =>
     signal.addEventListener("abort", () => reject(signal.reason));
   });
 
-describe("koFetch is bounded (ko-bastion#127)", () => {
+describe("koFetch is bounded (internal#127)", () => {
   it("a fetch that never answers is cut off by our own budget, not left to hang", async () => {
     fetchMock.mockImplementation(neverSettles);
     const { koFetch, KoTimeoutError } = await import("../ko-fetch.js");

@@ -6,7 +6,7 @@ import { str, int } from "../paging.js";
 import { FILINGS_LIST_OUTPUT, FILING_INDEX_OUTPUT, FILING_DOCUMENT_OUTPUT } from "../output-schemas.js";
 
 /**
- * SEC source-document gateway tools (ko-api#104).
+ * SEC source-document gateway tools (internal#104).
  *
  * These surface the ORIGINAL filing documents (10-K / 13F / 8-K / ...) served
  * under ko.io. Design rule: get_filing_document returns a ko.io LINK + metadata
@@ -173,7 +173,7 @@ export function registerFilingTools(server: McpServer, config: KoConfig) {
           // No key -> demo mode (mirror ko-fetch); without it the excerpt 401s.
           if (!config.apiKey) mdUrl.searchParams.set("demo", "true");
           // The one raw fetch in the tool layer. It gets the same bound as
-          // koFetch (ko-bastion#127): an excerpt that never arrives must not be
+          // koFetch (internal#127): an excerpt that never arrives must not be
           // able to hold the whole tool call open past the upstream's budget.
           const res = await fetch(mdUrl.toString(), {
             headers: config.apiKey

@@ -156,7 +156,7 @@ ko.io solves a different problem — the questions raw EDGAR can't answer:
 
 ## Plans
 
-| | Demo (no key) | Free | Pro $29/mo | Team $99/mo |
+| | Demo (no key) | Free | Pro | Builder |
 |---|---|---|---|---|
 | Calls/day | limited | 200 | 20,000 | 200,000 |
 | Rows/request | 500 | 500 | 5,000 | 50,000 |
@@ -165,7 +165,7 @@ ko.io solves a different problem — the questions raw EDGAR can't answer:
 | Macro (Treasury/Fed/CPI/stress) | — | — | ✅ | ✅ |
 | Bulk export | — | — | — | ✅ |
 
-Quota resets 00:00 UTC. MCP and REST share one quota. [Details →](https://ko.io/pricing)
+Quota resets 00:00 UTC. MCP and REST share one quota. Prices: <https://ko.io/pricing/>
 
 ## Contributing
 

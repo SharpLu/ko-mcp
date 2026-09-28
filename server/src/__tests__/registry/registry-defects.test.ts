@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 // Mock ONLY the transport. Spreading importActual keeps the module's real
 // constants (KO_FETCH_TIMEOUT_MS) and classes (KoTimeoutError) in place: a
 // factory that lists exports by hand silently yields `undefined` for any new
-// one, which is how the ko-bastion#127 timeout constant first read as undefined
+// one, which is how the internal#127 timeout constant first read as undefined
 // inside filings.ts and made a declared upstream leg vanish from this gate.
 vi.mock('../../ko-fetch.js', async () => ({
   ...(await vi.importActual<typeof import('../../ko-fetch.js')>('../../ko-fetch.js')),
@@ -50,13 +50,13 @@ describe('registry gate (g): declared defects still exist', () => {
       // 'filing-document-plan-undeclared' retired 2026-09-26; the test below
       // now guards the FIX.
       'headed-empty-table',
-      // 'no-timeout' retired when ko-bastion#127 shipped; the assertion below
+      // 'no-timeout' retired when internal#127 shipped; the assertion below
       // now guards the FIX rather than the defect.
     ]);
   });
 
   /**
-   * The inverse of the gate that used to stand here (ko-bastion#127).
+   * The inverse of the gate that used to stand here (internal#127).
    *
    * Until 2026-09-12 this asserted the DEFECT: that ko-fetch.ts mentioned no
    * AbortSignal, so fixing it would fail here and force the fixer to retire the

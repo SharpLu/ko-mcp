@@ -44,7 +44,7 @@ tool's *input* contract for free.
 Both failure modes are ko-api's, both written up in `ko-api/docs/SLO.md` §6d,
 and both apply to a Worker sitting behind the same edge.
 
-### The gate cannot grade a stale artefact (ko-api#231)
+### The gate cannot grade a stale artefact (internal#231)
 
 ko-api's golden gate probed a public URL. Cloudflare answered
 `cf-cache-status: HIT, age: 15290`, so the gate graded the **previous** deploy
@@ -73,7 +73,7 @@ response is a response **from the same contract**, and the gate compares
 contract and never values. A stale ko-api body has the same field names as a
 fresh one.
 
-### A conditional or time-varying field can never enter the assertions (ko-api#236)
+### A conditional or time-varying field can never enter the assertions (internal#236)
 
 ko-api's `/v1/dashboard/metrics` emitted `meta.cached` **only on a cache hit**.
 The capture happened to be cold, the gate at 03:41Z happened to be warm, and the
@@ -106,7 +106,7 @@ skeleton records which lines exist and in what order.
 | fixture files | 24, one per tool, in `src/contract/golden/` |
 | replayed cases | 71 |
 | excluded cases | 2, each with a written reason (below) |
-| annotated known defects | 3 cases across 2 defects (was 7 across 3; ko-bastion#126 retired 4 of them by being fixed -- §4) |
+| annotated known defects | 3 cases across 2 defects (was 7 across 3; internal#126 retired 4 of them by being fixed -- §4) |
 | offline tests added | 37 (suite total 77 -> 114) |
 | plan-gated tools pinning a 403 rather than data | 4 |
 
@@ -117,7 +117,7 @@ recordings this gate was seeded from contain **wrong output**. Pinning it would
 freeze the bug into the contract and the gate would then block its own repair.
 
 **One of the four is now fixed, and the mechanism is what fixed it honestly.**
-ko-bastion#126 (a `limit` no upstream route read, plus three tools that sent no
+internal#126 (a `limit` no upstream route read, plus three tools that sent no
 row-count param at all) held four of the seven annotations. The fix made all four
 probes stop holding, and the gate went red naming each one -- `rendered 5 data
 rows; the defect renders exactly 50`, and `rendered 100` for `get_ftd_data` --
@@ -134,11 +134,11 @@ issue, forcing a deliberate re-pin. A silent re-pin is unreachable.
 
 | case | issue | probe | what a red means |
 |---|---|---|---|
-| `list_insider_traders.normal` | ko-bastion#125 | `identicalToCase: empty` -- `search=Musk` and `search=zzzqqq` still come back byte-identical | `search` now reaches ko-api; re-pin both cases and close #125 |
+| `list_insider_traders.normal` | internal#125 | `identicalToCase: empty` -- `search=Musk` and `search=zzzqqq` still come back byte-identical | `search` now reaches ko-api; re-pin both cases and close #125 |
 | `list_institutions.empty` | audit §3 warning 5 (no issue filed) | `headerWithoutRows` | the empty result became a soft sentence; re-pin |
 | `get_congress_member.empty` | audit §3 warning 5 (no issue filed) | `headerWithoutRows` | same |
 
-**ko-bastion#127 (no timeout) was never annotated, and is now FIXED.** It had no
+**internal#127 (no timeout) was never annotated, and is now FIXED.** It had no
 signature in a response body, only in latency: the same input produced a 60.2 s
 502 once and a 404 the next time, so its case was excluded rather than pinned.
 `koFetch` is now bounded at `KO_FETCH_TIMEOUT_MS` = 20 s -- under the 30 s the
@@ -168,7 +168,7 @@ itself, so an exclusion cannot be added or dropped without saying why here.
 error CLASS the input produced was nondeterministic -- a 404 in one M0 recording,
 a 502-after-60.2 s in another, and a 404 -> 502 move between a local run and CI
 that blocked a main deploy (run 34711440107). That was an unbounded wait, not a
-property of the input. With `koFetch` bounded (ko-bastion#127) the call either
+property of the input. With `koFetch` bounded (internal#127) the call either
 answers 404 or raises this proxy's own named timeout, so the case is pinned
 again.
 
@@ -279,14 +279,14 @@ there is a next page** (`rows.length === limit`, or a computed page count > 1):
 | `get_congress_member.normal` | `*Showing N trades -- use page=N+1 for more.*` | asks for 5 of Pelosi's multi-year disclosure history |
 | `get_ftd_data.truncation` | `*Full page of N rows -- more may exist; use page=N+1.*` | takes the default 100 of a 1,825-day window with `total_count` 1,025 |
 
-The bottom four arrived with the ko-bastion#126 fix: before it, the page size
+The bottom four arrived with the internal#126 fix: before it, the page size
 never reached ko-api, so `rows.length === limit` was false by accident and the
 hint could not fire -- these tools rendered a full 50-row page and said nothing.
 The hint firing is the fix.
 
 `list_insider_traders` is the one tool where the #126 fix does NOT add a line,
 and the reason is worth recording because it moved twice in one afternoon. Its
-two cases differ only in `search`, and while `search` was inert (ko-bastion#125)
+two cases differ only in `search`, and while `search` was inert (internal#125)
 both returned the same full 20-row page, so the hint fired on both. ko-api #260
 shipped the #125 filter mid-session; `search=Musk` and `search=zzzqqq` now match
 nobody, both cases render an empty table, and the hint correctly does not fire.
@@ -312,7 +312,7 @@ committed.
 - **The data path of the 4 plan-gated tools** (§6). Needs a paid key.
 - **`resolveInstitution` by name** (§8).
 - **Latency, retries and circuit breaking.** `koFetch` is bounded at 20 s since
-  ko-bastion#127, and the gate has a 90 s per-call ceiling so a hang cannot wedge
+  internal#127, and the gate has a 90 s per-call ceiling so a hang cannot wedge
   CI, but neither asserts how long a call SHOULD take. Per-tool p95, retry policy
   and a breaker belong to the SLO wave.
 - **Anything beyond the free/demo tier.** The Worker under test carries no key,
@@ -323,6 +323,6 @@ committed.
   disclosure line that says a page is full, not a total. koFetch discards
   ko-api's `meta` when it unwraps `{ data, meta }`, so `total_count` never
   reaches this Worker and an honest "showing 100 of 1,025" is not available here
-  yet. That is ko-bastion#127's file.
+  yet. That is internal#127's file.
 - **ko-api's own behaviour.** ko-api has its own 488-case gate for that. This
   one watches the seam between the two.

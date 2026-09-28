@@ -7,7 +7,7 @@ import { FTD_OUTPUT, TREASURY_YIELDS_OUTPUT, FED_RATES_OUTPUT, ECONOMIC_OUTPUT, 
 import { str } from "../paging.js";
 
 // ---------------------------------------------------------------------------
-// Paging for the `days`-window tools (ko-bastion#126, silent-truncation half)
+// Paging for the `days`-window tools (internal#126, silent-truncation half)
 //
 // Three of the five macro routes paginate: /sec/ftd, /economic/indicators and
 // /stress/ofr all read `page` + `per_page` and cap a page at their own 50-row
@@ -46,7 +46,7 @@ const PAGE_SCHEMA = {
  * Deliberately claims only what this Worker can actually know. The honest
  * "showing N of M" needs `meta.total_count`, and koFetch discards `meta` when it
  * unwraps ko-api's `{ data, meta }` envelope; ko-fetch.ts is being changed under
- * ko-bastion#127 in a separate PR, so this one does not touch it. A page that
+ * internal#127 in a separate PR, so this one does not touch it. A page that
  * came back exactly full is evidence of a boundary and nothing more -- which is
  * what this says. Upgrade to a true total when koFetch surfaces meta.
  */

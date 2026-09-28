@@ -9,7 +9,7 @@ export interface KoFetchOptions {
 }
 
 /**
- * How long this proxy will wait for api.ko.io before it gives up (ko-bastion#127).
+ * How long this proxy will wait for api.ko.io before it gives up (internal#127).
  *
  * The number is calibrated, not guessed:
  *
@@ -201,7 +201,7 @@ export async function koFetch<T = unknown>(
 
   // BOUNDED. Without this, an EDGAR miss that stalls upstream blocks the client
   // for as long as the network is willing to hold the socket open -- 60.2 s in
-  // the ko-bastion#127 measurement -- and then surfaces as a 502, so the same
+  // the internal#127 measurement -- and then surfaces as a 502, so the same
   // input could return either a 404 or a 5xx depending on nothing the caller
   // controls.
   const timeoutMs = options.timeoutMs ?? KO_FETCH_TIMEOUT_MS;

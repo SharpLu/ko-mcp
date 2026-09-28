@@ -83,6 +83,12 @@ Any `/api/v1` endpoint not covered by a typed method:
 ko.get("/api/v1/exec-compensation", ticker="AAPL", ceo_only=True)
 ```
 
+## Releases
+
+Publishing to PyPI from CI is not set up yet (the PyPI Trusted Publisher is not
+configured), so a GitHub Release does not publish this package. The current
+PyPI release, 0.1.0, was uploaded manually.
+
 ## Links
 
 - Docs: <https://ko.io/docs>

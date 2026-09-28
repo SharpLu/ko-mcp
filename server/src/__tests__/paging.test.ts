@@ -1,5 +1,5 @@
 /**
- * ko-bastion#126, the half the registry gates cannot see: the RENDERING.
+ * internal#126, the half the registry gates cannot see: the RENDERING.
  *
  * THE BUG
  * -------
@@ -123,7 +123,7 @@ describe("the three `days`-window tools disclose a full page instead of hiding i
   it("the disclosure claims only a boundary, never a total it cannot know", async () => {
     // koFetch drops ko-api's `meta` when it unwraps { data, meta }, so
     // total_count never reaches this Worker and an honest "showing 25 of 1,025"
-    // is not available. ko-fetch.ts is owned by ko-bastion#127. Until it
+    // is not available. ko-fetch.ts is owned by internal#127. Until it
     // surfaces meta, a full page is evidence of a boundary and nothing more --
     // and the wording must not over-claim.
     mock.mockResolvedValue(Array.from({ length: 25 }, (_, i) => ftdRow(i)) as unknown as never);
