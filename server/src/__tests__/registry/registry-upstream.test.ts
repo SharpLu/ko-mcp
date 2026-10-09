@@ -129,16 +129,17 @@ describe('registry gate (d): no tool sends a param nobody reads', () => {
     // and `executive_cik` were FIXED upstream (internal#260, verified live), and
     // `party`/`state` were DELETED from the tool schema because the dimension
     // behind them is 38.6% filled. Only `type`, `period_type` and the two
-    // resolve.ts `limit` legs remain. This number only ever shrinks.
-    expect(INERT_PARAMS.length).toBe(4);
+    // resolve.ts `limit` legs remained. 4 -> 2 (2026-10-09): ko-api reads
+    // `limit` on /api/v1/institutions through pageSizeParam(), which the pin
+    // scanner now resolves, so the two resolve.ts legs were never inert after
+    // ko-api's alias landed -- the scanner just could not see it. This number
+    // only ever shrinks.
+    expect(INERT_PARAMS.length).toBe(2);
     // Was 6 (the M0 audit's 4 rendered truncations + the 2 shared resolve.ts
-    // legs). internal#126 retired the 4; what is left is resolve.ts's internal
-    // candidate lookup, shared by the two tools that take a free-text name --
-    // bandwidth, not a rendered truncation, and shrinking it would change which
-    // institution a name resolves to. See its INERT_PARAMS entry.
-    expect(INERT_PARAMS.filter((e) => e.param === 'limit').length).toBe(2);
-    expect(INERT_PARAMS.filter((e) => e.issue === 'internal#126').map((e) => e.tool).sort())
-      .toEqual(['get_crypto_holder', 'get_institution_holdings']);
+    // legs). internal#126 retired the 4 tool-side; the 2 resolve.ts legs were
+    // retired by the upstream `limit` alias. Zero inert row counts remain.
+    expect(INERT_PARAMS.filter((e) => e.param === 'limit').length).toBe(0);
+    expect(INERT_PARAMS.filter((e) => e.issue === 'internal#126')).toEqual([]);
     // Params the tool ADVERTISES as filters that upstream never reads.
     // 6 -> 2. Four of the six #125 entries were retired on 2026-09-12:
     // `search` and `executive_cik` fixed upstream by internal#260 (verified

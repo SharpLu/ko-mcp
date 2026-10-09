@@ -83,6 +83,24 @@ export const SCANNED_ROUTE_FILES = [
   'src/routes/v1/crypto.ts',
 ];
 
+/**
+ * ko-api helpers that read query params on a handler's behalf. A handler that
+ * calls `pageSizeParam(sp)` reads `per_page` AND its alias `limit`, but no
+ * `sp.get('limit')` appears in the handler body -- so without this table the
+ * scanner under-reports exactly the row-count params gate (d)/(e) care about.
+ *
+ * Each helper is RESOLVED, not hard-coded: the generator reads the helper's
+ * own body from `file` at the pinned rev, scans it with the same readParams()
+ * patterns, and pins the file's blob SHA, so a helper that starts reading a
+ * different param shows up as drift like any route file.
+ *
+ * A handler that passes its URLSearchParams to a function NOT listed here is
+ * unscannable (unscannableReads) and the generator refuses to pin.
+ */
+export const PARAM_HELPERS = {
+  pageSizeParam: 'src/lib/pagination.ts',
+};
+
 /** Locate a ko-api checkout, or return null. Never guesses silently. */
 export function findKoApiRepo() {
   const candidates = [
@@ -149,11 +167,18 @@ export function splitHandlers(source) {
   return out;
 }
 
-/** Query-param names a handler body actually reads. */
-export function readParams(body) {
+/** The names a handler may bind its URLSearchParams to and still be scanned. */
+const SP_NAMES = ['sp', 'searchParams', 'params', 'query', 'qs'];
+
+/**
+ * Query-param names a handler body actually reads: direct reads, plus the
+ * reads of every PARAM_HELPERS helper it calls (`helperReads`: name -> params,
+ * from resolveHelperReads()).
+ */
+export function readParams(body, helperReads = {}) {
   const found = new Set();
   const patterns = [
-    /(?:sp|searchParams|params|query|qs)\s*\.get\(\s*['"]([\w.\-]+)['"]/g,
+    new RegExp(`(?:${SP_NAMES.join('|')})\\s*\\.get\\(\\s*['"]([\\w.\\-]+)['"]`, 'g'),
     /c\.req\.query\(\s*['"]([\w.\-]+)['"]/g,
     /c\.req\.queries\(\s*['"]([\w.\-]+)['"]/g,
   ];
@@ -161,19 +186,73 @@ export function readParams(body) {
     let m;
     while ((m = re.exec(body)) !== null) found.add(m[1]);
   }
+  for (const [name, params] of Object.entries(helperReads)) {
+    if (new RegExp(`\\b${name}\\s*\\(`).test(body)) for (const p of params) found.add(p);
+  }
   return [...found].sort();
+}
+
+/**
+ * The body of `export function <name>(...) { ... }` in a ko-api source file,
+ * brace-matched. Throws when the declaration is not found -- a helper that
+ * moved or was renamed must not silently resolve to "reads nothing".
+ */
+export function functionBody(source, name) {
+  const m = new RegExp(`export\\s+function\\s+${name}\\s*\\(`).exec(source);
+  if (!m) throw new Error(`helper ${name}() not found`);
+  const open = source.indexOf('{', source.indexOf(')', m.index));
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === '{') depth++;
+    else if (source[i] === '}' && --depth === 0) return source.slice(m.index, i + 1);
+  }
+  throw new Error(`helper ${name}() has no closing brace`);
+}
+
+/**
+ * Resolve PARAM_HELPERS against helper sources (`sourceOf(file)` -> text):
+ * name -> sorted params its body reads. A helper whose body reads nothing the
+ * scanner can see is an error, never an empty list.
+ */
+export function resolveHelperReads(sourceOf) {
+  const out = {};
+  for (const [name, file] of Object.entries(PARAM_HELPERS)) {
+    const body = functionBody(sourceOf(file), name);
+    const bad = unscannableReads(body, {});
+    if (bad.length) throw new Error(`helper ${name}() in ${file} reads params in an unscannable shape (${bad.join(', ')})`);
+    const params = readParams(body);
+    if (!params.length) throw new Error(`helper ${name}() in ${file}: no param reads found`);
+    out[name] = params;
+  }
+  return out;
 }
 
 /**
  * Shapes this scanner CANNOT see. Hitting one means the generated surface would
  * silently under-report reads, so the generator refuses to write instead.
  */
-export function unscannableReads(source) {
+export function unscannableReads(source, helpers = PARAM_HELPERS) {
   const bad = [];
   if (/c\.req\.query\(\s*\)/.test(source)) bad.push('bare c.req.query() destructuring');
   if (/(?:sp|searchParams)\s*\.get\(\s*[A-Za-z_$][\w$]*\s*\)/.test(source)) bad.push('searchParams.get(<variable>)');
   if (/c\.req\.query\(\s*[A-Za-z_$][\w$]*\s*\)/.test(source)) bad.push('c.req.query(<variable>)');
-  return bad;
+  // URLSearchParams bound to a name readParams() does not scan (`const q = url.searchParams; q.get('x')`).
+  const bound = [];
+  for (const m of source.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*[^;\n]*\.searchParams\s*[;\n]/g)) {
+    if (!SP_NAMES.includes(m[1])) bad.push(`URLSearchParams bound to "${m[1]}"`);
+    bound.push(m[1]);
+  }
+  // URLSearchParams handed to a function: its reads are invisible here unless
+  // the function is a resolved PARAM_HELPERS entry. Only names actually bound
+  // to `.searchParams` count (`params` is also ko-api's ClickHouse bind map),
+  // plus the inline `new URL(c.req.url).searchParams` / `<x>.searchParams`.
+  const spArg = `(?:${[...bound, 'new\\s+URL\\(c\\.req(?:\\.raw)?\\.url\\)\\.searchParams', '[A-Za-z_$][\\w$]*\\.searchParams'].join('|')})`;
+  for (const m of source.matchAll(new RegExp(`([A-Za-z_$][\\w$.]*)\\s*\\(\\s*${spArg}\\s*[,)]`, 'g'))) {
+    const fn = m[1];
+    if (fn in helpers) continue;
+    bad.push(`URLSearchParams passed to ${fn}()`);
+  }
+  return [...new Set(bad)];
 }
 
 /** Parse ROUTE_REGISTRY out of a verbatim ko-api routes.ts. */
