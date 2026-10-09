@@ -13,7 +13,7 @@ these 24 tools read; a renamed field upstream turns every table into a header
 with no body, and nothing in this repo would have noticed. That is the shape of
 two mart freezes this org has already paid for (2026-06, 2026-07).
 
-The gate replays 71 recorded tool calls against the Worker **built from the
+The gate replays 76 recorded tool calls against the Worker **built from the
 commit under test** and compares the **contract**:
 
 | pinned | not pinned |
@@ -104,9 +104,9 @@ skeleton records which lines exist and in what order.
 |---|---|
 | tools covered | 24 / 24 (`tools/list` returns 24; the deploy check asserts `>= 24`) |
 | fixture files | 24, one per tool, in `src/contract/golden/` |
-| replayed cases | 71 |
+| replayed cases | 76 |
 | excluded cases | 2, each with a written reason (below) |
-| annotated known defects | 3 cases across 2 defects (was 7 across 3; internal#126 retired 4 of them by being fixed -- §4) |
+| annotated known defects | 1 case: `list_institutions.empty` (see §4) |
 | offline tests added | 37 (suite total 77 -> 114) |
 | plan-gated tools pinning a 403 rather than data | 4 |
 
@@ -134,9 +134,21 @@ issue, forcing a deliberate re-pin. A silent re-pin is unreachable.
 
 | case | issue | probe | what a red means |
 |---|---|---|---|
-| `list_insider_traders.normal` | internal#125 | `identicalToCase: empty` -- `search=Musk` and `search=zzzqqq` still come back byte-identical | `search` now reaches ko-api; re-pin both cases and close #125 |
 | `list_institutions.empty` | audit §3 warning 5 (no issue filed) | `headerWithoutRows` | the empty result became a soft sentence; re-pin |
-| `get_congress_member.empty` | audit §3 warning 5 (no issue filed) | `headerWithoutRows` | same |
+
+**Retired 2026-10-09: the congress member headed-empty-table defect.**
+The `empty` case already pins the keyless `SIGNIN_REQUIRED` error for page 9999;
+it cannot exercise a successful empty response. The new `paper_only` case uses
+`mccaul`, whose paper disclosures are absent from the machine-readable rows.
+It pins the soft empty sentence and upstream coverage note, with no zero-trades
+claim or empty table. Coverage also reaches `structuredContent`, preserving an
+unknown paper count as null. `congress-coverage.test.ts` covers bare arrays,
+missing/unknown coverage, mixed paper/electronic histories, and plan refusals.
+The registry guard now permits only `list_institutions` to emit an empty table.
+
+This case intentionally depends on McCaul remaining paper-only. If electronic
+trades become available, inspect the new response before changing the case;
+do not silently re-pin a populated history as the paper-only regression check.
 
 **internal#127 (no timeout) was never annotated, and is now FIXED.** It had no
 signature in a response body, only in latency: the same input produced a 60.2 s

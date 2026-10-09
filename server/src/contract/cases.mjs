@@ -222,10 +222,11 @@ export const CASES = [
              '(`per_page ?? limit`), which is why get_congress_trades above was never affected.' },
       { name: 'empty', arguments: { member: 'nancy-pelosi', page: 9999 },
         why: 'Page past the end. Since the soft wall went on (2026-09-24) a KEYLESS page>1 is refused with 403 ' +
-             'SIGNIN_REQUIRED before the handler runs, so this pins that plan-limit isError. The headed-empty-table ' +
-             'defect (audit warning 5) this case used to annotate is NOT fixed -- it is simply unreachable from ' +
-             'the keyless gate (an unknown member is a 404, not an empty page). It stays asserted offline by ' +
-             'registry-defects.test.ts (BEHAVIOURAL_DEFECTS headed-empty-table).' },
+             'SIGNIN_REQUIRED before the handler runs, so this pins that plan-limit isError. ' +
+             'The successful empty response is covered separately by paper_only.' },
+      { name: 'paper_only', arguments: { member: 'mccaul', limit: 5 },
+        why: 'Paper-only member: no machine-readable trades, but scanned disclosures exist. ' +
+             'Pins the soft empty sentence and upstream coverage explanation, never a zero-trades claim.' },
       { name: 'error', arguments: {}, why: 'Required `member` missing.' },
     ],
   },

@@ -103,12 +103,8 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
     async ({ member, page, limit }) => {
       const memberSlug = encodeURIComponent(member.toLowerCase().trim());
 
-      // koFetch returns the array directly.
-      // PAGE SIZE IS `per_page`, NOT `limit` (internal#126): the :member route
-      // reads only `per_page` and falls back to its own 50-row default otherwise.
-      // NOTE the sibling /api/v1/congress-trades collection route above is the one
-      // route in this surface that DOES accept `limit` (`per_page ?? limit`), which
-      // is why get_congress_trades was never affected and is not touched here.
+      // Keep meta.coverage: an empty machine-readable list can still have
+      // paper disclosures. Use the existing envelope and canonical page size.
       const env = asEnvelope<CongressTrade[]>(
         await koFetch<unknown>(
           config,
@@ -119,18 +115,29 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
       );
       const trades = Array.isArray(env.data) ? env.data : [];
 
-      const lines: string[] = [
-        `## ${member} — Trading History`,
-        `*${trades.length} trades returned*\n`,
-        "| Date | Ticker | Asset | Type | Amount | Disclosed | Owner |",
-        "|------|--------|-------|------|--------|-----------|-------|",
-      ];
+      const rawCoverage = env.meta.coverage as {
+        paper_filings?: number | string | null; note?: string | null;
+      } | undefined;
+      const coverage = rawCoverage ? {
+        paper_filings: rawCoverage.paper_filings == null ? null : Number(rawCoverage.paper_filings),
+        note: rawCoverage.note ?? null,
+      } : null;
+      const lines: string[] = [`## ${member} — Trading History`];
 
-      for (const t of trades) {
-        lines.push(
-          `| ${t.transaction_date} | **${t.ticker || "N/A"}** | ${t.asset_description?.slice(0, 40) || "—"} | ${t.transaction_type} | ${t.amount_range} | ${t.disclosure_date} | ${t.owner || "—"} |`
-        );
+      if (trades.length > 0) {
+        lines.push(`*${trades.length} trades returned*\n`);
+        lines.push("| Date | Ticker | Asset | Type | Amount | Disclosed | Owner |");
+        lines.push("|------|--------|-------|------|--------|-----------|-------|");
+        for (const t of trades) {
+          lines.push(
+            `| ${t.transaction_date} | **${t.ticker || "N/A"}** | ${t.asset_description?.slice(0, 40) || "—"} | ${t.transaction_type} | ${t.amount_range} | ${t.disclosure_date} | ${t.owner || "—"} |`
+          );
+        }
+      } else {
+        lines.push("\nNo machine-readable trades returned for this member.");
       }
+      // Mixed paper/electronic histories also need the upstream caveat.
+      if (coverage?.note) lines.push(`\n**Coverage:** ${coverage.note}`);
 
       if (env.meta.softwall || env.meta.total_count !== undefined) {
         lines.push(...pagingLines(pagingOf(env.meta, { page, limit, returned: trades.length })));
@@ -142,6 +149,7 @@ export function registerCongressTools(server: McpServer, config: KoConfig) {
         content: [{ type: "text", text: lines.join("\n") }],
         structuredContent: {
           member,
+          coverage,
           rows: trades.map(congressRow),
           paging: pagingOf(env.meta, { page, limit, returned: trades.length }),
           plan_limit: planLimitOf(env.meta),
