@@ -188,7 +188,6 @@ def executive_trades(ticker: str) -> Endpoint:
 def congress_trades(
     ticker: str | None,
     chamber: str | None,
-    party: str | None,
     search: str | None,
     sort: str | None,
     page: int | None,
@@ -197,7 +196,6 @@ def congress_trades(
     return "/api/v1/congress-trades", {
         "ticker": ticker,
         "chamber": chamber,
-        "party": party,
         "search": search,
         "sort": sort,
         "page": page,
@@ -299,8 +297,15 @@ def economic_indicators(
     }
 
 
-def financial_stress(days: int | None, series_name: str | None) -> Endpoint:
-    return "/api/v1/stress/ofr", {"days": days, "series_name": series_name}
+def financial_stress(
+    days: int | None, series_name: str | None, page: int | None, per_page: int | None
+) -> Endpoint:
+    return "/api/v1/stress/ofr", {
+        "days": days,
+        "series_name": series_name,
+        "page": page,
+        "per_page": per_page,
+    }
 
 
 # -- SEC filings gateway --------------------------------------------------------------

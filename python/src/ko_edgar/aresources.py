@@ -138,14 +138,13 @@ class AsyncCongress(_AsyncResource):
         self,
         ticker: str | None = None,
         chamber: str | None = None,
-        party: str | None = None,
         search: str | None = None,
         sort: str | None = None,
         page: int = 1,
         per_page: int = 50,
     ) -> ApiResult:
         return await self._get(
-            *ep.congress_trades(ticker, chamber, party, search, sort, page, per_page)
+            *ep.congress_trades(ticker, chamber, search, sort, page, per_page)
         )
 
     async def member(self, slug: str, page: int = 1, per_page: int = 50) -> ApiResult:
@@ -225,9 +224,13 @@ class AsyncMacro(_AsyncResource):
         return await self._get(*ep.economic_indicators(category, series_id, days, page, per_page))
 
     async def financial_stress(
-        self, days: int = 365, series_name: str | None = None
+        self,
+        days: int = 365,
+        series_name: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
     ) -> ApiResult:
-        return await self._get(*ep.financial_stress(days, series_name))
+        return await self._get(*ep.financial_stress(days, series_name, page, per_page))
 
 
 class AsyncFilings(_AsyncResource):

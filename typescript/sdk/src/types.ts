@@ -114,7 +114,6 @@ export interface InsiderTransactionsOptions extends PageOptions {
 export interface CongressTradesOptions extends PageOptions {
   ticker?: string;
   chamber?: string;
-  party?: string;
   search?: string;
   sort?: string;
 }
@@ -154,7 +153,7 @@ export interface EconomicIndicatorsOptions extends PageOptions {
   days?: number;
 }
 
-export interface FinancialStressOptions {
+export interface FinancialStressOptions extends PageOptions {
   days?: number;
   seriesName?: string;
 }

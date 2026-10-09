@@ -179,17 +179,18 @@ class Congress(_Resource):
         self,
         ticker: str | None = None,
         chamber: str | None = None,
-        party: str | None = None,
         search: str | None = None,
         sort: str | None = None,
         page: int = 1,
         per_page: int = 50,
     ) -> ApiResult:
-        """Congress trades. ``chamber``: house/senate. ``party``: D/R/I.
+        """Congress trades. ``chamber``: house/senate. ``search``: member name.
 
-        ``sort``: ``volume`` | ``trades`` | ``recent``.
+        ``sort``: ``volume`` | ``trades`` | ``recent``. There is no party
+        filter: the API does not implement one (the former ``party`` argument
+        was silently ignored and has been removed).
         """
-        return self._get(*ep.congress_trades(ticker, chamber, party, search, sort, page, per_page))
+        return self._get(*ep.congress_trades(ticker, chamber, search, sort, page, per_page))
 
     def member(self, slug: str, page: int = 1, per_page: int = 50) -> ApiResult:
         """A member's trades by slug (e.g. ``"nancy-pelosi"``)."""
@@ -286,9 +287,15 @@ class Macro(_Resource):
         """CPI, unemployment, NFP, PPI, JOLTS. **Pro+**"""
         return self._get(*ep.economic_indicators(category, series_id, days, page, per_page))
 
-    def financial_stress(self, days: int = 365, series_name: str | None = None) -> ApiResult:
-        """OFR Financial Stress Index. **Pro+**"""
-        return self._get(*ep.financial_stress(days, series_name))
+    def financial_stress(
+        self,
+        days: int = 365,
+        series_name: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        """OFR Financial Stress Index. **Pro+** Paginated like every list method."""
+        return self._get(*ep.financial_stress(days, series_name, page, per_page))
 
 
 class Filings(_Resource):

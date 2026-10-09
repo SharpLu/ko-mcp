@@ -47,6 +47,57 @@ function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === "AbortError";
 }
 
+/** Map a response to a result or a typed error. Runs inside the request timeout. */
+async function parseResult<T>(response: Response): Promise<ApiResult<T>> {
+  if (!response.ok) throw await errorFromResponse(response);
+
+  let raw: unknown;
+  try {
+    raw = await response.json();
+  } catch {
+    throw new KoError("ko.io API returned a non-JSON success body", {
+      status: response.status,
+      code: "INVALID_RESPONSE",
+    });
+  }
+
+  if (raw === null || typeof raw !== "object" || !("data" in raw)) {
+    throw new KoError('ko.io API returned a success body without a "data" property', {
+      status: response.status,
+      code: "INVALID_RESPONSE",
+    });
+  }
+
+  const body = raw as { data: T; meta?: Meta };
+  const meta: Meta = body.meta ?? {};
+  return {
+    data: body.data,
+    meta,
+    rows: normalizeRows(body.data),
+    truncated: meta.truncated === true,
+  };
+}
+
+/**
+ * Settle with `work`, or reject with an AbortError as soon as `signal` aborts --
+ * whichever comes first. `fetch()` resolving only means the HEADERS arrived; a
+ * body that then stalls would leave `response.json()` pending forever unless the
+ * request timeout also governs body consumption. On abort, a real fetch tears the
+ * body down through the (same, now aborted) request signal; the cancel() here is
+ * a best-effort release for a body nobody has started reading.
+ */
+function untilAborted<R>(work: Promise<R>, signal: AbortSignal, response: Response): Promise<R> {
+  return new Promise<R>((resolve, reject) => {
+    const onAbort = () => {
+      response.body?.cancel().catch(() => undefined);
+      reject(new DOMException("The operation was aborted", "AbortError"));
+    };
+    if (signal.aborted) return onAbort();
+    signal.addEventListener("abort", onAbort, { once: true });
+    work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}
+
 /** Uppercase + URL-encode a ticker path segment. */
 function tick(ticker: string): string {
   return encodeURIComponent(ticker.toUpperCase());
@@ -123,34 +174,7 @@ export class KoClient {
    */
   async get<T = unknown>(path: string, params?: QueryParams): Promise<ApiResult<T>> {
     const url = this.buildUrl(path, params);
-    const response = await this.requestWithRetry(url);
-    if (!response.ok) throw await errorFromResponse(response);
-
-    let raw: unknown;
-    try {
-      raw = await response.json();
-    } catch {
-      throw new KoError("ko.io API returned a non-JSON success body", {
-        status: response.status,
-        code: "INVALID_RESPONSE",
-      });
-    }
-
-    if (raw === null || typeof raw !== "object" || !("data" in raw)) {
-      throw new KoError('ko.io API returned a success body without a "data" property', {
-        status: response.status,
-        code: "INVALID_RESPONSE",
-      });
-    }
-
-    const body = raw as { data: T; meta?: Meta };
-    const meta: Meta = body.meta ?? {};
-    return {
-      data: body.data,
-      meta,
-      rows: normalizeRows(body.data),
-      truncated: meta.truncated === true,
-    };
+    return this.requestWithRetry(url, (response) => parseResult<T>(response));
   }
 
   private buildUrl(path: string, params?: QueryParams): string {
@@ -165,18 +189,28 @@ export class KoClient {
     return url.toString();
   }
 
-  private async requestWithRetry(url: string): Promise<Response> {
+  /**
+   * One timeout per attempt, covering the WHOLE attempt: connect, headers and
+   * body consumption (`consume`, which parses success and error bodies alike).
+   * A server that sends headers and then stalls the body is a timeout, not a
+   * hang.
+   */
+  private async requestWithRetry<R>(url: string, consume: (response: Response) => Promise<R>): Promise<R> {
     for (let attempt = 0; ; attempt++) {
       const canRetry = attempt < this.maxRetries;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      (timer as { unref?: () => void }).unref?.();
       try {
-        const response = await this.doFetch(url);
+        const response = await this.doFetch(url, controller.signal);
         if (RETRYABLE_STATUSES.has(response.status) && canRetry) {
+          clearTimeout(timer);
           // Consume the discarded body so the connection can be reused.
           await response.body?.cancel().catch(() => undefined);
           await sleep(250 * 2 ** attempt);
           continue;
         }
-        return response;
+        return await untilAborted(consume(response), controller.signal, response);
       } catch (err) {
         if (err instanceof KoError) throw err;
         // We accept no caller-provided signals, so every abort is our own timeout.
@@ -205,11 +239,13 @@ export class KoClient {
           status: 0,
           code: "REQUEST_ERROR",
         });
+      } finally {
+        clearTimeout(timer);
       }
     }
   }
 
-  private async doFetch(url: string): Promise<Response> {
+  private async doFetch(url: string, signal: AbortSignal): Promise<Response> {
     const headers: Record<string, string> = {
       Accept: "application/json",
       // User-Agent is forbidden in browsers; a custom header is safe everywhere.
@@ -217,14 +253,7 @@ export class KoClient {
     };
     if (this.apiKey) headers.Authorization = `Bearer ${this.apiKey}`;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    (timer as { unref?: () => void }).unref?.();
-    try {
-      return await this.fetchImpl(url, { headers, signal: controller.signal });
-    } finally {
-      clearTimeout(timer);
-    }
+    return this.fetchImpl(url, { headers, signal });
   }
 
   /**
@@ -499,7 +528,9 @@ export class KoClient {
   /** US congress member stock trading disclosures. */
   readonly congress = {
     /**
-     * Congress trades, filterable by ticker, chamber and party.
+     * Congress trades, filterable by ticker, chamber and member name (`search`).
+     * There is no party filter: the API does not implement one (the former
+     * `party` option was silently ignored and has been removed).
      *
      * @example
      * ```ts
@@ -510,7 +541,6 @@ export class KoClient {
       this.get<T>("/api/v1/congress-trades", {
         ticker: options.ticker,
         chamber: options.chamber,
-        party: options.party,
         search: options.search,
         sort: options.sort,
         page: options.page,
@@ -700,6 +730,8 @@ export class KoClient {
       this.get<T>("/api/v1/stress/ofr", {
         days: options.days,
         series_name: options.seriesName,
+        page: options.page,
+        per_page: options.perPage,
       }),
   };
 
