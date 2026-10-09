@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from .conftest import envelope, json_response
 
 
@@ -47,6 +49,59 @@ def test_congress_trades_filters(make_client) -> None:
     )
     assert request.url.path == "/api/v1/congress-trades"
     assert request.url.params["chamber"] == "senate"
+    assert "party" not in request.url.params
+
+
+def test_congress_trades_has_no_party_argument(make_client) -> None:
+    # The API has no party filter; the old argument was sent and silently ignored.
+    import inspect
+
+    from ko_edgar.aresources import AsyncCongress
+    from ko_edgar.resources import Congress
+
+    assert "party" not in inspect.signature(Congress.trades).parameters
+    assert "party" not in inspect.signature(AsyncCongress.trades).parameters
+    client, _ = make_client([json_response(envelope([]))])
+    with pytest.raises(TypeError):
+        client.congress.trades(party="D")
+
+
+def test_financial_stress_paginates(make_client) -> None:
+    request = _request_for(
+        make_client,
+        lambda ko: ko.macro.financial_stress(days=30, series_name="OFR FSI", page=2, per_page=200),
+    )
+    assert request.url.path == "/api/v1/stress/ofr"
+    params = request.url.params
+    assert params["days"] == "30"
+    assert params["series_name"] == "OFR FSI"
+    assert params["page"] == "2"
+    assert params["per_page"] == "200"
+
+
+def test_financial_stress_works_with_paginate(make_client) -> None:
+    from ko_edgar import paginate
+
+    client, handler = make_client(
+        [
+            json_response(envelope([{"d": 1}, {"d": 2}], {"total_count": 3, "per_page": 2})),
+            json_response(envelope([{"d": 3}], {"total_count": 3, "per_page": 2})),
+        ],
+        api_key="ko_live_t",
+    )
+    rows = list(paginate(client.macro.financial_stress, days=30, per_page=2))
+    assert rows == [{"d": 1}, {"d": 2}, {"d": 3}]
+    assert [r.url.params["page"] for r in handler.requests] == ["1", "2"]
+
+
+async def test_async_financial_stress_paginates(make_async_client) -> None:
+    client, handler = make_async_client([json_response(envelope([]))], api_key="ko_live_t")
+    await client.macro.financial_stress(days=30, page=4, per_page=10)
+    params = handler.requests[0].url.params
+    assert handler.requests[0].url.path == "/api/v1/stress/ofr"
+    assert params["page"] == "4"
+    assert params["per_page"] == "10"
+    await client.close()
 
 
 def test_macro_treasury_yields_route(make_client) -> None:

@@ -336,6 +336,58 @@ describe("retries and timeout", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * Headers arrive, then the body stalls forever. fetch() has resolved, so a
+   * timeout that only wraps fetch() never fires and response.json() hangs.
+   * The stream ignores everything but cancel(): it is the body-read path, not
+   * the fetch signal, that must give up.
+   */
+  function headersThenStall(status = 200): Response {
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new TextEncoder().encode('{"data": ['));
+      },
+    });
+    return new Response(body, { status, headers: { "content-type": "application/json" } });
+  }
+
+  it("times out a success body that stalls after the headers", async () => {
+    const { fn } = mockFetch(headersThenStall());
+    const ko = new KoClient({ fetch: fn, timeoutMs: 30, maxRetries: 0 });
+    const err = await ko.stocks.list().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(KoError);
+    expect(err).toMatchObject({ status: 0, code: "TIMEOUT" });
+  }, 2000); // a hang fails here in 2s instead of running to the suite default
+
+  it("times out an error body that stalls after the headers", async () => {
+    const { fn } = mockFetch(headersThenStall(400));
+    const ko = new KoClient({ fetch: fn, timeoutMs: 30, maxRetries: 0 });
+    const err = await ko.stocks.list().catch((e: unknown) => e);
+    expect(err).toMatchObject({ status: 0, code: "TIMEOUT" });
+  }, 2000);
+
+  it("retries a stalled body like any other timeout and succeeds", async () => {
+    const { fn } = mockFetch(headersThenStall(), jsonResponse(OK));
+    const ko = new KoClient({ fetch: fn, timeoutMs: 30, maxRetries: 1 });
+    const res = await ko.stocks.list();
+    expect(res.rows).toHaveLength(1);
+    expect(fn).toHaveBeenCalledTimes(2);
+  }, 2000);
+
+  it("does not abort a body that finishes inside the budget", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      async start(c) {
+        await new Promise((r) => setTimeout(r, 5));
+        c.enqueue(new TextEncoder().encode(JSON.stringify(OK)));
+        c.close();
+      },
+    });
+    const { fn } = mockFetch(new Response(body, { status: 200 }));
+    const ko = new KoClient({ fetch: fn, timeoutMs: 1000, maxRetries: 0 });
+    const res = await ko.stocks.list();
+    expect(res.rows).toHaveLength(1);
+  });
+
   it("cancels the response body before retrying a retryable status", async () => {
     const first = new Response("gateway down", { status: 503 });
     const cancelSpy = vi.spyOn(first.body!, "cancel");
@@ -385,6 +437,29 @@ describe("URL building and query serialization", () => {
     expect(url.pathname).toBe("/api/v1/search");
     expect(url.searchParams.get("q")).toBe("tesla");
     expect(url.searchParams.get("limit")).toBe("3");
+  });
+
+  it("congress.trades sends no party param (the API has no party filter; option removed)", async () => {
+    const { fn, calls } = mockFetch(jsonResponse(OK));
+    const ko = new KoClient({ fetch: fn });
+    // @ts-expect-error -- `party` was removed from CongressTradesOptions
+    await ko.congress.trades({ ticker: "NVDA", chamber: "senate", party: "D" });
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/api/v1/congress-trades");
+    expect(url.searchParams.get("chamber")).toBe("senate");
+    expect(url.searchParams.has("party")).toBe(false);
+  });
+
+  it("macro.financialStress serializes page/perPage", async () => {
+    const { fn, calls } = mockFetch(jsonResponse(OK));
+    const ko = new KoClient({ fetch: fn });
+    await ko.macro.financialStress({ days: 365, seriesName: "OFR FSI", page: 3, perPage: 200 });
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/api/v1/stress/ofr");
+    expect(url.searchParams.get("days")).toBe("365");
+    expect(url.searchParams.get("series_name")).toBe("OFR FSI");
+    expect(url.searchParams.get("page")).toBe("3");
+    expect(url.searchParams.get("per_page")).toBe("200");
   });
 
   it("exposes get() as a raw escape hatch", async () => {

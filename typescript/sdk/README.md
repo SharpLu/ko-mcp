@@ -3,7 +3,7 @@
 Typed TypeScript client for the [ko.io](https://ko.io) financial data API — SEC 13F institutional holdings, insider trades (Form 4), congress trading, crypto ETF exposure, short-side data and macro series.
 
 - Zero runtime dependencies — works on Node 18+, browsers and edge workers (global `fetch`).
-- Typed errors, automatic retries (502/503/504 + network errors), request timeout.
+- Typed errors, automatic retries (502/503/504 + network errors), request timeout (covers the whole request, including reading the response body).
 - Keyless demo mode out of the box; add an API key for full access.
 
 ```bash
@@ -75,6 +75,15 @@ try {
 | `ko.macro` | `treasuryYields`, `fedRates`, `economicIndicators`, `financialStress` (Pro+) |
 | `ko.filings` | `list`, `index`, `share` (EDGAR gateway) |
 | `ko.get(path, params)` | raw escape hatch for any endpoint |
+
+## Changes (unreleased)
+
+- **Removed** `party` from `congress.trades()` options. The API has no party
+  filter; the option was sent and silently ignored, returning trades from every
+  party. Filter by `chamber`, `ticker` or member name (`search`) instead.
+- `macro.financialStress()` accepts `page` / `perPage`.
+- `timeoutMs` now also bounds reading the response body; a server that sends
+  headers and then stalls fails with `KoError` code `TIMEOUT` instead of hanging.
 
 ## Configuration
 

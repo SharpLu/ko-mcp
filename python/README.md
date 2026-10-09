@@ -83,6 +83,15 @@ Any `/api/v1` endpoint not covered by a typed method:
 ko.get("/api/v1/exec-compensation", ticker="AAPL", ceo_only=True)
 ```
 
+## Changes (unreleased)
+
+- **Removed** the `party` argument from `congress.trades()` (sync and async).
+  The API has no party filter; the argument was sent and silently ignored,
+  returning trades from every party. Filter by `chamber`, `ticker` or member
+  name (`search`) instead.
+- `macro.financial_stress()` (sync and async) accepts `page` / `per_page`, so it
+  works with `paginate()`.
+
 ## Releases
 
 Publishing to PyPI from CI is not set up yet (the PyPI Trusted Publisher is not
