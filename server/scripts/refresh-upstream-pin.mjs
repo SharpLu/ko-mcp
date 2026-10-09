@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 import {
   DERIVED_FROM, SCANNED_ROUTE_FILES, MCP_UPSTREAM_ROUTES, findKoApiRepo, blobSha, fileAt,
   commitSha, splitHandlers, readParams, unscannableReads, parseRouteRegistry,
-  parseFreeBlockedPrefixes,
+  parseFreeBlockedPrefixes, PARAM_HELPERS, resolveHelperReads,
 } from './upstream-pin-lib.mjs';
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/registry/upstream');
@@ -74,7 +74,17 @@ if (freeBlockedPrefixes.length === 0) {
   process.exit(1);
 }
 
-// ── 2. handler-granular param reads for the routes ko-mcp calls ─────────────
+// ── 2a. shared param-reading helpers (pageSizeParam: per_page + limit) ──────
+let helperReads;
+try {
+  helperReads = resolveHelperReads((file) => fileAt(repo, REV, file));
+} catch (e) {
+  console.error(`FATAL: cannot resolve PARAM_HELPERS: ${e.message}`);
+  process.exit(1);
+}
+for (const file of new Set(Object.values(PARAM_HELPERS))) files[file] = blobSha(repo, REV, file);
+
+// ── 2b. handler-granular param reads for the routes ko-mcp calls ────────────
 const reads = {};
 let handlerCount = 0;
 for (const src of SCANNED_ROUTE_FILES) {
@@ -91,7 +101,7 @@ for (const src of SCANNED_ROUTE_FILES) {
   files[src] = blobSha(repo, REV, src);
   for (const h of splitHandlers(body)) {
     handlerCount++;
-    reads[`${h.method} ${h.path}`] = readParams(h.body);
+    reads[`${h.method} ${h.path}`] = readParams(h.body, helperReads);
   }
 }
 
@@ -149,5 +159,6 @@ console.log(`pinned ko-api ${pin.commit.slice(0, 12)} (${REV})`);
 console.log(`  routes in contract : ${Object.keys(routes).length}`);
 console.log(`  source route count : ${allRoutes.length}`);
 console.log(`  scanned files      : ${SCANNED_ROUTE_FILES.length} (${handlerCount} handlers)`);
+console.log(`  param helpers      : ${Object.entries(helperReads).map(([n, p]) => `${n} -> [${p.join(', ')}]`).join('; ')}`);
 console.log(`  free blocked       : ${freeBlockedPrefixes.length} prefixes`);
 console.log(`  blob SHAs recorded : ${Object.keys(files).length}`);

@@ -1,8 +1,8 @@
 {
   "_comment": "DERIVED from ko-api at the commit in pin.json -- do not hand-edit; src/__tests__/registry/upstream-pin.test.ts hashes this file and compares it with pin.json.contractSha256. Regenerate with: npm run registry:refresh-pin.",
   "koApiRepo": "SharpLu/ko-api",
-  "koApiCommit": "9b844c7d2901919c240e2ffcaee1b19fcba19037",
-  "sourceRouteCount": 176,
+  "koApiCommit": "118f1b04d40a33a37b9fcef681d72e46593e7f1d",
+  "sourceRouteCount": 185,
   "freeBlockedPrefixes": [
     "/api/v1/treasury",
     "/api/v1/fed",
@@ -24,7 +24,8 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
@@ -33,6 +34,7 @@
         "cik",
         "ciks",
         "exclude_ciks",
+        "limit",
         "order",
         "page",
         "per_page",
@@ -48,20 +50,24 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 30000,
       "readParams": [
         "action",
         "consolidate_share_classes",
+        "entity_grain",
         "include",
+        "limit",
         "page",
         "per_page",
         "quarter",
         "raw_share_classes",
         "scope",
         "search",
+        "share_classes",
         "single_entity",
         "ticker",
         "trades_only",
@@ -89,6 +95,8 @@
       "timeoutMs": 20000,
       "readParams": [
         "action",
+        "basis",
+        "exclude",
         "excludeCik",
         "include_options",
         "limit",
@@ -107,13 +115,15 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
         "days",
         "end_date",
+        "limit",
         "page",
         "per_page",
         "start_date"
@@ -126,12 +136,14 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
         "include",
+        "limit",
         "min_value",
         "page",
         "per_page",
@@ -152,11 +164,13 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
+        "limit",
         "page",
         "per_page",
         "side",
@@ -171,7 +185,8 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
@@ -192,11 +207,13 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
+        "limit",
         "page",
         "per_page"
       ]
@@ -218,12 +235,14 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
         "cik",
+        "limit",
         "page",
         "per_page",
         "ticker"
@@ -295,13 +314,15 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
         "category",
         "days",
+        "limit",
         "page",
         "per_page",
         "series_id"
@@ -314,12 +335,14 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
         "days",
+        "limit",
         "page",
         "per_page",
         "ticker"
@@ -332,12 +355,14 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
         "days",
+        "limit",
         "page",
         "per_page",
         "series_name"
@@ -357,11 +382,13 @@
         "style": "page",
         "params": [
           "page",
-          "per_page"
+          "per_page",
+          "limit"
         ]
       },
       "timeoutMs": 20000,
       "readParams": [
+        "limit",
         "page",
         "per_page",
         "product"

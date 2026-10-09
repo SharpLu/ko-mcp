@@ -459,20 +459,18 @@ export interface InertParam {
 export const INERT_PARAMS: readonly InertParam[] = [
   // -- inert row counts (internal#126) -----------------------------------
   //
-  // The four PRIMARY legs that used to be here -- list_institutions,
-  // get_insider_trades, list_insider_traders, get_congress_member -- now send
-  // `per_page`, which is the name their routes read, so their entries are gone.
-  // What is left is the one leg that is NOT a rendered truncation: resolve.ts's
-  // internal candidate lookup, shared by the two tools that accept a free-text
-  // institution name.
-  {
-    tool: 'get_institution_holdings', path: '/api/v1/institutions', param: 'limit', issue: 'internal#126',
-    why: 'resolve.ts asks for 5 candidates and gets 50; it then uses matches[0], so the cost is bandwidth, not correctness. NOT fixed with the rest: /api/v1/institutions orders by portfolio_value DESC, so honouring the 5 would SHRINK the candidate set and could change which institution a free-text name resolves to. That is a behaviour change needing its own evidence, and no fixture covers the name path today',
-  },
-  {
-    tool: 'get_crypto_holder', path: '/api/v1/institutions', param: 'limit', issue: 'internal#126',
-    why: 'same resolve.ts leg as get_institution_holdings',
-  },
+  // ALL RETIRED. The four PRIMARY legs (list_institutions, get_insider_trades,
+  // list_insider_traders, get_congress_member) were fixed here by sending
+  // `per_page`. The last two -- resolve.ts's `limit: 5` candidate lookup on
+  // /api/v1/institutions, for get_institution_holdings and get_crypto_holder --
+  // were retired 2026-10-09 because ko-api now READS `limit` there: its shared
+  // pageSizeParam() helper (src/lib/pagination.ts, PLAN_DATA section 2E) makes
+  // `limit` the page-size alias of `per_page` on every list route that uses it.
+  // The pin scanner could not see that read until it learned to resolve
+  // pageSizeParam(); it now does (scripts/upstream-pin-lib.mjs PARAM_HELPERS).
+  // Consequence already live upstream: the name lookup returns 5 candidates,
+  // not 50. resolve.ts uses an exact name/slug match among them, else the
+  // first (highest portfolio value) -- the same first row as before.
 
   // -- false filters (internal#125 class) --------------------------------
   //
