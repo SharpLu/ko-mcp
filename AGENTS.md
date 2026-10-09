@@ -97,6 +97,7 @@ curl -s -X POST https://mcp.ko.io/mcp -H 'content-type: application/json' \
 | 文件 | 是什么 | 注意 |
 |------|--------|------|
 | 本文件 | 铁律 + 入口 | 每个 session 开始读 |
+| [docs/README.md](docs/README.md) | 文档索引与归档位置 | 查文档从这里开始 |
 | `CLAUDE.md` | 指向本文件的薄壳 | 别往里加规则 |
 | `server/README.md` | worker / tool 说明 | 新 tool 同步 |
 | `README.md`（根） | 面向用户的门面：24 tool 清单 / 数据表 / 套餐表 | 数字改动要同步 |

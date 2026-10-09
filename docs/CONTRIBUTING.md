@@ -13,6 +13,8 @@ data pipelines behind `api.ko.io` live elsewhere.
 
 ## Development setup
 
+Run these commands from the repository root.
+
 ### MCP server (Cloudflare Worker)
 
 ```bash
@@ -56,4 +58,4 @@ npm test
 
 - MCP server / SDK / proxy bugs → GitHub issues here.
 - Data questions or API bugs → feedback console at <https://ko.io/console/feedback>.
-- Security issues → see [SECURITY.md](SECURITY.md).
+- Security issues → see [SECURITY.md](../SECURITY.md).

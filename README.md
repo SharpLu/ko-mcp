@@ -65,6 +65,8 @@ Free keys are 200 calls/day, forever, no credit card → [ko.io/console](https:/
 
 ## What's in this repo
 
+Browse the [documentation index](docs/README.md) for setup guides, package docs, and contributor workflows.
+
 | Directory | What it is |
 |-----------|------------|
 | [`server/`](server) | **The hosted MCP server** (mcp.ko.io) — Cloudflare Worker, 24 tools, deployed from this repo |
@@ -169,7 +171,7 @@ Quota resets 00:00 UTC. MCP and REST share one quota. Prices: <https://ko.io/pri
 
 ## Contributing
 
-Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and PRs welcome — see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 Security reports: [SECURITY.md](SECURITY.md).
 
 MIT © ko.io
