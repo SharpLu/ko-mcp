@@ -29,7 +29,8 @@
  *
  * THE TWO FAILURE MODES THIS HARNESS IS BUILT AGAINST
  * ---------------------------------------------------
- * Both are ko-api's, both written up in ko-api/docs/SLO.md section 6d, and both
+ * Both are ko-api's, both written up in ko-api/AGENTS.md section 2 ("Workflow and
+ * conventions": purge before gate, stable shape across paths), and both
  * apply verbatim to a Worker sitting behind the same edge.
  *
  * 1. "The golden gate was grading the previous build" (internal#231). ko-api's

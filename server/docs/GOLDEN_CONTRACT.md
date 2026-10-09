@@ -41,7 +41,7 @@ tool's *input* contract for free.
 
 ## 2. The two anti-staleness properties
 
-Both failure modes are ko-api's, both written up in `ko-api/docs/SLO.md` §6d,
+Both failure modes are ko-api's, both written up in `ko-api/AGENTS.md` §2 "Workflow and conventions" (purge before gate, stable shape across paths),
 and both apply to a Worker sitting behind the same edge.
 
 ### The gate cannot grade a stale artefact (internal#231)
