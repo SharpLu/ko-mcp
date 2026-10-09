@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { registerStockTools } from "../tools/stocks.js";
 import { registerCongressTools } from "../tools/congress.js";
 import { registerInstitutionTools } from "../tools/institutions.js";
+import { registerCryptoTools } from "../tools/crypto.js";
 import { makeFakeServer } from "./helpers.js";
 
 // Uses the REAL koFetch with a mocked global fetch (status mapping itself is in
@@ -75,15 +76,19 @@ describe("tool error propagation (upstream 429/500 surfaced, not swallowed)", ()
     [() => reg(registerStockTools), "get_stock_profile", { ticker: "AAPL" }],
     [() => reg(registerCongressTools), "get_congress_member", { member: "mike-kelly" }],
     [() => reg(registerInstitutionTools), "get_institution_holdings", { institution: "1067983" }],
+    // Name inputs: the failure happens in resolveInstitution's /institutions
+    // lookup, which used to swallow it and answer "No institution found".
+    [() => reg(registerInstitutionTools), "get_institution_holdings", { institution: "Point72 Asset Management" }],
+    [() => reg(registerCryptoTools), "get_crypto_holder", { institution: "Point72 Asset Management" }],
   ];
 
   for (const [build, name, args] of cases) {
-    it(`${name} surfaces a 429`, async () => {
+    it(`${name}(${JSON.stringify(args)}) surfaces a 429`, async () => {
       fetchMock.mockResolvedValue(errResponse(429, { error: { message: "Rate limit exceeded" } }));
       const tool = build().get(name)!;
       await expect(tool.handler(args)).rejects.toThrow(/429/);
     });
-    it(`${name} surfaces a 500`, async () => {
+    it(`${name}(${JSON.stringify(args)}) surfaces a 500`, async () => {
       fetchMock.mockResolvedValue(errResponse(500, { error: { message: "Upstream error" } }));
       const tool = build().get(name)!;
       await expect(tool.handler(args)).rejects.toThrow(/500/);
