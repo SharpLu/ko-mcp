@@ -563,7 +563,7 @@ export const BEHAVIOURAL_DEFECTS: readonly BehaviouralDefect[] = [
   {
     id: 'headed-empty-table',
     issue: null,
-    what: 'list_institutions and get_congress_member render an empty result as a table header with no rows, unlike the soft "no results" sentence the other 22 tools use. A headed empty table reads to a model as a valid, complete, empty answer.',
-    stillTrue: 'both tools emit a markdown table header for an empty upstream response',
+    what: 'list_institutions renders an empty result as a table header with no rows, unlike the soft "no results" sentence the other 23 tools use. A headed empty table reads to a model as a valid, complete, empty answer.',
+    stillTrue: 'list_institutions emits a markdown table header for an empty upstream response',
   },
 ];

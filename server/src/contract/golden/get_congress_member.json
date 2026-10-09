@@ -1,9 +1,9 @@
 {
   "tool": "get_congress_member",
   "planGated": false,
-  "capturedAt": "2026-09-26",
+  "capturedAt": "2026-10-09",
   "provenance": {
-    "source": "http://127.0.0.1:62061",
+    "source": "http://127.0.0.1:63331",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -27,6 +27,10 @@
               }
             },
             "structuredContent": {
+              "coverage": {
+                "note": "null",
+                "paper_filings": "number"
+              },
               "member": "string",
               "paging": {
                 "continuation": "string",
@@ -57,7 +61,7 @@
                   "disclosure_date": "string",
                   "member_name": "string",
                   "owner": "string",
-                  "ticker": "string",
+                  "ticker": "null",
                   "transaction_date": "string",
                   "transaction_type": "string"
                 }
@@ -104,7 +108,7 @@
         "member": "nancy-pelosi",
         "page": 9999
       },
-      "why": "Page past the end. Since the soft wall went on (2026-09-24) a KEYLESS page>1 is refused with 403 SIGNIN_REQUIRED before the handler runs, so this pins that plan-limit isError. The headed-empty-table defect (audit warning 5) this case used to annotate is NOT fixed -- it is simply unreachable from the keyless gate (an unknown member is a 404, not an empty page). It stays asserted offline by registry-defects.test.ts (BEHAVIOURAL_DEFECTS headed-empty-table).",
+      "why": "Page past the end. Since the soft wall went on (2026-09-24) a KEYLESS page>1 is refused with 403 SIGNIN_REQUIRED before the handler runs, so this pins that plan-limit isError. The successful empty response is covered separately by paper_only.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -127,6 +131,75 @@
           {
             "lines": [
               "TEXT ko.io API error (403): Access forbidden (check your plan): Sign in (free) to see more rows. [SIGNIN_REQUIRED (continuation); parameter `page`] This is a limit of keyless (anonymous) access, not missing data: without an API key ko.io serves only the first page, capped at <VAL> rows. Send a free ko.io API key (Authorization: Bearer ko_...) to page further."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "paper_only",
+      "arguments": {
+        "member": "mccaul",
+        "limit": 5
+      },
+      "why": "Paper-only member: no machine-readable trades, but scanned disclosures exist. Pins the soft empty sentence and upstream coverage explanation, never a zero-trades claim.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "coverage": {
+                "note": "string",
+                "paper_filings": "number"
+              },
+              "member": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "null",
+                "window_start": "null"
+              },
+              "rows": {
+                "_array": null
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 mccaul — Trading History",
+              "BLANK",
+              "TEXT No machine-readable trades returned for this member.",
+              "BLANK",
+              "TEXT **Coverage:** <VAL> disclosure filings were filed on paper; those are published as scans, are not machine-readable, and any trades they contain are absent from this response."
             ],
             "tables": []
           }

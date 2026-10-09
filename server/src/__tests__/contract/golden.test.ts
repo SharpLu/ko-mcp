@@ -268,8 +268,9 @@ describe("known defects are annotated, never pinned", () => {
     // left is the headed-empty-table warning, which has no issue filed.
     // 2 -> 1 (2026-09-26) WITHOUT a fix: get_congress_member.empty (page 9999)
     // became a keyless 403 SIGNIN_REQUIRED under ko-api's soft wall, so the gate
-    // can no longer observe that tool's headed empty table. The defect itself is
-    // still asserted offline by registry-defects.test.ts.
+    // can no longer observe that tool's headed empty table. Fixed 2026-10-09:
+    // paper_only now pins its soft empty sentence and coverage disclosure;
+    // registry-defects.test.ts guards against bringing the empty table back.
     expect(annotated.length).toBeGreaterThanOrEqual(1);
     const bad: string[] = [];
     for (const { fixture, c } of annotated) {

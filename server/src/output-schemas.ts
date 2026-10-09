@@ -411,6 +411,7 @@ export const CONGRESS_TRADES_OUTPUT = {
 };
 export const CONGRESS_MEMBER_OUTPUT = {
   member: z.string(),
+  coverage: z.object({ paper_filings: z.number().nullable(), note: z.string().nullable() }).nullable(),
   rows: z.array(CONGRESS_ROW),
   paging: PAGING,
   plan_limit: PLAN_LIMIT,
