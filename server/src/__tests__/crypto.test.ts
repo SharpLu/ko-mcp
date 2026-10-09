@@ -78,17 +78,44 @@ describe("get_crypto_holder", () => {
     expect(out).toContain("ADDED");
   });
 
-  it("rejects a non-numeric CIK without calling ko-api", async () => {
+  it("a name that matches nothing is 'not found' only after a successful lookup", async () => {
+    mock.mockResolvedValueOnce([]); // /institutions?search= answered: zero matches
     const t = tools().get("get_crypto_holder")!;
-    const out = textOf(await t.handler({ institution: "not-a-cik" }));
-    expect(mock).not.toHaveBeenCalled();
-    expect(out).toMatch(/numeric CIK/i);
+    const r = await t.handler({ institution: "not-a-cik" });
+    expect(mock).toHaveBeenCalledTimes(1);
+    expect(mock.mock.calls[0][1]).toBe("/api/v1/institutions");
+    expect(textOf(r)).toMatch(/numeric CIK/i);
+    expect(r.structuredContent).toMatchObject({ cik: null, positions: [] });
   });
 
-  it("strips non-digits from the CIK before proxying", async () => {
+  it("accepts the explicit 'CIK <digits>' form without a lookup", async () => {
     mock.mockResolvedValue({ institution: { cik: "1512857" }, positions: [], history: [] });
     const t = tools().get("get_crypto_holder")!;
     await t.handler({ institution: "CIK 1512857" });
+    expect(mock).toHaveBeenCalledTimes(1);
     expect(mock.mock.calls[0][1]).toBe("/api/v1/crypto/holder/1512857");
+  });
+
+  it("digits inside a name are not a CIK: 'Point72 Asset Management' resolves by name, never /holder/72", async () => {
+    mock
+      .mockResolvedValueOnce([{ cik: "1603466", name: "Point72 Asset Management, L.P.", slug: "point72-asset-management" }])
+      .mockResolvedValueOnce({ institution: { cik: "1603466", name: "Point72 Asset Management, L.P." }, positions: [], history: [] });
+    const t = tools().get("get_crypto_holder")!;
+    const out = textOf(await t.handler({ institution: "Point72 Asset Management" }));
+    expect(mock.mock.calls[0][1]).toBe("/api/v1/institutions");
+    expect(mock.mock.calls[0][2]).toMatchObject({ search: "Point72 Asset Management" });
+    expect(mock.mock.calls[1][1]).toBe("/api/v1/crypto/holder/1603466");
+    expect(mock.mock.calls.map((c) => c[1])).not.toContain("/api/v1/crypto/holder/72");
+    expect(out).toContain("Interpreted \"Point72 Asset Management\" as Point72 Asset Management, L.P. (CIK 1603466)");
+  });
+
+  it("a slug is looked up by name (the holder route takes only a CIK), not stripped to its digits", async () => {
+    mock
+      .mockResolvedValueOnce([{ cik: "1603466", name: "Point72 Asset Management, L.P.", slug: "point72-asset-management" }])
+      .mockResolvedValueOnce({ institution: { cik: "1603466" }, positions: [], history: [] });
+    const t = tools().get("get_crypto_holder")!;
+    await t.handler({ institution: "point72-asset-management" });
+    expect(mock.mock.calls[0][1]).toBe("/api/v1/institutions");
+    expect(mock.mock.calls[1][1]).toBe("/api/v1/crypto/holder/1603466");
   });
 });

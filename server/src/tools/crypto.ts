@@ -4,7 +4,7 @@ import { defineTool } from "../tool-def.js";
 import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
 import { pagingOf, pagingLines, planLimitOf, dec, int, str } from "../paging.js";
 import { CRYPTO_EXPOSURE_OUTPUT, CRYPTO_HOLDERS_OUTPUT, CRYPTO_HOLDER_OUTPUT } from "../output-schemas.js";
-import { resolveInstitution } from "../resolve.js";
+import { parseCik, resolveInstitution } from "../resolve.js";
 import { fmtMoney, fmtShares, fmtPct2, num } from "../format.js";
 
 // Institutional exposure to US spot crypto ETFs (BTC complex: IBIT, FBTC, GBTC,
@@ -131,14 +131,13 @@ export function registerCryptoTools(server: McpServer, config: KoConfig) {
         .describe("Institution CIK number (e.g. '1512857' for Brevan Howard) or name (e.g. 'BlackRock')."),
     },
     async ({ institution }) => {
-      // Prefer embedded digits (CIK / "CIK 1512857"); fall back to name resolution.
-      let cik = institution.replace(/\D/g, "");
-      let note = "";
-      if (!cik) {
-        const resolved = await resolveInstitution(config, institution);
-        cik = (resolved?.target ?? "").replace(/\D/g, "");
-        note = resolved?.note ?? "";
-      }
+      // A CIK only when the WHOLE input is one ("1512857" / "CIK 1512857");
+      // everything else is a name. Digits inside a name are not a CIK
+      // ("Point72 Asset Management" is not CIK 72). A failed lookup throws
+      // (MCP isError) -- only a successful zero-match lookup is "not found".
+      const resolved = await resolveInstitution(config, institution, { cikOnly: true });
+      const cik = (resolved && parseCik(resolved.target)) || "";
+      const note = resolved?.note ?? "";
       if (!cik) {
         return {
           content: [
