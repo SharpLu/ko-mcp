@@ -100,8 +100,9 @@ export function registerGovTools(server: McpServer, config: KoConfig) {
         lines.push(...table(['Agency', 'Gross (USD)', 'Net (USD)', 'Actions', 'Gross share'], s.agencies.map(r => [r.name, r.gross_obligated, r.net_obligated, r.actions, r.gross_share === null ? 'unknown' : `${(r.gross_share * 100).toFixed(2)}%`])));
         lines.push(...table(['Link tier', 'Actions'], s.link_tiers.map(r => [r.link_tier === 'A' ? 'automatic exact match' : 'reviewed link', r.actions])));
       }
+      // Defensive only: the API returns issuer-scoped fact metadata for every attributed award.
       if (a.award_id && award === null) lines.push('Award metadata is temporarily unavailable. Attributed actions are shown below.');
-      if (award) lines.push(`Award-wide context ${award.coverage_label}: ${award.coverage_net_obligated ?? 'requires Pro'} USD net; ${award.coverage_actions ?? 'requires Pro'} actions. These figures cover all recipients of the award.`, award.source_url);
+      if (award) lines.push(`Attributed to ${cell(identity.ticker)} since FY2015: ${award.attributed_net_obligated ?? 'requires Pro'} USD net; ${award.attributed_actions ?? 'requires Pro'} actions.`, award.source_url);
       if (actions) lines.push(...actionTable(actions));
       if (paging) lines.push(...pagingLines(paging));
       return { content: [{ type: 'text', text: lines.join('\n') }], structuredContent: output };

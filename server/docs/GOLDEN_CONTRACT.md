@@ -364,5 +364,6 @@ The deploy health guard requires at least 26 tools and both government tool name
 The transactions contract has `meta.identity = {ticker,cik,company_name,issuer_tickers}`,
 plus `meta.scope`, `meta.refreshed_at`, `meta.caveats`, window fields and `meta.provisional_from`, including empty windows.
 For `award_id`, only the transactions leg runs. Company totals and series are absent.
-Award context itself may be null during a mixed-generation publication; actions remain available.
-Award coverage amounts may be null for Free callers and are labeled "since FY2015 (coverage)".
+Award metadata comes from this issuer's latest attributed action on the award.
+A null award block is handled defensively as an upstream regression; actions remain available.
+Issuer-attributed award totals may be null for Free callers.

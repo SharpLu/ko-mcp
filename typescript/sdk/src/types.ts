@@ -206,8 +206,8 @@ export interface GovFeedAction extends GovAction { ticker: string | null; cik: s
 export interface GovCompany extends Omit<GovTotals, 'agencies'> { rank: number; ticker: string | null; cik: string; company_name: string | null }
 export interface GovAward {
   award_id: string; piid: string; award_type: string; agency: GovAction['agency']; recipient: GovAction['recipient'];
-  description: string; latest_action_date: string; coverage_actions: number | null; coverage_net_obligated: GovMoney | null;
-  coverage_label: 'since FY2015 (coverage)'; requires_plan: string | null; source_url: string;
+  award_description: string; latest_action_date: string; attributed_actions: number | null; attributed_net_obligated: GovMoney | null;
+  attributed_scope: 'issuer_attributed_since_fy2015'; requires_plan: string | null; source_url: string;
 }
 export interface GovMeta extends Meta {
   window_start: string; window_end: string; window_clamped: boolean; date_basis: 'action_date'; period: string | null;

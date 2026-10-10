@@ -44,12 +44,25 @@ describe('government contracts SDK-validated tool contract', () => {
     for (const key of ['totals', 'monthly', 'agencies', 'link_tiers']) expect(r.structuredContent).not.toHaveProperty(key);
     expect(JSON.stringify(r.content)).toContain('Attributed actions on award');
     expect(JSON.stringify(r.content)).not.toContain('Gross obligations (USD)');
+    expect(JSON.stringify(r.content)).toContain('Attributed to BA since FY2015: requires Pro USD net; requires Pro actions');
+    expect(JSON.stringify(r.content)).not.toMatch(/award-wide|all recipients/i);
+    expect(r.structuredContent).toHaveProperty('award.award_description', 'Aircraft procurement');
+    for (const key of ['description', 'coverage_actions', 'coverage_net_obligated', 'coverage_label']) expect(r.structuredContent).not.toHaveProperty(`award.${key}`);
   });
   for (const amount of ['0.00', '1.50', '-1250000.00', '123456789012345678901234567890.10']) it(`keeps ${amount} exact in structured and text output`, async () => {
     const body = transactions(false, true); body.data = [{ ...action, obligated_amount: amount }];
     mock.mockResolvedValue(body);
     const r = await call('get_gov_contracts', { ticker: 'BA', award_id: 'CONT_AWD_X' });
     expect(r.isError).toBeFalsy(); expect(JSON.stringify(r.structuredContent)).toContain(amount); expect(JSON.stringify(r.content)).toContain(amount);
+  });
+  for (const amount of ['0.00', '1.50', '-1250000.00', '123456789012345678901234567890.10']) it(`preserves paid issuer-attributed award total ${amount} independently of window actions`, async () => {
+    const body = transactions(true, true);
+    mock.mockResolvedValue({ ...body, meta: { ...body.meta, identity: { ...meta.identity, ticker: 'BRK-B' }, award: { ...award, attributed_actions: 42, attributed_net_obligated: amount, requires_plan: null } } });
+    const r = await call('get_gov_contracts', { ticker: 'BRK.B', award_id: 'CONT_AWD_X' });
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent).toMatchObject({ actions: [], award: { attributed_actions: 42, attributed_net_obligated: amount, attributed_scope: 'issuer_attributed_since_fy2015', requires_plan: null } });
+    expect(JSON.stringify(r.content)).toContain(`Attributed to BRK-B since FY2015: ${amount} USD net; 42 actions`);
+    expect(JSON.stringify(r.content)).not.toMatch(/award-wide|all recipients|requires Pro/);
   });
   it('supports nested lists and nullable company display identity', async () => {
     const body = companies(); const row = { ...body.data[0], ticker: null, company_name: null };
@@ -88,7 +101,7 @@ describe('government contracts SDK-validated tool contract', () => {
     mock.mockRejectedValue(new KoApiError('PLAN_REQUIRED: history requires Pro', 403, 'PLAN_REQUIRED', null));
     const r = await call('get_gov_contracts', { ticker: 'BA', period: 'ALL' }); expect(r.isError).toBe(true); expect(JSON.stringify(r.content)).toContain('Pro');
   });
-  it('retains attributed actions when award context is unavailable during publication', async () => {
+  it('defensively retains attributed actions if the API regresses to a null award block', async () => {
     mock.mockResolvedValue({ ...transactions(false, true), meta: { ...transactions(false, true).meta, award: null } });
     const r = await call('get_gov_contracts', { ticker: 'BA', award_id: 'CONT_AWD_X' });
     expect(r.isError).toBeFalsy();

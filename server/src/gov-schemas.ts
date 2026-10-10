@@ -18,6 +18,6 @@ export const GovAction = z.object({
 });
 export const GovFeedAction = GovAction.extend({ ticker: z.string().nullable(), cik: z.string(), company_name: z.string().nullable() });
 export const GovCompany = z.object({ rank: count, ticker: z.string().nullable(), cik: z.string(), company_name: z.string().nullable(), gross_obligated: GovMoney, deobligated: GovMoney, net_obligated: GovMoney, actions: count, awards: count });
-export const GovAward = z.object({ award_id: z.string(), piid: z.string(), award_type: z.string(), agency, recipient, description: z.string(), latest_action_date: z.string(), coverage_actions: count.nullable(), coverage_net_obligated: GovMoney.nullable(), coverage_label: z.literal('since FY2015 (coverage)'), requires_plan: z.string().nullable(), source_url: z.string() });
+export const GovAward = z.object({ award_id: z.string(), piid: z.string(), award_type: z.string(), agency, recipient, award_description: z.string(), latest_action_date: z.string(), attributed_actions: count.nullable(), attributed_net_obligated: GovMoney.nullable(), attributed_scope: z.literal('issuer_attributed_since_fy2015'), requires_plan: z.string().nullable(), source_url: z.string() });
 export const GovSummary = GovIdentity.extend({ totals: GovTotals, monthly: z.array(GovMonth), agencies: z.array(GovAgency), link_tiers: z.array(GovTier) });
 export const GovWindow = z.object({ start: z.string(), end: z.string(), clamped: z.boolean(), date_basis: z.literal('action_date'), period: z.string().nullable() });

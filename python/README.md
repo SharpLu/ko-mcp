@@ -132,6 +132,6 @@ Free access covers the trailing 92 days. History requires Pro.
 Amounts stay exact two-decimal strings, including negative obligations and large values.
 For arithmetic, use a decimal library. Do not cast amounts to binary floating point.
 Award queries retain `meta.identity`, `meta.scope`, `meta.refreshed_at`, and `meta.caveats` even when `data` is empty.
-Award-wide coverage context is distinct from the company's attributed actions and is plan-gated.
+Award context is issuer-scoped: metadata from this company's latest attributed action; attributed totals are plan-gated.
 Automatic links cover companies listed today, plus reviewed links. No link is not proof of no contracts.
 [Methodology](https://ko.io/datasets/gov-contracts/).
