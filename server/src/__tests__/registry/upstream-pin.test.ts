@@ -38,8 +38,9 @@ describe('ko-api pin integrity', () => {
     expect(UPSTREAM_PIN.contractSha256).toMatch(/^[0-9a-f]{64}$/);
     const shas = Object.values(UPSTREAM_PIN.files);
     // 3 declaration files (routes, api-auth, entitlements catalog) + 1 param
-    // helper (pagination.ts: pageSizeParam) + 20 route files
-    expect(shas.length).toBe(24);
+    // helper (pagination.ts: pageSizeParam) + gov-contracts/params.ts + 20 route files
+    expect(shas.length).toBe(25);
+    expect(UPSTREAM_PIN.files).toHaveProperty('src/lib/gov-contracts/params.ts');
     expect(shas.every((s) => /^[0-9a-f]{40}$/.test(s))).toBe(true);
   });
 
