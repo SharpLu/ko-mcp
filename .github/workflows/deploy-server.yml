@@ -34,9 +34,9 @@ jobs:
       # -----------------------------------------------------------------------
       # Golden contract gate -- BLOCKING, and deliberately BEFORE the upload.
       #
-      # `tools/list >= 24` in the Verify step counts names. It is satisfied by a
+      # `tools/list >= 26` in the Verify step counts names. It is satisfied by a
       # Worker that renders every table with a header and no body, which is what
-      # happens when ko-api renames a field upstream. This step replays 71
+      # happens when ko-api renames a field upstream. This step replays 84
       # recorded tool calls against the Worker built from THIS commit and fails
       # if the response CONTRACT moved -- envelope shape, isError, content-block
       # type, headings, table columns, section order, error class. Values are
@@ -84,7 +84,7 @@ jobs:
         run: node scripts/deploy-guard.mjs deploy --version-id ${{ steps.upload.outputs.version_id }}
 
       # -----------------------------------------------------------------------
-      # Health + tools/list >= 24. Post-deploy golden is not wired yet (reported
+      # Health + tools/list >= 26. Post-deploy golden is not wired yet (reported
       # SKIPPED, never silently passed); the blocking golden gate runs
       # pre-deploy on the local build (step above). On failure this step rolls
       # back to the pre-upload version, RE-RUNS the same checks against the

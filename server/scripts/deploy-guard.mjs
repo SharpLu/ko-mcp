@@ -296,8 +296,14 @@ async function cmdVerify() {
   const deployed = arg("deployed");
   const previous = arg("previous");
 
-  const previousNames = JSON.parse(arg("previous-tools", "[]") || "[]");
-  if (!Array.isArray(previousNames) || !previousNames.every(n => typeof n === 'string')) throw new DeployGuardError('Invalid previous tool contract');
+  let previousNames = [];
+  try {
+    const parsed = JSON.parse(arg("previous-tools", "[]") || "[]");
+    if (!Array.isArray(parsed) || !parsed.every(n => typeof n === 'string')) throw new Error('invalid names');
+    previousNames = parsed;
+  } catch {
+    log('::warning::invalid previous tool inventory; rollback uses the 24-tool baseline');
+  }
   const { summary } = await runChecks({ label: "verify" });
   if (summary.ok) {
     log("post-deploy checks passed; no rollback needed");

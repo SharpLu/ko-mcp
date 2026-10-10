@@ -12,6 +12,7 @@
  * every non-error path (src/__tests__/structured.test.ts checks it offline).
  */
 import { z } from "zod";
+import { GovIdentity, GovTotals, GovMonth, GovAgency, GovTier, GovAction, GovFeedAction, GovCompany, GovAward, GovWindow } from './gov-schemas.js';
 
 /** Exact decimal string ("474813.22", "105979600"), or null when unknown. */
 const Dec = z
@@ -527,7 +528,6 @@ export const CRYPTO_HOLDER_OUTPUT = {
 };
 
 // USAspending: scoped issuer/award output. No floating-point amount coercion.
-import { GovIdentity, GovTotals, GovMonth, GovAgency, GovTier, GovAction, GovFeedAction, GovCompany, GovAward, GovWindow } from './gov-schemas.js';
 export const GOV_CONTRACTS_OUTPUT = {
   scope: z.enum(['company', 'award']), ...GovIdentity.shape, window: GovWindow,
   match_status: z.enum(['has_actions', 'none_in_window', 'no_attributed_actions']),

@@ -139,6 +139,11 @@ describe("deploy guard rehearsal", () => {
     expect(res.out).toContain("never deleted");
     expect(res.outputs).toContain(`previous_version_id=${PREV}`);
     expect(res.outputs).toContain("rollback_available=true");
+    const inventory = res.outputs.split('\n').find(line => line.startsWith('previous_tools='));
+    const names = JSON.parse(inventory.slice('previous_tools='.length));
+    expect(names).toHaveLength(26);
+    expect(names).toContain('get_gov_contracts');
+    expect(names).toContain('search_gov_contracts');
   });
 
   it("capture permits a repair deployment when the current tool inventory is broken", async () => {
@@ -204,6 +209,16 @@ describe("deploy guard rehearsal", () => {
     expect(res.code).toBe(20);
     expect(res.outputs).toContain("outcome=rolled_back");
     expect(res.out).toContain("[verify-rollback] PASS tools_list: 24 tools");
+    expect(rollbackCalls()).toHaveLength(1);
+  });
+
+  it("still verifies and rolls back when the prior inventory is malformed", async () => {
+    setToolCount(12);
+    writeFileSync(rollbackLog, "");
+    const res = await runGuard(["verify", "--deployed", NEW, "--previous", PREV, "--previous-tools", "malformed"], { FAKE_ROLLBACK_HEALS: "1", FAKE_ROLLBACK_COUNT: "24" });
+    expect(res.code).toBe(20);
+    expect(res.outputs).toContain("outcome=rolled_back");
+    expect(res.out).toContain("invalid previous tool inventory");
     expect(rollbackCalls()).toHaveLength(1);
   });
 

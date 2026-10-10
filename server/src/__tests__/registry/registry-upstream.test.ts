@@ -64,13 +64,8 @@ describe('registry gate (c): every tool route exists upstream', () => {
 
   it('cross-checks every declared leg (count is the coverage this gate has)', () => {
     const legs = TOOL_REGISTRY.flatMap((t) => t.upstreamRoutes);
-    // 27 -> 28 (2026-09-26): get_insider_trades has two mutually exclusive
-    // legs now (per-day aggregate / per-transaction line) where it had one.
+    // USAspending adds four legs and four distinct paths to the 28/24 baseline.
     expect(legs.length).toBe(32);
-    // 24 distinct ko-api paths. The M0 audit's headline said 20, but its own
-    // per-tool matrix lists 24 -- the four EDGAR filing routes are the gap.
-    // Still 24 after 2026-09-26: /executive-trades/:ticker left the surface and
-    // /insider/:cik/transactions joined it.
     expect(new Set(legs.map((l) => `${l.method} ${l.path}`)).size).toBe(28);
   });
 });

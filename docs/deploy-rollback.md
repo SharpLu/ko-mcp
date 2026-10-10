@@ -11,7 +11,7 @@ This page is what you do when the automation is the thing that broke.
 | capture | `node scripts/deploy-guard.mjs capture` | Reads `wrangler deployments status --json` **before the upload** and prints the full rollback command to the log. `versions list` answers "what was uploaded", not "what is serving" — and after the upload the new version is in the list, so any positional "previous" assumption inverts. |
 | upload | `... upload` | `wrangler versions upload`, version id parsed in JS (not `grep -oP`, which is GNU-only and dies on a BSD/macOS self-hosted runner). |
 | deploy | `... deploy --version-id <id>` | `wrangler versions deploy <id>@100% -y`. |
-| verify | `... verify --deployed <id> --previous <id>` | `/health`, `tools/list >= 24`, post-deploy golden contract not wired yet (reported SKIPPED, never silently passed; the blocking golden gate runs pre-deploy). On failure: roll back, **re-verify the rolled-back Worker**, post to Discord `#deploys`, exit non-zero. |
+| verify | `... verify --deployed <id> --previous <id>` | `/health`, `tools/list >= 26`, post-deploy golden contract not wired yet (reported SKIPPED, never silently passed; the blocking golden gate runs pre-deploy). On failure: roll back, **re-verify the rolled-back Worker**, post to Discord `#deploys`, exit non-zero. |
 
 Exit codes from `verify`: `0` green · `20` rolled back and verified healthy ·
 `21` rolled back but still unhealthy · `22` no rollback target was captured.
@@ -44,7 +44,7 @@ curl -sS https://mcp.ko.io/health
 curl -sS -X POST https://mcp.ko.io/mcp \
   -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
-  | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["result"]["tools"]))'   # must be >= 24
+  | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["result"]["tools"]))'   # must be >= 26
 ```
 
 ### Two traps, both verified against wrangler 4.100.0
