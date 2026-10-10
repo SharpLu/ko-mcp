@@ -323,3 +323,23 @@ def filings_index(cik: str, accession: str) -> Endpoint:
 
 def filings_share(cik: str, accession: str, file: str | None) -> Endpoint:
     return f"/api/v1/filings/{_seg(cik)}/{_seg(accession)}/share", {"file": file}
+
+
+def gov_contracts_company(ticker: str, **params: Any) -> Endpoint:
+    return f"/api/v1/gov-contracts/{_seg(ticker.upper())}", params
+
+
+def gov_contracts_transactions(ticker: str, **params: Any) -> Endpoint:
+    return f"/api/v1/gov-contracts/{_seg(ticker.upper())}/transactions", params
+
+
+def gov_contracts_search(**params: Any) -> Endpoint:
+    return "/api/v1/gov-contracts", params
+
+
+def gov_contracts_companies(**params: Any) -> Endpoint:
+    return "/api/v1/gov-contracts/companies", params
+
+
+def gov_contracts_coverage(**params: Any) -> Endpoint:
+    return "/api/v1/gov-contracts/coverage", params

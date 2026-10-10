@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ko-edgar"
-version = "0.1.0"
+version = "0.2.0"
 description = "Official Python SDK for ko.io — source-traced SEC & market data for AI agents and quants"
 readme = "README.md"
 license = "MIT"

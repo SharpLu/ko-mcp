@@ -319,3 +319,145 @@ class Filings(_Resource):
     def share(self, cik: str, accession: str, file: str | None = None) -> ApiResult:
         """Mint a signed, keyless, browser-openable link to a document. **Paid**"""
         return self._get(*ep.filings_share(cik, accession, file))
+
+
+class GovContracts(_Resource):
+    """USAspending prime-contract obligations. Amounts remain exact decimal strings.
+
+    Free covers trailing 92 days. History requires Pro. One window form per call.
+    Automatic links cover companies listed today; no link is not proof of no contracts.
+    """
+
+    def company(
+        self,
+        ticker: str,
+        *,
+        period: str | None = None,
+        fiscal_year: int | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        agency: str | None = None,
+        sub_agency: str | None = None,
+    ) -> ApiResult:
+        return self._get(
+            *ep.gov_contracts_company(
+                ticker,
+                period=period,
+                fiscal_year=fiscal_year,
+                to=to,
+                agency=agency,
+                sub_agency=sub_agency,
+                **{"from": from_},
+            )
+        )
+
+    def transactions(
+        self,
+        ticker: str,
+        *,
+        period: str | None = None,
+        fiscal_year: int | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        agency: str | None = None,
+        sub_agency: str | None = None,
+        award_id: str | None = None,
+        award_type: str | None = None,
+        min_amount: str | None = None,
+        sort: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        return self._get(
+            *ep.gov_contracts_transactions(
+                ticker,
+                period=period,
+                fiscal_year=fiscal_year,
+                to=to,
+                agency=agency,
+                sub_agency=sub_agency,
+                award_id=award_id,
+                award_type=award_type,
+                min_amount=min_amount,
+                sort=sort,
+                page=page,
+                per_page=per_page,
+                **{"from": from_},
+            )
+        )
+
+    def search(
+        self,
+        *,
+        ticker: str | None = None,
+        period: str | None = None,
+        fiscal_year: int | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        agency: str | None = None,
+        sub_agency: str | None = None,
+        recipient: str | None = None,
+        naics: str | None = None,
+        award_type: str | None = None,
+        min_amount: str | None = None,
+        sort: str | None = None,
+        facets: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        return self._get(
+            *ep.gov_contracts_search(
+                ticker=ticker,
+                period=period,
+                fiscal_year=fiscal_year,
+                to=to,
+                agency=agency,
+                sub_agency=sub_agency,
+                recipient=recipient,
+                naics=naics,
+                award_type=award_type,
+                min_amount=min_amount,
+                sort=sort,
+                facets=facets,
+                page=page,
+                per_page=per_page,
+                **{"from": from_},
+            )
+        )
+
+    def companies(
+        self,
+        *,
+        ticker: str | None = None,
+        period: str | None = None,
+        fiscal_year: int | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        agency: str | None = None,
+        sub_agency: str | None = None,
+        sort: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        return self._get(
+            *ep.gov_contracts_companies(
+                ticker=ticker,
+                period=period,
+                fiscal_year=fiscal_year,
+                to=to,
+                agency=agency,
+                sub_agency=sub_agency,
+                sort=sort,
+                page=page,
+                per_page=per_page,
+                **{"from": from_},
+            )
+        )
+
+    def coverage(
+        self,
+    ) -> ApiResult:
+        return self._get(
+            *ep.gov_contracts_coverage(
+            )
+        )

@@ -69,7 +69,7 @@ Browse the [documentation index](docs/README.md) for setup guides, package docs,
 
 | Directory | What it is |
 |-----------|------------|
-| [`server/`](server) | **The hosted MCP server** (mcp.ko.io) — Cloudflare Worker, 24 tools, deployed from this repo |
+| [`server/`](server) | **The hosted MCP server** (mcp.ko.io) — Cloudflare Worker, 26 tools, deployed from this repo |
 | [`docs/clients/`](docs/clients) | Verified setup guides for every MCP client |
 | [`python/`](python) | `ko-edgar` — official Python SDK (sync + async, typed) |
 | [`typescript/sdk/`](typescript/sdk) | `@ko-io/sdk` — official TypeScript SDK (Node 18+, browsers, edge) |
@@ -123,13 +123,14 @@ All data is source-traced through the pipeline, and the filings gateway can
 pull the underlying SEC documents — so your agent cites real filings instead
 of inventing numbers.
 
-## The 24 MCP tools
+## The 26 MCP tools
 
 **Institutions**: `get_institution_holdings` · `list_institutions` ·
 **Stocks**: `get_stock_profile` · `get_stock_holders` · `get_stock_activity` ·
 `get_stock_price` · `get_stock_financials` ·
 **Insiders**: `get_insider_trades` · `list_insider_traders` ·
 **Congress**: `get_congress_trades` · `get_congress_member` ·
+**Government contracts**: `get_gov_contracts` · `search_gov_contracts` ·
 **Crypto**: `get_crypto_exposure` · `get_crypto_holders` · `get_crypto_holder` ·
 **Filings**: `sec_list_filings` · `sec_get_filing_index` · `sec_get_filing_document` ·
 **Short data**: `get_ftd_data` ·
@@ -138,6 +139,18 @@ of inventing numbers.
 `get_economic_indicators` · `get_financial_stress`
 
 Full parameter reference: [llms.txt](llms.txt) · [ko.io/docs](https://ko.io/docs)
+
+### Government contracts
+
+`get_gov_contracts` returns issuer-level U.S. federal prime-contract obligations since FY2015.
+Use `include=actions` for action rows or `award_id` for one award's attributed actions.
+`search_gov_contracts` searches actions across companies or ranks companies with `view=companies`.
+Amounts remain exact decimal strings. Gross is positive obligations; deobligations are negative; net is their sum.
+Free access covers the trailing 92 days. History requires Pro.
+Choose one window: `period`, `fiscal_year`, or `from`/`to`.
+Automatic exact matches cover companies listed today, plus reviewed links with recorded evidence.
+No linked actions does not prove no contracts. Recent months are provisional; Defense reports about 90 days late.
+See the [methodology](https://ko.io/datasets/gov-contracts/).
 
 ## Why not scrape EDGAR directly?
 

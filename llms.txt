@@ -22,8 +22,10 @@ Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "messa
 - Codex CLI: codex mcp add ko-sec-data --url https://mcp.ko.io/mcp
 - stdio-only clients: npx -y @ko-io/mcp-sec-data (env KO_API_KEY)
 
-## MCP tools (24)
+## MCP tools (26)
 
+- get_gov_contracts(ticker, period, fiscal_year, from, to, agency, sub_agency, include, award_id, sort, page, limit): issuer obligations or attributed award actions
+- search_gov_contracts(view, ticker, agency, sub_agency, period, fiscal_year, from, to, recipient, naics, award_type, min_amount, sort_actions, sort_companies, page, limit): actions or companies
 - search(query, limit): universal search across institutions, stocks, Congress members
 - get_institution_holdings(institution, ticker, entity, page, limit): 13F holdings by CIK or fuzzy name; states entity grain (filer vs family) and security grain (share classes merged vs one security)
 - list_institutions(search, page, limit): 13F filers ranked by portfolio value
@@ -86,3 +88,16 @@ an isError result that names the plan, never an empty "no data" answer.
 - REST reference: https://ko.io/docs
 - MCP setup for every client: https://ko.io/mcp
 - Pricing: https://ko.io/pricing
+
+## Government contracts (USAspending)
+- get_gov_contracts: issuer summary, optional actions; award_id returns only attributed award actions and award metadata.
+- search_gov_contracts: actions or view=companies leaderboard.
+- GET /api/v1/gov-contracts/:ticker
+- GET /api/v1/gov-contracts/:ticker/transactions
+- GET /api/v1/gov-contracts
+- GET /api/v1/gov-contracts/companies
+- GET /api/v1/gov-contracts/coverage
+Exact two-decimal amount strings. Free: trailing 92 days. History: Pro.
+Choose one window: period, fiscal_year, or from/to. page and limit are MCP inputs; REST uses per_page.
+Links cover companies listed today plus reviewed links. No link does not mean no contracts.
+Methodology: https://ko.io/datasets/gov-contracts/

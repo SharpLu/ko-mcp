@@ -28,6 +28,10 @@ export const DERIVED_FROM = {
  * gates fail if a tool declares a route that is not pinned here.
  */
 export const MCP_UPSTREAM_ROUTES = [
+  'GET /api/v1/gov-contracts/:ticker',
+  'GET /api/v1/gov-contracts/:ticker/transactions',
+  'GET /api/v1/gov-contracts',
+  'GET /api/v1/gov-contracts/companies',
   'GET /api/v1/institutions',
   'GET /api/v1/holdings/:cik',
   'GET /api/v1/stocks/:ticker',
@@ -62,6 +66,7 @@ export const MCP_UPSTREAM_ROUTES = [
  * maps to a file that is not listed here.
  */
 export const SCANNED_ROUTE_FILES = [
+  'src/routes/v1/gov-contracts.ts',
   'src/routes/v1/institutions.ts',
   'src/routes/v1/holdings.ts',
   'src/routes/v1/stock.ts',

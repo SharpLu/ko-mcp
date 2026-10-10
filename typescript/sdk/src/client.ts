@@ -1,6 +1,17 @@
 import { errorFromResponse, KoError } from "./errors.js";
 import type {
   ApiResult,
+  GovWindowOptions,
+  GovTransactionsOptions,
+  GovSearchOptions,
+  GovCompaniesOptions,
+  GovSummary,
+  GovAction,
+  GovFeedAction,
+  GovCompany,
+  GovCoverage,
+  GovTransactionsMeta,
+
   CongressTradesOptions,
   CryptoHoldersOptions,
   EconomicIndicatorsOptions,
@@ -455,6 +466,26 @@ export class KoClient {
       this.get<T>(`/api/v1/stocks/${tick(ticker)}/financials/historical`),
   };
 
+  /** USAspending prime-contract obligations. Exact decimal strings. Free: 92 days; history: Pro. */
+  readonly govContracts = {
+    company: (ticker: string, options: GovWindowOptions = {}): Promise<ApiResult<GovSummary>> =>
+      this.get(`/api/v1/gov-contracts/${tick(ticker)}`, govParams(options)),
+    transactions: (ticker: string, options: GovTransactionsOptions = {}): Promise<ApiResult<GovAction[]> & { meta: GovTransactionsMeta }> =>
+      this.get<GovAction[]>(`/api/v1/gov-contracts/${tick(ticker)}/transactions`, {
+        ...govParams(options), award_id: options.awardId, award_type: options.awardType, min_amount: options.minAmount,
+        sort: options.sort, page: options.page ?? 1, per_page: options.perPage ?? 50,
+      }) as Promise<ApiResult<GovAction[]> & { meta: GovTransactionsMeta }>,
+    search: (options: GovSearchOptions = {}): Promise<ApiResult<GovFeedAction[]>> =>
+      this.get('/api/v1/gov-contracts', {
+        ...govParams(options), ticker: options.ticker, recipient: options.recipient, naics: options.naics,
+        award_type: options.awardType, min_amount: options.minAmount, sort: options.sort, facets: options.facets,
+        page: options.page ?? 1, per_page: options.perPage ?? 50,
+      }),
+    companies: (options: GovCompaniesOptions = {}): Promise<ApiResult<GovCompany[]>> =>
+      this.get('/api/v1/gov-contracts/companies', { ...govParams(options), ticker: options.ticker, sort: options.sort, page: options.page ?? 1, per_page: options.perPage ?? 50 }),
+    coverage: (): Promise<ApiResult<GovCoverage[]>> => this.get('/api/v1/gov-contracts/coverage'),
+  };
+
   /** SEC Form 4 insider transactions. */
   readonly insiders = {
     /**
@@ -778,4 +809,8 @@ export class KoClient {
         file: options.file,
       }),
   };
+}
+
+function govParams(o: GovWindowOptions): QueryParams {
+  return { period: o.period, fiscal_year: o.fiscalYear, from: o.from, to: o.to, agency: o.agency, sub_agency: o.subAgency };
 }

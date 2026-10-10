@@ -4,7 +4,7 @@ export interface KoConfig {
 }
 
 export interface KoFetchOptions {
-  /** Override the default budget. Only for a call that legitimately needs longer. */
+  /** Override the default budget; keep it strictly below the upstream route timeout. */
   timeoutMs?: number;
 }
 
@@ -13,7 +13,7 @@ export interface KoFetchOptions {
  *
  * The number is calibrated, not guessed:
  *
- *   - p50 across the 24-tool surface is ~155 ms and the SLOWEST healthy call ever
+ *   - p50 across the 26-tool surface is ~155 ms and the SLOWEST healthy call ever
  *     measured is 1,050 ms (`sec_get_filing_index` on a cache hit) --
  *     KO_MCP_TOOL_MATRIX_20260912.md. 20 s is ~129x the median and ~19x the
  *     slowest healthy call, so no working request can reach this bound.

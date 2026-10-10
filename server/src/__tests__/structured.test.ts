@@ -31,6 +31,7 @@ import { registerForm144Tools } from "../tools/form144.js";
 import { registerFilingTools } from "../tools/filings.js";
 import { registerFinancialTools } from "../tools/financials.js";
 import { registerMacroTools } from "../tools/macro.js";
+import { registerGovTools } from "../tools/gov.js";
 import { registerCryptoTools } from "../tools/crypto.js";
 import { makeFakeServer } from "./helpers.js";
 
@@ -41,7 +42,7 @@ async function connect(apiKey = "") {
   const server = new McpServer({ name: "ko-sec-data", version: "test" });
   for (const reg of [
     registerInstitutionTools, registerStockTools, registerInsiderTools, registerCongressTools, registerSearchTool,
-    registerForm144Tools, registerFilingTools, registerFinancialTools, registerMacroTools, registerCryptoTools,
+    registerForm144Tools, registerFilingTools, registerFinancialTools, registerMacroTools, registerCryptoTools, registerGovTools,
   ]) reg(server, config);
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "t", version: "0" });
@@ -72,16 +73,16 @@ const KEYLESS_WINDOW = (basis: string, returned: number, cap = 25) => ({
 beforeEach(() => { mock.mockReset(); });
 
 // ── tools/list ──────────────────────────────────────────────────────────────
-describe("tools/list: annotations on all 24, outputSchema where structured", () => {
+describe("tools/list: annotations on all 26, outputSchema where structured", () => {
   it("every tool is read-only and open-world", async () => {
     const { tools } = await (await connect()).listTools();
-    expect(tools.length).toBe(24);
+    expect(tools.length).toBe(26);
     for (const t of tools) {
       expect(t.annotations, t.name).toMatchObject({ readOnlyHint: true, openWorldHint: true, destructiveHint: false });
     }
   });
 
-  it("every one of the 24 tools declares an outputSchema", async () => {
+  it("every one of the 26 tools declares an outputSchema", async () => {
     const { tools } = await (await connect()).listTools();
     const without = tools.filter((t) => !t.outputSchema).map((t) => t.name);
     expect(without, `tools without outputSchema: ${without.join(", ")}`).toEqual([]);

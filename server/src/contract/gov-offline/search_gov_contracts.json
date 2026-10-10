@@ -1,0 +1,268 @@
+{
+  "tool": "search_gov_contracts",
+  "planGated": false,
+  "capturedAt": "2026-10-10",
+  "provenance": {
+    "source": "src/__tests__/contract/gov-golden.test.mjs",
+    "mode": "recordings",
+    "note": "Machine-captured real MCP Server/Client responses with synthetic USAspending API fixtures. Two independent probes agree. Offline contract evidence only; recapture against live API before merge."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "ticker": "BA"
+      },
+      "why": "Attributed cross-company actions with exact signed obligation strings; fixture-backed until API deployment.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "actions": {
+                "_array": {
+                  "action_date": "string",
+                  "agency": {
+                    "code": "string",
+                    "name": "string",
+                    "sub_code": "string",
+                    "sub_name": "string"
+                  },
+                  "award_id": "string",
+                  "award_type": "string",
+                  "cik": "string",
+                  "company_name": "string",
+                  "description": "string",
+                  "link_tier": "string",
+                  "modification_number": "string",
+                  "naics": {
+                    "code": "string",
+                    "description": "string"
+                  },
+                  "obligated_amount": "string",
+                  "piid": "string",
+                  "place_of_performance": {
+                    "city": "string",
+                    "country": "string",
+                    "state": "string"
+                  },
+                  "provisional": "boolean",
+                  "psc": {
+                    "code": "string",
+                    "description": "string"
+                  },
+                  "recipient": {
+                    "name": "string",
+                    "parent_name": "string",
+                    "parent_uei": "string",
+                    "uei": "string"
+                  },
+                  "source_url": "string",
+                  "ticker": "string",
+                  "transaction_id": "string"
+                }
+              },
+              "caveats": {
+                "_array": "string"
+              },
+              "paging": {
+                "continuation": "null",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "null",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": "null",
+              "universe": "string",
+              "view": "string",
+              "window": {
+                "clamped": "boolean",
+                "date_basis": "string",
+                "end": "string",
+                "period": "string",
+                "start": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Government contracts — actions",
+              "TEXT Window: <DATE> to <DATE> (action date).",
+              "TEXT Amounts are signed obligations, not payments. Recent months are provisional (*); partial months are marked ~. Defense reports about <VAL> days late.",
+              "TEXT Automatic exact matches cover companies listed today, plus reviewed links with recorded evidence. Current parents are not historical ownership. [Methodology](<URL>)",
+              "BLANK",
+              "THEAD Company | Date | Agency / sub-agency | Award | Obligation (USD) | Source",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Company",
+                  "Date",
+                  "Agency / sub-agency",
+                  "Award",
+                  "Obligation (USD)",
+                  "Source"
+                ],
+                "dataRows": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "agency": "9999"
+      },
+      "why": "Successful empty filtered actions response is not proof of zero contracts.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "actions": {
+                "_array": null
+              },
+              "caveats": {
+                "_array": "string"
+              },
+              "paging": {
+                "continuation": "null",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "null",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": "null",
+              "universe": "string",
+              "view": "string",
+              "window": {
+                "clamped": "boolean",
+                "date_basis": "string",
+                "end": "string",
+                "period": "string",
+                "start": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Government contracts — actions",
+              "TEXT Window: <DATE> to <DATE> (action date).",
+              "TEXT Amounts are signed obligations, not payments. Recent months are provisional (*); partial months are marked ~. Defense reports about <VAL> days late.",
+              "TEXT Automatic exact matches cover companies listed today, plus reviewed links with recorded evidence. Current parents are not historical ownership. [Methodology](<URL>)",
+              "TEXT No contract actions match these filters in this window. No linked actions is not evidence of zero federal contracts."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "view": "companies",
+        "recipient": "BOEING"
+      },
+      "why": "Action-only recipient filter cannot silently reach a company leaderboard.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT recipient is not supported for view=companies."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "history_denied",
+      "arguments": {
+        "ticker": "BA",
+        "period": "ALL"
+      },
+      "why": "Keyless history is a PLAN_REQUIRED 403, not an absence of contracts.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (403): Access forbidden (check your plan): History requires Pro. This is a plan limit, not missing data."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    }
+  ]
+}

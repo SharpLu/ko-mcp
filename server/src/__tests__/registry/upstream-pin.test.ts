@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { GOV_TIMEOUT_MS } from '../../tools/gov.js';
 import {
   UPSTREAM_PIN, UPSTREAM_CONTRACT, UPSTREAM_CONTRACT_RAW, sha256, pinAgeDays, MAX_PIN_AGE_DAYS,
 } from '../../registry/upstream.js';
@@ -23,6 +24,13 @@ import {
  */
 
 describe('ko-api pin integrity', () => {
+  it('government request budgets are strictly below every real pinned upstream route', () => {
+    for (const path of ['/api/v1/gov-contracts', '/api/v1/gov-contracts/:ticker', '/api/v1/gov-contracts/:ticker/transactions', '/api/v1/gov-contracts/companies']) {
+      const route = UPSTREAM_CONTRACT.routes[`GET ${path}`];
+      expect(route, path).toBeDefined();
+      expect(GOV_TIMEOUT_MS, path).toBeLessThan(route.timeoutMs);
+    }
+  });
   it('records a commit, a date, a contract hash and a SHA per source file', () => {
     expect(UPSTREAM_PIN.koApiRepo).toBe('SharpLu/ko-api');
     expect(UPSTREAM_PIN.commit).toMatch(/^[0-9a-f]{40}$/);
@@ -30,8 +38,9 @@ describe('ko-api pin integrity', () => {
     expect(UPSTREAM_PIN.contractSha256).toMatch(/^[0-9a-f]{64}$/);
     const shas = Object.values(UPSTREAM_PIN.files);
     // 3 declaration files (routes, api-auth, entitlements catalog) + 1 param
-    // helper (pagination.ts: pageSizeParam) + 19 route files
-    expect(shas.length).toBe(23);
+    // helper (pagination.ts: pageSizeParam) + gov-contracts/params.ts + 20 route files
+    expect(shas.length).toBe(25);
+    expect(UPSTREAM_PIN.files).toHaveProperty('src/lib/gov-contracts/params.ts');
     expect(shas.every((s) => /^[0-9a-f]{40}$/.test(s))).toBe(true);
   });
 
@@ -51,10 +60,10 @@ describe('ko-api pin integrity', () => {
 
   it('pins every route the contract describes, and nothing outside the MCP surface', () => {
     const keys = Object.keys(UPSTREAM_CONTRACT.routes);
-    expect(keys.length).toBe(24);
+    expect(keys.length).toBe(28);
     expect(keys.every((k) => k.startsWith('GET /api/v1/'))).toBe(true);
     // Scalar only: the ko-api route inventory stays in the private repo.
-    expect(UPSTREAM_CONTRACT.sourceRouteCount).toBe(185);
+    expect(UPSTREAM_CONTRACT.sourceRouteCount).toBe(190);
   });
 
   it(`the pin is younger than ${MAX_PIN_AGE_DAYS} days`, () => {

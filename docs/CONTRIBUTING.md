@@ -6,7 +6,7 @@ Thanks for your interest in improving the ko.io connector kit!
 
 This repository contains everything that faces an MCP client or SDK user:
 `server/` — the Cloudflare Worker behind the hosted MCP endpoint
-`https://mcp.ko.io/mcp` (24 tools, deployed from this repo) — plus the Python
+`https://mcp.ko.io/mcp` (26 tools, deployed from this repo) — plus the Python
 SDK (`ko-edgar`), the TypeScript SDK (`@ko-io/sdk`), the stdio MCP proxy
 (`@ko-io/mcp-sec-data`), per-client setup guides, and the cookbook. Only the
 data pipelines behind `api.ko.io` live elsewhere.

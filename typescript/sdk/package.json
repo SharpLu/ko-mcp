@@ -1,6 +1,6 @@
 {
   "name": "@ko-io/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed TypeScript client for the ko.io financial data API — SEC 13F institutional holdings, insider trades, congress trading, crypto ETF exposure and macro data.",
   "license": "MIT",
   "type": "module",

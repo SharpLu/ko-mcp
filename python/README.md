@@ -85,6 +85,8 @@ ko.get("/api/v1/exec-compensation", ticker="AAPL", ceo_only=True)
 
 ## Changes (unreleased)
 
+- Added U.S. federal prime-contract obligations (FY2015+): five SDK methods, including coverage.
+
 - **Removed** the `party` argument from `congress.trades()` (sync and async).
   The API has no party filter; the argument was sent and silently ignored,
   returning trades from every party. Filter by `chamber`, `ticker` or member
@@ -105,3 +107,31 @@ PyPI release, 0.1.0, was uploaded manually.
 - Repository: <https://github.com/SharpLu/ko-mcp>
 
 MIT licensed.
+
+## Government contracts (0.2.0)
+
+Added: U.S. federal prime-contract obligations (FY2015+) by public company.
+Five methods cover company summaries, attributed transactions, action search, company rankings, and coverage.
+
+```python
+with KoClient() as ko:
+    result = ko.gov_contracts.company("BA")
+    actions = ko.gov_contracts.transactions("BA", per_page=50)
+    feed = ko.gov_contracts.search(agency="097", sub_agency="2100")
+    ranking = ko.gov_contracts.companies(agency="097", sort="gross")
+    coverage = ko.gov_contracts.coverage()
+
+async with AsyncKoClient() as ko:
+    result = await ko.gov_contracts.company("BA")
+```
+
+The async namespace has the same five methods and arguments. Use `from_` for the REST `from` parameter.
+
+Use one window form: period, fiscal year, or from/to. Omitting it uses the API default.
+Free access covers the trailing 92 days. History requires Pro.
+Amounts stay exact two-decimal strings, including negative obligations and large values.
+For arithmetic, use a decimal library. Do not cast amounts to binary floating point.
+Award queries retain `meta.identity`, `meta.scope`, `meta.refreshed_at`, and `meta.caveats` even when `data` is empty.
+Award context is issuer-scoped: metadata from this company's latest attributed action; attributed totals are plan-gated.
+Automatic links cover companies listed today, plus reviewed links. No link is not proof of no contracts.
+[Methodology](https://ko.io/datasets/gov-contracts/).

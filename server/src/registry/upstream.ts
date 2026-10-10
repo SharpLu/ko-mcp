@@ -14,7 +14,7 @@
  * its git blob SHA offline -- is not available: **ko-mcp is a public repo and
  * ko-api is private**, so vendoring would publish private source. What is
  * committed in src/registry/upstream/contract.json is only what the MCP server
- * already exposes to the internet on every call: the 24 public /api/v1 paths it
+ * already exposes to the internet on every call: the public /api/v1 paths it
  * proxies to, their query-param names, the auth mode and the free-plan gate a
  * caller observes as a 403. The private bytes stay private; pin.json records
  * their git blob SHAs, which disclose nothing and are what makes the pin

@@ -1,8 +1,8 @@
 {
   "_comment": "DERIVED from ko-api at the commit in pin.json -- do not hand-edit; src/__tests__/registry/upstream-pin.test.ts hashes this file and compares it with pin.json.contractSha256. Regenerate with: npm run registry:refresh-pin.",
   "koApiRepo": "SharpLu/ko-api",
-  "koApiCommit": "118f1b04d40a33a37b9fcef681d72e46593e7f1d",
-  "sourceRouteCount": 185,
+  "koApiCommit": "5c0bd4e1dec817c9fb8cf57648c76a4276af0f34",
+  "sourceRouteCount": 190,
   "freeBlockedPrefixes": [
     "/api/v1/treasury",
     "/api/v1/fed",
@@ -17,6 +17,105 @@
     "/api/v1/sec/buybacks"
   ],
   "routes": {
+    "GET /api/v1/gov-contracts/:ticker": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": [
+        "agency",
+        "fiscal_year",
+        "from",
+        "period",
+        "sub_agency",
+        "to"
+      ]
+    },
+    "GET /api/v1/gov-contracts/:ticker/transactions": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page",
+          "limit"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "agency",
+        "award_id",
+        "award_type",
+        "fiscal_year",
+        "from",
+        "limit",
+        "min_amount",
+        "page",
+        "per_page",
+        "period",
+        "sort",
+        "sub_agency",
+        "to"
+      ]
+    },
+    "GET /api/v1/gov-contracts": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page",
+          "limit"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "agency",
+        "award_type",
+        "facets",
+        "fiscal_year",
+        "from",
+        "limit",
+        "min_amount",
+        "naics",
+        "page",
+        "per_page",
+        "period",
+        "recipient",
+        "sort",
+        "sub_agency",
+        "ticker",
+        "to"
+      ]
+    },
+    "GET /api/v1/gov-contracts/companies": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page",
+          "limit"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "agency",
+        "fiscal_year",
+        "from",
+        "limit",
+        "page",
+        "per_page",
+        "period",
+        "sort",
+        "sub_agency",
+        "ticker",
+        "to"
+      ]
+    },
     "GET /api/v1/institutions": {
       "auth": "apiKey",
       "cache": "hourly",
