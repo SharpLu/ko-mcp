@@ -96,12 +96,14 @@ jobs:
       - name: Verify deployment, roll back automatically on failure
         id: verify
         env:
+          PREVIOUS_TOOLS: ${{ steps.capture.outputs.previous_tools }}
           DISCORD_WEBHOOK_DEPLOYS: ${{ secrets.DISCORD_WEBHOOK_DEPLOYS }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: >-
           node scripts/deploy-guard.mjs verify
           --deployed ${{ steps.upload.outputs.version_id }}
-          --previous ${{ steps.capture.outputs.previous_version_id }}
+          --previous "${{ steps.capture.outputs.previous_version_id }}"
+          --previous-tools "$PREVIOUS_TOOLS"
 
   # ---------------------------------------------------------------------------
   # Discord notification (inline, best-effort)

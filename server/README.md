@@ -32,12 +32,13 @@ Once connected, just ask your assistant:
 
 > Live sample: institutions currently hold **$28B+** in US spot Bitcoin ETFs — BlackRock's IBIT alone is held by 1,400+ filers.
 
-## Tools (24)
+## Tools (26)
 
 **Institutions / 13F** — `get_institution_holdings`, `list_institutions`, `get_stock_holders`, `get_stock_activity`
 **Stocks** — `get_stock_profile`, `get_stock_price`, `get_stock_financials`, `search`
 **Insiders** — `get_insider_trades`, `list_insider_traders`, `get_form144_notices`
 **Congress** — `get_congress_trades`, `get_congress_member`
+**Government contracts** — `get_gov_contracts`, `search_gov_contracts`
 **Crypto** — `get_crypto_exposure`, `get_crypto_holders`, `get_crypto_holder`
 **Macro** — `get_treasury_yields`, `get_fed_rates`, `get_economic_indicators`, `get_financial_stress`
 **Short data** — `get_ftd_data`
@@ -46,7 +47,7 @@ Once connected, just ask your assistant:
 ### Output contract
 
 - Every tool advertises `annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }`.
-- All 24 tools declare an `outputSchema` and return `structuredContent` next to the Markdown on every
+- All 26 tools declare an `outputSchema` and return `structuredContent` next to the Markdown on every
   successful answer (empty ones included): exact integers / decimal strings (the Markdown rounds `57,727` to nothing, the
   structured twin never rounds), the grain of every row, paging, and the plan limits applied.
 - Grain is always stated: insider rows are per insider per day (code P/S -- open market or private -- split from all
@@ -77,3 +78,15 @@ Once connected, just ask your assistant:
 - MCP endpoint: https://mcp.ko.io/mcp
 
 Data sourced from SEC EDGAR, US Treasury, Federal Reserve, BLS, and OFR.
+
+### Government contracts
+
+`get_gov_contracts` returns issuer-level U.S. federal prime-contract obligations since FY2015.
+Use `include=actions` for action rows or `award_id` for one award's attributed actions.
+`search_gov_contracts` searches actions across companies or ranks companies with `view=companies`.
+Amounts remain exact decimal strings. Gross is positive obligations; deobligations are negative; net is their sum.
+Free access covers the trailing 92 days. History requires Pro.
+Choose one window: `period`, `fiscal_year`, or `from`/`to`.
+Automatic exact matches cover companies listed today, plus reviewed links with recorded evidence.
+No linked actions does not prove no contracts. Recent months are provisional; Defense reports about 90 days late.
+See the [methodology](https://ko.io/datasets/gov-contracts/).

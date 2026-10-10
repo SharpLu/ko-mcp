@@ -46,7 +46,7 @@ beforeAll(async () => {
   rollbackLog = path.join(dir, "rollback.argv");
   stateFile = path.join(dir, "tools.count");
   writeFileSync(rollbackLog, "");
-  setToolCount(24);
+  setToolCount(26);
 
   // Fake wrangler: records rollback argv and, when told to, "heals" the Worker.
   writeFileSync(
@@ -65,7 +65,7 @@ if (argv[0] === "deployments" && argv[1] === "status") {
   process.stdout.write("Deployed ko-mcp-server\\n");
 } else if (argv[0] === "rollback") {
   appendFileSync(LOG, JSON.stringify(argv) + "\\n");
-  if (process.env.FAKE_ROLLBACK_HEALS === "1") writeFileSync(STATE, "24");
+  if (process.env.FAKE_ROLLBACK_HEALS === "1") writeFileSync(STATE, process.env.FAKE_ROLLBACK_COUNT || "26");
   if (process.env.FAKE_ROLLBACK_FAILS === "1") { process.stderr.write("rollback exploded\\n"); process.exit(1); }
   process.stdout.write("Worker Version ${PREV} has been deployed to 100% of traffic.\\n");
 } else {
@@ -82,7 +82,7 @@ if (argv[0] === "deployments" && argv[1] === "status") {
       return;
     }
     if (req.url === "/mcp") {
-      const tools = Array.from({ length: toolCount() }, (_, i) => ({ name: `tool_${i}` }));
+      const tools = Array.from({ length: toolCount() }, (_, i) => ({ name: toolCount() >= 26 ? (['get_gov_contracts', 'search_gov_contracts'][i] ?? `tool_${i}`) : `tool_${i}` }));
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools } }));
       return;
@@ -141,6 +141,16 @@ describe("deploy guard rehearsal", () => {
     expect(res.outputs).toContain("rollback_available=true");
   });
 
+  it("capture permits a repair deployment when the current tool inventory is broken", async () => {
+    setToolCount(0);
+    const res = await runGuard(["capture"]);
+    expect(res.code).toBe(0);
+    expect(res.outputs).toContain(`previous_version_id=${PREV}`);
+    expect(res.outputs).toContain('previous_tools=[]');
+    expect(res.out).toContain('rollback uses the 24-tool baseline');
+    setToolCount(26);
+  });
+
   it("upload parses the version id without grep -oP", async () => {
     const res = await runGuard(["upload"]);
     expect(res.code).toBe(0);
@@ -148,7 +158,7 @@ describe("deploy guard rehearsal", () => {
   });
 
   it("passes cleanly and performs NO rollback when the checks are green", async () => {
-    setToolCount(24);
+    setToolCount(26);
     writeFileSync(rollbackLog, "");
     const res = await runGuard(["verify", "--deployed", NEW, "--previous", PREV]);
     expect(res.code).toBe(0);
@@ -157,7 +167,7 @@ describe("deploy guard rehearsal", () => {
     expect(res.out).toContain("gate counts: total=3 passed=2 failed=0 skipped=1");
   });
 
-  it("rolls back exactly once, with the pinned argv, when tools/list drops below 24", async () => {
+  it("rolls back exactly once, with the pinned argv, when tools/list drops below 26", async () => {
     setToolCount(12);
     writeFileSync(rollbackLog, "");
     const res = await runGuard(["verify", "--deployed", NEW, "--previous", PREV], { FAKE_ROLLBACK_HEALS: "1" });
@@ -180,10 +190,21 @@ describe("deploy guard rehearsal", () => {
     expect(res.outputs).toContain("outcome=rolled_back");
     expect(res.outputs).toContain(`rolled_back_to=${PREV}`);
     expect(res.outputs).toContain("failed_check=tools_list");
-    expect(res.out).toContain("[verify-rollback] PASS tools_list: 24 tools");
+    expect(res.out).toContain("[verify-rollback] PASS tools_list: 26 tools");
     expect(res.out).toContain("MCP DEPLOY ROLLED BACK");
     expect(res.out).toContain(NEW); // failed version named, kept for forensics
-    expect(toolCount()).toBe(24);
+    expect(toolCount()).toBe(26);
+  });
+
+  it("verifies rollback to the previous 24-tool release without the new names", async () => {
+    setToolCount(12);
+    writeFileSync(rollbackLog, "");
+    const priorNames = Array.from({ length: 24 }, (_, i) => `tool_${i}`);
+    const res = await runGuard(["verify", "--deployed", NEW, "--previous", PREV, "--previous-tools", JSON.stringify(priorNames)], { FAKE_ROLLBACK_HEALS: "1", FAKE_ROLLBACK_COUNT: "24" });
+    expect(res.code).toBe(20);
+    expect(res.outputs).toContain("outcome=rolled_back");
+    expect(res.out).toContain("[verify-rollback] PASS tools_list: 24 tools");
+    expect(rollbackCalls()).toHaveLength(1);
   });
 
   it("fails the job with a distinct code when the rollback does NOT restore health", async () => {

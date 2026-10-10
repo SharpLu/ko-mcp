@@ -30,7 +30,7 @@
  */
 
 export const WORKER_NAME = "ko-mcp-server";
-export const MIN_TOOLS = 24;
+export const MIN_TOOLS = 26;
 
 /** Discord's hard cap for a message `content` field. */
 export const DISCORD_CONTENT_LIMIT = 2000;
@@ -209,6 +209,10 @@ export function formatCommand(argv) {
 // Post-deploy checks
 // ---------------------------------------------------------------------------
 
+export function toolNamesFromBody(body) { return toolsFromBody(body).map(t => t.name); }
+export function countToolsFromBody(body) { return toolsFromBody(body).length; }
+export const REQUIRED_TOOLS = ['get_gov_contracts', 'search_gov_contracts'];
+
 /** @param {number} status @param {string} body */
 export function evaluateHealth(status, body) {
   const text = String(body ?? "");
@@ -234,9 +238,9 @@ export function evaluateHealth(status, body) {
  * Count tools in a `tools/list` response body. The Worker speaks Streamable
  * HTTP, so the body may be raw JSON or SSE-framed (`data: {...}`).
  * @param {string} body
- * @returns {number}
+ * @returns {Array<{name: string}>}
  */
-export function countToolsFromBody(body) {
+function toolsFromBody(body) {
   const text = String(body ?? "").trim();
   const jsonStr = text.startsWith("{") ? text : (text.match(/data: (\{[\s\S]*\})/)?.[1] ?? text);
   let parsed;
@@ -252,22 +256,24 @@ export function countToolsFromBody(body) {
   if (!Array.isArray(tools)) {
     throw new DeployGuardError("tools/list response had no result.tools array");
   }
-  return tools.length;
+  return tools;
 }
 
 /** @param {number} status @param {string} body */
-export function evaluateTools(status, body) {
+export function evaluateTools(status, body, { minTools = MIN_TOOLS, requiredTools = REQUIRED_TOOLS } = {}) {
   if (status < 200 || status >= 300) {
     return { name: "tools_list", ok: false, examined: 0, count: 0, detail: `HTTP ${status}` };
   }
   try {
-    const count = countToolsFromBody(body);
+    const tools = toolsFromBody(body);
+    const count = tools.length;
+    const missing = requiredTools.filter(name => !tools.some(t => t.name === name));
     return {
       name: "tools_list",
-      ok: count >= MIN_TOOLS,
+      ok: count >= minTools && missing.length === 0,
       examined: count,
       count,
-      detail: `${count} tools (need >= ${MIN_TOOLS})`,
+      detail: `${count} tools (need >= ${minTools})${missing.length ? `; missing: ${missing.join(", ")}` : ""}`,
     };
   } catch (err) {
     return { name: "tools_list", ok: false, examined: 0, count: 0, detail: String(err?.message ?? err) };

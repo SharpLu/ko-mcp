@@ -1,8 +1,9 @@
+import { summary as govSummary, feed as govFeed } from './gov-fixtures.js';
 /**
  * Every tool, populated AND empty, through a real McpServer + Client
  * (final-eval R1 #7). The SDK validates structuredContent against each tool's
  * outputSchema on the server and again on the client, so this proves that all
- * 24 tools return schema-valid structured output on both success shapes.
+ * 26 tools return schema-valid structured output on both success shapes.
  *
  * The fixture table is keyed by tool name and compared with tools/list: a new
  * tool with no fixture fails here, so coverage cannot silently stay at "some".
@@ -29,6 +30,7 @@ import { registerForm144Tools } from "../tools/form144.js";
 import { registerFilingTools } from "../tools/filings.js";
 import { registerFinancialTools } from "../tools/financials.js";
 import { registerMacroTools } from "../tools/macro.js";
+import { registerGovTools } from "../tools/gov.js";
 import { registerCryptoTools } from "../tools/crypto.js";
 
 const mock = vi.mocked(koFetch);
@@ -38,7 +40,7 @@ async function connect(apiKey = "") {
   const server = new McpServer({ name: "ko-sec-data", version: "test" });
   for (const reg of [
     registerInstitutionTools, registerStockTools, registerInsiderTools, registerCongressTools, registerSearchTool,
-    registerForm144Tools, registerFilingTools, registerFinancialTools, registerMacroTools, registerCryptoTools,
+    registerForm144Tools, registerFilingTools, registerFinancialTools, registerMacroTools, registerCryptoTools, registerGovTools,
   ]) reg(server, config);
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "t", version: "0" });
@@ -102,6 +104,8 @@ interface Fixture {
 const same = (body: unknown) => () => body;
 
 const FIXTURES: Record<string, Fixture> = {
+  get_gov_contracts: { args: { ticker: 'BA' }, populated: same(govSummary()), empty: same(govSummary(true)) },
+  search_gov_contracts: { args: {}, populated: same(govFeed()), empty: same(govFeed(true)) },
   get_institution_holdings: { args: { institution: "1067983" }, populated: same(env([HOLDING], { total_count: "1" })), empty: same(env([])) },
   list_institutions: {
     args: {},
@@ -191,7 +195,7 @@ function stubExcerpt(status: number) {
   })) as unknown as typeof fetch;
 }
 
-describe("all 24 tools return schema-valid structuredContent (R1 #7)", () => {
+describe("all 26 tools return schema-valid structuredContent (R1 #7)", () => {
   it("the fixture table covers exactly the tools/list surface", async () => {
     const { tools } = await (await connect()).listTools();
     expect(Object.keys(FIXTURES).sort()).toEqual(tools.map((t) => t.name).sort());

@@ -76,3 +76,12 @@ wrangler and a loopback Worker, and asserts the exact rollback argv). The YAML
 itself is linted as text by the same suite: no `x=$(cmd); rc=$?`, no
 `PIPESTATUS`, no `grep -oP`, no `versions rollback`, no version deletion,
 capture-before-upload ordering.
+
+### Tool additions and rollback verification
+
+The forward gate requires at least 26 tools, including `get_gov_contracts` and `search_gov_contracts`.
+Before upload, capture also records the serving release's tool names in `previous_tools`.
+The workflow passes this JSON through `PREVIOUS_TOOLS` to `verify --previous-tools`.
+Rollback verification checks those previous names and count, so a healthy 24-tool release can be restored.
+Older/manual verify invocations without that argument retain the previous 24-tool minimum.
+The failed deployment still exits nonzero after a healthy rollback.

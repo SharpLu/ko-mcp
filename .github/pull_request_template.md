@@ -19,11 +19,11 @@ $ <命令>
 
 ## 契约与版本
 
-- [ ] 新/改/删 tool：`server/src/__tests__/tools-proxy.test.ts` 的 24-count `EXPECTED_TOOLS` 已同步（铁律 #1）
+- [ ] 新/改/删 tool：`server/src/__tests__/tools-proxy.test.ts` 的 26-count `EXPECTED_TOOLS` 已同步（铁律 #1）
 - [ ] 版本齐步：`server.json` + `server/package.json` + `server/src/index.ts` 的 `McpServer({version})` 三处；SDK 三包同版本（铁律 #8）
 - [ ] 无 tool/版本影响（一句话说明理由）：
 
 ## 风险与回滚
 
-<!-- server 改动 = merge server/** 即部署（deploy-server.yml + tools/list>=24 健康门）。
+<!-- server 改动 = merge server/** 即部署（deploy-server.yml + tools/list>=26 健康门）。
      SDK 改动 = 发 Release 才 publish。破坏性操作必填回滚方式；纯增量可写"无"。 -->

@@ -12,10 +12,10 @@
 
 | 目录 | 是什么 | 发布到 | 版本 |
 |------|--------|--------|------|
-| `server/` | **mcp.ko.io** 的 Cloudflare Worker 本体（唯一 MCP 入口，**24 tools**，Streamable HTTP） | CF Worker `ko-mcp-server` | server.json + package.json + src/index.ts = 1.2.0 |
-| `python/` | `ko-edgar` PyPI SDK（httpx，同步+异步） | PyPI `ko-edgar` | 0.1.0 |
-| `typescript/sdk/` | `@ko-io/sdk`（TS REST 客户端） | npm | 0.1.0 |
-| `typescript/mcp-proxy/` | `@ko-io/mcp-sec-data`（stdio→mcp.ko.io 代理，**动态转发 tool 列表**） | npm | 0.1.0 |
+| `server/` | **mcp.ko.io** 的 Cloudflare Worker 本体（唯一 MCP 入口，**26 tools**，Streamable HTTP） | CF Worker `ko-mcp-server` | server.json + package.json + src/index.ts = 1.3.0 |
+| `python/` | `ko-edgar` PyPI SDK（httpx，同步+异步） | PyPI `ko-edgar` | 0.2.0 |
+| `typescript/sdk/` | `@ko-io/sdk`（TS REST 客户端） | npm | 0.2.0 |
+| `typescript/mcp-proxy/` | `@ko-io/mcp-sec-data`（stdio→mcp.ko.io 代理，**动态转发 tool 列表**） | npm | 0.2.0 |
 
 数据链：`ko-api (api.ko.io serving) → server/ tools 代理 → MCP client（Claude / ChatGPT / …）`。
 worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`）。
@@ -24,7 +24,7 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 
 - **分支纪律**：永远 `git fetch && git switch -c <type>/<slug> origin/main`。一分支 = 一任务 = 一 PR，squash merge。
 - **部署**：
-  - **server** = push `server/**` 到 main → `.github/workflows/deploy-server.yml`（部署**前**在本地构建上跑黄金契约阻断门 `npm run golden:gate` → `wrangler versions deploy 100%` → 部署后 `/health` + `tools/list >= 24` 健康门；部署**后**的 golden 检查尚未接线，报 SKIPPED）。没有手动部署这回事。
+  - **server** = push `server/**` 到 main → `.github/workflows/deploy-server.yml`（部署**前**在本地构建上跑黄金契约阻断门 `npm run golden:gate` → `wrangler versions deploy 100%` → 部署后 `/health` + `tools/list >= 26` 健康门；部署**后**的 golden 检查尚未接线，报 SKIPPED）。没有手动部署这回事。
     健康门失败 = **自动 rollback**：部署前先抓当前 serving 版本 id 并把 rollback 命令打进日志，失败后 `wrangler rollback <id>`（**不是** `wrangler versions rollback`，该子命令不存在）→ 重新跑健康门 → Discord `#deploys`。坏版本永不删除。运维细节见 `docs/deploy-rollback.md`。
   - **SDK（python + 2 个 npm 包）** = 发 GitHub Release 触发 publish（`publish-python.yml` / `publish-npm.yml`，各自带 test 门：`pytest` / `npm test`）。**PyPI 自动发布未打通**：`publish-python.yml` 仅有的两次运行（2026-07-11）都以 `invalid-publisher` 失败——pypi.org 上 Trusted Publisher 未配置（需 owner SharpLu / repo ko-mcp / workflow `publish-python.yml` / environment `pypi`）；PyPI 上的 `ko-edgar` 0.1.0 是手动上传的。查：`gh run list -R SharpLu/ko-mcp --workflow publish-python.yml`。`publish-mcp-registry.yml` 由 tag `v*` 触发。
   - **CI 跑在 GitHub-hosted `ubuntu-latest`**（`ci.yml` 三个 job + `deploy-server.yml` 全部如此）。**ko-mcp 是 public repo，Actions 分钟数免费**，私仓那次 Actions 账单中断从未波及它——这正是 PR #12 revert 掉 PR #8（迁 A3 自建 runner）的理由。别再把本仓的 gate 往自建 runner 上搬。
@@ -38,7 +38,7 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 
 | # | 规则 | 出处 | 机器强制 |
 |---|------|------|----------|
-| 1 | **24-tool 契约**：新增/删除/改名 tool 必须同步更新 `server/src/__tests__/tools-proxy.test.ts` 的 `EXPECTED_TOOLS`（断言恰好 24 个 + 全名）。漏改 = CI 直接 fail | tool 契约门 | `tools-proxy.test.ts` |
+| 1 | **26-tool 契约**：新增/删除/改名 tool 必须同步更新 `server/src/__tests__/tools-proxy.test.ts` 的 `EXPECTED_TOOLS`（断言恰好 26 个 + 全名）。漏改 = CI 直接 fail | tool 契约门 | `tools-proxy.test.ts` |
 | 2 | ko-api 的 **Int64/UInt64 以字符串到达**——喂给数字格式化前必须 `num()` 强转（`Number(String(v))`），别当 number 用。`fmtMoney/fmtShares/fmtPct` 已在 `format.ts` 顶部集中 coerce；`num()` 是参照（`crypto.ts` 是范本） | net_value 类（stock_activity / crypto 溢出误渲染） | `format.ts` coerce + 单测 |
 | 3 | 每个 tool 代理到一条 **LIVE ko-api 路径**。契约门只查 tool **注册**（是否调 `/api/` 路径），**不查 liveness**——ko-api 端点改动会静默打断 tool。新增/改动 tool 的路径必须对着 ko-api 路由核对并 curl 过 | 契约门覆盖面局限 | 人工（§6 curl） |
 | 4 | **别硬编码 tool 列表**：`mcp-proxy` 动态转发 mcp.ko.io 的 `tools/list`。`KO_API_URL = api.ko.io` 是地理路由（正确），也别在代理里写死路径 | 架构约定 | 人工 / PR review |
@@ -49,8 +49,9 @@ worker 本身不碰 ClickHouse / D1，只是 ko-api 的薄客户端（`koFetch`�
 | 9 | **黄金契约不许钉 bug**：`src/contract/golden/` 里任何一条已知缺陷的用例必须带 `knownDefect` + probe（断言"缺陷仍在"），或在 `EXCLUDED` 里写明理由。把今天的错答案钉成契约 = 这道门会挡住它自己的修复。修好缺陷时在**同一个 PR** 里删注解 + `npm run golden:capture` 重钉 | M1 黄金契约门（internal#231 / #236 的同形教训） | `golden.test.ts`（注解/排除/原值三道断言）+ `golden-gate.mjs`（缺陷被修 = 红） |
 | 10 | **出站 fetch 必须有界，且界要小于上游**：每个 `fetch`（含 tool 层的裸 fetch）带 `AbortSignal.timeout()`，默认 `KO_FETCH_TIMEOUT_MS`=20s，**必须小于上游 route 声明的 `timeoutMs`(30s)**——代理要先于被代理者失败，否则拿回来的是别人的 5xx。超时抛独立的 `KoTimeoutError`（"我们不等了"），绝不能和 `ko.io API error (5xx)`（"上游坏了"）同形。配套：**hang 测试必须真 hang**——mock 立即 reject 的 "no hang" 测试对零超时实现同样绿（#127 的假绿正是如此），要用只听 signal、自己永不 settle 的 fetch | #127：单次调用实测阻塞 60,222 ms；同一输入跑出 404 / 502 两种错误类，卡死过一次 main 部署 | `registry-defects.test.ts`（AbortSignal + 上界断言）+ `mcp-errors.test.ts`（真 hang，2s 内红） |
 | 11 | **分页参数叫 `per_page`，`limit` 只是别名**：ko-api 的 list route 经共享 helper `pageSizeParam()`（`src/lib/pagination.ts`）读页大小——非空 `per_page` 优先，否则读 `limit`；`/search`、`/filings/:cik` 只读 `limit`。每条路由实际读哪些参数以 `server/src/registry/upstream/contract.json` 为准（pin 扫描器会解析 `pageSizeParam()`，见 `scripts/upstream-pin-lib.mjs` 的 `PARAM_HELPERS`）。历史教训：别名上线前发 `limit` = 没人读 = 静默回落到路由自己的 50 行默认值，而表格照样渲染满，从输出里看不出来。规矩三条：**一律 `per_page: limit`**；调分页路由必须发行数参数（没有“不传就好”）；渲染层不准再加第二道硬编码截断（`truncate(rows, 50)` 就是 #126 的第二层，参数修好了它还在吃）。一页拉满要在输出里说出来；有 `meta.total_count` 时说真实范围（`koFetch(..., { envelope: true })` + `src/paging.ts`），没有时只说边界 | internal#126（`limit:5` 渲染 50 行；`get_ftd_data{GME,days:1825}` 渲染 50/1025 行且零提示） | `src/registry/tools.ts` 门 (b)(d)(e)（参数层）+ `__tests__/paging.test.ts`（渲染层）|
-| 12 | **套餐限制是 isError，不是"没有数据"；粒度必须写明**：ko-api 软墙（Free / 无 key）会把 200 响应里的序列清空或截断（`meta.softwall`），或对超窗参数回 403 `PLAN_REQUIRED` / `SIGNIN_REQUIRED`。tool 读 envelope：被套餐清空的结果返回 `isError:true` 并点名套餐；无 key 的答案**永远不提示打不开的 `page=2`**；默认参数不得超出调用方套餐（`get_stock_activity` 不传 `quarters` 让上游注入）。聚合行必须写明粒度（内部人按人按日 vs 逐笔 Form 4；持仓 filer vs family、证券 vs 发行人合并），数值精确值放 `structuredContent`（声明 `outputSchema` 的 tool 每条成功路径都必须给，SDK 会拒） | final-eval 2026-09-26（EVAL_CODEX_TECH #1/#2/#4/#6：年报被说成"无数据"、4 笔交易渲染成 1 笔 SELL、GOOG 发行人合计冒充单一证券） | `structured.test.ts` + `structured-all.test.ts`（真 McpServer+Client，24 个 tool 满/空两态逐一校验 outputSchema）+ `paging.test.ts` + 黄金契约 |
+| 12 | **套餐限制是 isError，不是"没有数据"；粒度必须写明**：ko-api 软墙（Free / 无 key）会把 200 响应里的序列清空或截断（`meta.softwall`），或对超窗参数回 403 `PLAN_REQUIRED` / `SIGNIN_REQUIRED`。tool 读 envelope：被套餐清空的结果返回 `isError:true` 并点名套餐；无 key 的答案**永远不提示打不开的 `page=2`**；默认参数不得超出调用方套餐（`get_stock_activity` 不传 `quarters` 让上游注入）。聚合行必须写明粒度（内部人按人按日 vs 逐笔 Form 4；持仓 filer vs family、证券 vs 发行人合并），数值精确值放 `structuredContent`（声明 `outputSchema` 的 tool 每条成功路径都必须给，SDK 会拒） | final-eval 2026-09-26（EVAL_CODEX_TECH #1/#2/#4/#6：年报被说成"无数据"、4 笔交易渲染成 1 笔 SELL、GOOG 发行人合计冒充单一证券） | `structured.test.ts` + `structured-all.test.ts`（真 McpServer+Client，26 个 tool 满/空两态逐一校验 outputSchema）+ `paging.test.ts` + 黄金契约 |
 | 13 | **null 是"未知"，永远不是 0**：ko-api 对不可比（not_comparable / unknown）季度把份额/金额流量置 null，`changes` 整体也可能为 null。渲染层**禁止 `fmt*(num(x))`** 处理可能为 null 的流量字段（`num(null)` = 0）——用 `flowShares/flowMoney`（null → "unknown"）；structuredContent 原样保留 null。上游的状态字段（`comparability` / `comparability_reason` / `split_factor` / `null_reason`）必须透传，否则拆股、首次申报的季度在 MCP 里与正常季度无法区分 | 13F 拆股/首次申报防御上线后 MCP 丢状态、legacy 文本 `num(null)` 渲染成 0 | `activity-comparability.test.ts`（SPCX/KLAC/IVV 实录 + not_comparable/changes=null） |
+| 14 | **互斥输入的探针按腿覆盖**：主探针和 variants 的输入并集必须覆盖 schema；每次调用只允许声明的参数，每条上游腿所有调用的参数并集必须等于声明。金额为 canonical Decimal 字符串时不得转浮点。 | USAspending 窗口/视图互斥 | `registry-behaviour.test.ts` + `gov.test.ts` |
 
 ## 4. 任务怎么做（新 tool 五步）
 
@@ -58,14 +59,14 @@ Claude Code 用户可用 `/new-tool` skill（同一内容的快捷入口）。
 
 1. **核对 ko-api 路径**：tool 要代理的 `/api/v1/...` 在 ko-api 存在且 live——**先 curl 一次**（`https://api.ko.io/api/v1/... ?demo=true` 或带 key）。路径不对/没上线，别写 tool（铁律 #3）。
 2. **写 tool**：在 `server/src/tools/<area>.ts` 加 `defineTool(server, name, desc, schema, handler, { outputSchema? })`（`src/tool-def.ts`：统一带 readOnly/openWorld annotations）。金额/份额字段先 `num()` 再 `fmt*`（铁律 #2）；列表响应做 `Array.isArray()` 双形态分支（铁律 #5）。
-3. **登记注册表 + 24-count 契约**：把新 tool 加进 `server/src/registry/tools.ts` 的 `TOOL_REGISTRY`（上游 route / 参数 / plan）和 `src/__tests__/registry/probes.ts` 的 `PROBES`，再加进 `tools-proxy.test.ts` 的 `EXPECTED_TOOLS` 并改数字断言（铁律 #1）。注册表的门会告诉你缺什么：**tool 发出而上游 handler 不读的参数 = 红门**（不是注释）。
+3. **登记注册表 + 26-count 契约**：把新 tool 加进 `server/src/registry/tools.ts` 的 `TOOL_REGISTRY`（上游 route / 参数 / plan）和 `src/__tests__/registry/probes.ts` 的 `PROBES`，再加进 `tools-proxy.test.ts` 的 `EXPECTED_TOOLS` 并改数字断言（铁律 #1）。注册表的门会告诉你缺什么：**tool 发出而上游 handler 不读的参数 = 红门**（不是注释）。
 4. **写单测**：`vi.mock("../ko-fetch.js")`，断言代理路径 + 参数 + 渲染（`crypto.test.ts` / `stocks.test.ts` 是模板）。禁触网（铁律 #6）。
-5. **本地门 + 部署后实测**：`server` 目录 `npm run type-check && npm test` 全绿 → 新 tool 进 `src/contract/cases.mjs` 三个用例（normal/empty/error）并 `npm run golden:capture` → `npm run golden:gate` 绿 → merge `server/**` → deploy-server.yml 先跑黄金契约门再部署，最后 `tools/list>=24` 健康门 → 对 live mcp.ko.io 打一次该 tool（铁律 #7）。
+5. **本地门 + 部署后实测**：`server` 目录 `npm run type-check && npm test` 全绿 → 新 tool 进 `src/contract/cases.mjs` 三个用例（normal/empty/error）并 `npm run golden:capture` → `npm run golden:gate` 绿 → merge `server/**` → deploy-server.yml 先跑黄金契约门再部署，最后 `tools/list>=26` 健康门 → 对 live mcp.ko.io 打一次该 tool（铁律 #7）。
 
 ## 5. Definition of Done（全部勾完才算完成）
 
 - [ ] 代码 + 测试同一个 PR；改动包各自的门全绿（`server`: `npm run type-check` + `npm test`；`python`: `ruff`+`mypy`+`pytest`；`typescript/*`: `npm run build`+`npm test`）
-- [ ] 新/改/删 tool：`src/registry/tools.ts` 注册表 + `probes.ts` 探针 + `tools-proxy.test.ts` 的 24-count 契约全部同步（铁律 #1）
+- [ ] 新/改/删 tool：`src/registry/tools.ts` 注册表 + `probes.ts` 探针 + `tools-proxy.test.ts` 的 26-count 契约全部同步（铁律 #1）
 - [ ] 触碰上游契约时：`npm test -- src/__tests__/registry` 全绿；改了 ko-api 侧 route/参数则 `KO_API_REPO=../ko-api npm run registry:refresh-pin` 重钉并在 PR 里贴 diff
 - [ ] 黄金契约：新/改 tool 进 `src/contract/cases.mjs` 并重钉 fixture；已知缺陷带 `knownDefect` probe 或写明排除理由（铁律 #9）
 - [ ] 新/改 tool 的 ko-api 路径已 curl 实测（铁律 #3/#7），证据贴 PR
@@ -87,7 +88,7 @@ cd typescript/mcp-proxy && npm ci && npm run build && npm test
 curl -s https://mcp.ko.io/health
 curl -s "https://api.ko.io/api/v1/<tool-backing-path>?demo=true" | head   # tool 路径必须 curl 过
 
-# MCP tools/list（应 >= 24）
+# MCP tools/list（应 >= 26）
 curl -s -X POST https://mcp.ko.io/mcp -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python3 -m json.tool | grep -c '"name"'
 ```
@@ -100,11 +101,11 @@ curl -s -X POST https://mcp.ko.io/mcp -H 'content-type: application/json' \
 | [docs/README.md](docs/README.md) | 文档索引与归档位置 | 查文档从这里开始 |
 | `CLAUDE.md` | 指向本文件的薄壳 | 别往里加规则 |
 | `server/README.md` | worker / tool 说明 | 新 tool 同步 |
-| `README.md`（根） | 面向用户的门面：24 tool 清单 / 数据表 / 套餐表 | 数字改动要同步 |
+| `README.md`（根） | 面向用户的门面：26 tool 清单 / 数据表 / 套餐表 | 数字改动要同步 |
 | `llms.txt` | 机器可读的 tool + REST 端点地图 | 新 tool 同步 |
 | `docs/clients/*.md`（7 份） | 各 MCP 客户端接入配置 | server 名一律 `ko-sec-data` |
 | `cookbook/*.py`（10 个） | 可直接跑的 SDK 示例（01–09 免 key，10 需 Pro） | 改 SDK 要真跑一遍 |
-| `server/src/registry/tools.ts` | 24 个 tool → ko-api route/参数/plan 的唯一声明 | 新/改 tool 必改；异常表只许缩小 |
+| `server/src/registry/tools.ts` | 26 个 tool → ko-api route/参数/plan 的唯一声明 | 新/改 tool 必改；异常表只许缩小 |
 | `server/src/registry/upstream/` | 按 blob SHA 钉住的 ko-api 快照（`pin.json` 是钉子） | 只能由 `registry:refresh-pin` 生成，不手改 |
 | `server/docs/GOLDEN_CONTRACT.md` | 黄金契约门：钉什么/不钉什么、两条防陈旧性质、已知缺陷注解、重录规程 | 改 tool 渲染前先读 §7 |
 | `.github/workflows/deploy-server.yml` | server 部署：部署前黄金契约门 → 捕获 rollback 目标 → upload → deploy → 健康门 + 自动 rollback | 逻辑在 `server/scripts/deploy-guard.mjs`，YAML 只是调用 |

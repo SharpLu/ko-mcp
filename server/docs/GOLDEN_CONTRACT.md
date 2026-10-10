@@ -1,6 +1,6 @@
 # The golden contract gate
 
-> Counterpart of ko-api's 488-case gate, for the 24 MCP tools.
+> Counterpart of ko-api's 488-case gate, for the 26 MCP tools.
 > Code: `src/contract/` (harness + manifest + fixtures), `scripts/golden-gate.mjs` (blocking),
 > `scripts/golden-capture.mjs` (re-pin), `src/__tests__/contract/golden.test.ts` (offline half).
 
@@ -9,11 +9,11 @@
 Before this gate, the deploy workflow verified exactly two things after shipping:
 `/health` answers, and `tools/list` returns at least 24 names. Both are satisfied
 by a Worker that has forgotten how to render a single row. ko-api owns the JSON
-these 24 tools read; a renamed field upstream turns every table into a header
+these 26 tools read; a renamed field upstream turns every table into a header
 with no body, and nothing in this repo would have noticed. That is the shape of
 two mart freezes this org has already paid for (2026-06, 2026-07).
 
-The gate replays 76 recorded tool calls against the Worker **built from the
+The gate replays 84 tool calls (76 existing captures and 8 offline government-contract bootstrap captures) against the Worker **built from the
 commit under test** and compares the **contract**:
 
 | pinned | not pinned |
@@ -102,9 +102,9 @@ skeleton records which lines exist and in what order.
 
 | | |
 |---|---|
-| tools covered | 24 / 24 (`tools/list` returns 24; the deploy check asserts `>= 24`) |
-| fixture files | 24, one per tool, in `src/contract/golden/` |
-| replayed cases | 76 |
+| tools covered | 26 / 26 (`tools/list` returns 26; the deploy check asserts `>= 26`) |
+| fixture files | 26, one per tool, in `src/contract/golden/` |
+| replayed cases | 84 |
 | excluded cases | 2, each with a written reason (below) |
 | annotated known defects | 1 case: `list_institutions.empty` (see §4) |
 | offline tests added | 37 (suite total 77 -> 114) |
@@ -338,3 +338,31 @@ committed.
   yet. That is internal#127's file.
 - **ko-api's own behaviour.** ko-api has its own 488-case gate for that. This
   one watches the seam between the two.
+
+## Government contracts bootstrap (1.3.0)
+
+The two new tools have normal, empty, invalid-input, and keyless-history-denied cases.
+Their initial fixtures are machine captures through a real MCP Server/Client pair with synthetic API responses.
+They are explicitly **offline contract evidence**, not production captures or liveness evidence.
+Existing fixtures are unchanged. No fixture is edited by hand.
+
+```bash
+KO_CAPTURE_GOV_FIXTURES=1 npm test -- src/__tests__/contract/gov-golden.test.mjs --maxWorkers=1 --minWorkers=1
+npm test -- src/__tests__/contract --maxWorkers=1 --minWorkers=1
+```
+
+Capture probes each case twice, checks strict contract equality and rejects raw values in skeleton lines.
+Ordinary test runs replay the synthetic captures in `src/contract/gov-offline/` without writing them.
+Initial capture also seeds `src/contract/golden/`; it never overwrites a subsequent live capture.
+This separation lets the offline regression suite keep passing after live softwall metadata replaces bootstrap fixtures.
+Before merging, after the API is live, use the normal `golden:capture -- --tool get_gov_contracts --tool search_gov_contracts`
+workflow and run the full `golden:gate`. The bootstrap cannot replace that gate.
+Confirm a populated normal case and a successful filtered empty case against the published corpus before capture.
+Changes to those arguments must retain the intended case semantics.
+The deploy health guard requires at least 26 tools and both government tool names.
+
+The transactions contract has `meta.identity = {ticker,cik,company_name,issuer_tickers}`,
+plus `meta.scope`, `meta.refreshed_at`, `meta.caveats`, window fields and `meta.provisional_from`, including empty windows.
+For `award_id`, only the transactions leg runs. Company totals and series are absent.
+Award context itself may be null during a mixed-generation publication; actions remain available.
+Award coverage amounts may be null for Free callers and are labeled "since FY2015 (coverage)".

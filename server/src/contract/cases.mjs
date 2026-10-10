@@ -97,6 +97,24 @@ const DEFECT_EMPTY_TABLE = {
  */
 export const CASES = [
   {
+    tool: 'get_gov_contracts',
+    cases: [
+      { name: 'normal', arguments: { ticker: 'BA' }, why: 'Company summary with exact decimal obligations and issuer identity; fixture-backed until API deployment.' },
+      { name: 'empty', arguments: { ticker: 'BA', agency: '9999' }, why: 'Successful no-linked-actions response retains identity and zero totals; a non-matching agency filter.' },
+      { name: 'error', arguments: { ticker: 'BA', period: '1Q', fiscal_year: 2026 }, why: 'Mutually exclusive window forms are rejected before any upstream request.' },
+      { name: 'history_denied', arguments: { ticker: 'BA', period: 'ALL' }, why: 'Keyless history is a PLAN_REQUIRED 403, not an absence of contracts.' },
+    ],
+  },
+  {
+    tool: 'search_gov_contracts',
+    cases: [
+      { name: 'normal', arguments: { ticker: 'BA' }, why: 'Attributed cross-company actions with exact signed obligation strings; fixture-backed until API deployment.' },
+      { name: 'empty', arguments: { agency: '9999' }, why: 'Successful empty filtered actions response is not proof of zero contracts.' },
+      { name: 'error', arguments: { view: 'companies', recipient: 'BOEING' }, why: 'Action-only recipient filter cannot silently reach a company leaderboard.' },
+      { name: 'history_denied', arguments: { ticker: 'BA', period: 'ALL' }, why: 'Keyless history is a PLAN_REQUIRED 403, not an absence of contracts.' },
+    ],
+  },
+  {
     tool: 'get_institution_holdings',
     cases: [
       { name: 'normal', arguments: { institution: BERKSHIRE_CIK, limit: 5 },

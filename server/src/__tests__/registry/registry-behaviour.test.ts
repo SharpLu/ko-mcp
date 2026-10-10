@@ -84,8 +84,8 @@ describe('registry gate (a): tool completeness', () => {
     ).toEqual(registered);
   });
 
-  it('declares 24 tools, the number the deploy health gate asserts', () => {
-    expect(TOOL_REGISTRY.length).toBe(24);
+  it('declares 26 tools, the number the deploy health gate asserts', () => {
+    expect(TOOL_REGISTRY.length).toBe(26);
   });
 
   it('tool names are unique', () => {
@@ -98,7 +98,7 @@ describe('registry gate (a): tool completeness', () => {
       const probe = PROBES[spec.tool];
       if (!probe) { gaps.push(`${spec.tool}: no probe`); continue; }
       for (const input of spec.inputs) {
-        if (!(input in probe)) gaps.push(`${spec.tool}: probe does not set input "${input}"`);
+        if (![probe, ...(PROBE_VARIANTS[spec.tool] ?? [])].some(p => input in p)) gaps.push(`${spec.tool}: probe does not set input "${input}"`);
       }
     }
     expect(gaps, `An unexercised input is an unchecked param:\n${gaps.join('\n')}`).toEqual([]);
@@ -157,11 +157,15 @@ describe('registry gate (b): declaration matches behaviour', () => {
       const calls = await observe(spec.tool);
       const drift: string[] = [];
       for (const leg of spec.upstreamRoutes) {
-        const call = calls.find(
+        const matching = calls.filter(
           (c) => c.transport === leg.transport && templateToRegExp(leg.path).test(c.path),
         );
-        if (!call) continue; // reported by the previous test
-        const sent = [...call.params].sort();
+        if (!matching.length) continue; // reported by the previous test
+        for (const call of matching) {
+          const extra = call.params.filter(p => !leg.params.includes(p));
+          if (extra.length) drift.push(`${leg.path}: undeclared parameters [${extra}]`);
+        }
+        const sent = [...new Set(matching.flatMap(c => c.params))].sort();
         const declared = [...leg.params].sort();
         if (JSON.stringify(sent) !== JSON.stringify(declared)) {
           drift.push(`${leg.path}: wire [${sent}] vs registry [${declared}]`);

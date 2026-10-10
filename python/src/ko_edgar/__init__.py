@@ -16,6 +16,7 @@ Docs: https://ko.io/docs · Free API key: https://ko.io/console
 """
 
 from ._version import __version__
+from .aresources import AsyncGovContracts
 from .client import AsyncKoClient, KoClient
 from .errors import (
     AuthenticationError,
@@ -27,6 +28,7 @@ from .errors import (
     ServerError,
 )
 from .pagination import paginate
+from .resources import GovContracts
 from .result import ApiResult
 
 __all__ = [
@@ -34,6 +36,8 @@ __all__ = [
     "KoClient",
     "AsyncKoClient",
     "ApiResult",
+    "GovContracts",
+    "AsyncGovContracts",
     "paginate",
     "KoError",
     "AuthenticationError",

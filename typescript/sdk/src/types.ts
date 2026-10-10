@@ -168,3 +168,53 @@ export interface FilingsListOptions {
 export interface FilingShareOptions {
   file?: string;
 }
+
+/** Exactly the API's signed two-decimal USD string; never convert to Number for arithmetic. */
+export type GovMoney = string;
+export interface GovWindowOptions {
+  period?: '1Q' | '2Q' | '1Y' | 'ALL'; fiscalYear?: number; from?: string; to?: string;
+  agency?: string; subAgency?: string;
+}
+export interface GovTransactionsOptions extends GovWindowOptions, PageOptions {
+  awardId?: string; awardType?: string; minAmount?: string; sort?: 'date' | 'amount' | '-amount';
+}
+export interface GovSearchOptions extends GovWindowOptions, PageOptions {
+  ticker?: string; recipient?: string; naics?: string; awardType?: string; minAmount?: string;
+  sort?: 'date' | 'amount' | '-amount'; facets?: 'agency';
+}
+export interface GovCompaniesOptions extends GovWindowOptions, PageOptions {
+  ticker?: string; sort?: 'net' | 'gross' | 'actions';
+}
+export interface GovIdentity { ticker: string; cik: string; company_name: string; issuer_tickers: string[] }
+export interface GovTotals { gross_obligated: GovMoney; deobligated: GovMoney; net_obligated: GovMoney; actions: number; awards: number; agencies: number }
+export interface GovMonth extends Omit<GovTotals, 'agencies'> { month: string; provisional: boolean; window_clipped: boolean }
+export interface GovSummary extends GovIdentity {
+  totals: GovTotals; monthly: GovMonth[];
+  agencies: { code: string; name: string; gross_obligated: GovMoney; net_obligated: GovMoney; actions: number; gross_share: number | null }[];
+  link_tiers: { link_tier: 'A' | 'B'; actions: number }[];
+}
+export interface GovAction {
+  transaction_id: string; award_id: string; piid: string; modification_number: string; action_date: string;
+  obligated_amount: GovMoney; award_type: 'A' | 'B' | 'C' | 'D';
+  agency: { code: string; name: string; sub_code: string; sub_name: string };
+  recipient: { name: string; uei: string; parent_name: string; parent_uei: string };
+  naics: { code: string; description: string }; psc: { code: string; description: string };
+  place_of_performance: { country: string; state: string; city: string };
+  description: string; link_tier: 'A' | 'B'; provisional: boolean; source_url: string;
+}
+export interface GovFeedAction extends GovAction { ticker: string | null; cik: string; company_name: string | null }
+export interface GovCompany extends Omit<GovTotals, 'agencies'> { rank: number; ticker: string | null; cik: string; company_name: string | null }
+export interface GovAward {
+  award_id: string; piid: string; award_type: string; agency: GovAction['agency']; recipient: GovAction['recipient'];
+  description: string; latest_action_date: string; coverage_actions: number | null; coverage_net_obligated: GovMoney | null;
+  coverage_label: 'since FY2015 (coverage)'; requires_plan: string | null; source_url: string;
+}
+export interface GovMeta extends Meta {
+  window_start: string; window_end: string; window_clamped: boolean; date_basis: 'action_date'; period: string | null;
+  provisional_from: string; refreshed_at: string | null; caveats: string[];
+}
+export interface GovTransactionsMeta extends GovMeta {
+  identity: GovIdentity; scope: 'company' | 'award'; award: GovAward | null;
+  match_status: 'has_actions' | 'none_in_window' | 'no_attributed_actions';
+}
+export interface GovCoverage { month: string; transactions: number; matched_transactions: number; transaction_match_rate: number | null; matched_absolute_share: number | null; tier_a_absolute_share: number | null; tier_b_absolute_share: number | null; provisional: boolean }

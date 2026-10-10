@@ -525,3 +525,17 @@ export const CRYPTO_HOLDER_OUTPUT = {
   })),
   plan_limit: PLAN_LIMIT,
 };
+
+// USAspending: scoped issuer/award output. No floating-point amount coercion.
+import { GovIdentity, GovTotals, GovMonth, GovAgency, GovTier, GovAction, GovFeedAction, GovCompany, GovAward, GovWindow } from './gov-schemas.js';
+export const GOV_CONTRACTS_OUTPUT = {
+  scope: z.enum(['company', 'award']), ...GovIdentity.shape, window: GovWindow,
+  match_status: z.enum(['has_actions', 'none_in_window', 'no_attributed_actions']),
+  totals: GovTotals.optional(), monthly: z.array(GovMonth).optional(), agencies: z.array(GovAgency).optional(), link_tiers: z.array(GovTier).optional(),
+  actions: z.array(GovAction).optional(), award: GovAward.nullable().optional(), provisional_from: z.string(), refreshed_at: z.string().nullable(),
+  caveats: z.array(z.string()), paging: PAGING.optional(), plan_limit: PLAN_LIMIT,
+};
+export const GOV_SEARCH_OUTPUT = {
+  view: z.enum(['actions', 'companies']), window: GovWindow, actions: z.array(GovFeedAction).optional(), companies: z.array(GovCompany).optional(),
+  universe: z.literal('listed_companies_plus_reviewed_links'), caveats: z.array(z.string()), paging: PAGING, plan_limit: PLAN_LIMIT,
+};

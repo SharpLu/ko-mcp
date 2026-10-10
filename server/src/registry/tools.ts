@@ -89,6 +89,138 @@ export interface ToolSpec {
 export const TRANSPORT_PARAMS: readonly string[] = ['demo', 'api_key', 'key'];
 
 export const TOOL_REGISTRY: readonly ToolSpec[] = [
+{
+  tool: 'get_gov_contracts',
+  file: 'src/tools/gov.ts',
+  inputs: [
+    'ticker',
+    'period',
+    'fiscal_year',
+    'from',
+    'to',
+    'agency',
+    'sub_agency',
+    'include',
+    'award_id',
+    'sort',
+    'page',
+    'limit'
+  ],
+  paginationInputs: [
+    'page',
+    'limit'
+  ],
+  plan: 'free',
+  planReason: 'apiKey; no free blockedPrefix',
+  upstreamRoutes: [
+    {
+      path: '/api/v1/gov-contracts/:ticker',
+      method: 'GET',
+      params: [
+        'period',
+        'fiscal_year',
+        'from',
+        'to',
+        'agency',
+        'sub_agency'
+      ],
+      transport: 'koFetch',
+      role: 'primary',
+      conditional: 'award_id absent'
+    },
+    {
+      path: '/api/v1/gov-contracts/:ticker/transactions',
+      method: 'GET',
+      params: [
+        'period',
+        'fiscal_year',
+        'from',
+        'to',
+        'agency',
+        'sub_agency',
+        'award_id',
+        'sort',
+        'page',
+        'per_page'
+      ],
+      transport: 'koFetch',
+      role: 'primary',
+      conditional: 'include=actions or award_id'
+    }
+  ]
+},
+{
+  tool: 'search_gov_contracts',
+  file: 'src/tools/gov.ts',
+  inputs: [
+    'view',
+    'ticker',
+    'period',
+    'fiscal_year',
+    'from',
+    'to',
+    'agency',
+    'sub_agency',
+    'recipient',
+    'naics',
+    'award_type',
+    'min_amount',
+    'sort_actions',
+    'sort_companies',
+    'page',
+    'limit'
+  ],
+  paginationInputs: [
+    'page',
+    'limit'
+  ],
+  plan: 'free',
+  planReason: 'apiKey; no free blockedPrefix',
+  upstreamRoutes: [
+    {
+      path: '/api/v1/gov-contracts',
+      method: 'GET',
+      params: [
+        'ticker',
+        'period',
+        'fiscal_year',
+        'from',
+        'to',
+        'agency',
+        'sub_agency',
+        'recipient',
+        'naics',
+        'award_type',
+        'min_amount',
+        'sort',
+        'page',
+        'per_page'
+      ],
+      transport: 'koFetch',
+      role: 'primary',
+      conditional: 'view=actions'
+    },
+    {
+      path: '/api/v1/gov-contracts/companies',
+      method: 'GET',
+      params: [
+        'ticker',
+        'period',
+        'fiscal_year',
+        'from',
+        'to',
+        'agency',
+        'sub_agency',
+        'sort',
+        'page',
+        'per_page'
+      ],
+      transport: 'koFetch',
+      role: 'primary',
+      conditional: 'view=companies'
+    }
+  ]
+},
   // ── institutions ────────────────────────────────────────────────────────
   {
     tool: 'get_institution_holdings',

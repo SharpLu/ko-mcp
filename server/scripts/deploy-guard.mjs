@@ -39,6 +39,7 @@ import {
   evaluateGolden,
   evaluateHealth,
   evaluateTools,
+  toolNamesFromBody,
   formatCommand,
   githubOutputEntry,
   parseUploadedVersionId,
@@ -137,7 +138,7 @@ const TOOLS_RPC = {
   body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
 };
 
-async function runChecks({ label, attempts = ATTEMPTS, delayMs = RETRY_DELAY_MS }) {
+async function runChecks({ label, attempts = ATTEMPTS, delayMs = RETRY_DELAY_MS, toolContract }) {
   let checks = [];
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const health = await httpText(`${MCP_BASE}/health`);
@@ -148,7 +149,7 @@ async function runChecks({ label, attempts = ATTEMPTS, delayMs = RETRY_DELAY_MS 
     const tools = await httpText(`${MCP_BASE}/mcp`, TOOLS_RPC);
     const toolsCheck = tools.error
       ? { name: "tools_list", ok: false, examined: 0, count: 0, detail: `request failed: ${tools.error}` }
-      : evaluateTools(tools.status, tools.body);
+      : evaluateTools(tools.status, tools.body, toolContract);
 
     checks = [healthCheck, toolsCheck];
     if (checks.every((c) => c.ok)) break;
@@ -248,6 +249,12 @@ async function cmdCapture() {
   log("  the failed version is never deleted; it stays in `npx wrangler versions list` for forensics");
   log("=".repeat(72));
 
+  const priorTools = await httpText(`${MCP_BASE}/mcp`, TOOLS_RPC);
+  const priorCheck = evaluateTools(priorTools.status, priorTools.body, { minTools: 24, requiredTools: [] });
+  // A broken current release must not prevent a repair deployment. Preserve the
+  // version target, but disclose that rollback can only use the legacy baseline.
+  if (!priorCheck.ok) log('::warning::could not capture healthy previous tool inventory; rollback uses the 24-tool baseline');
+  setOutput('previous_tools', JSON.stringify(priorCheck.ok ? toolNamesFromBody(priorTools.body) : []));
   setOutput("previous_version_id", serving.versionId);
   setOutput("rollback_available", "true");
   return 0;
@@ -289,6 +296,8 @@ async function cmdVerify() {
   const deployed = arg("deployed");
   const previous = arg("previous");
 
+  const previousNames = JSON.parse(arg("previous-tools", "[]") || "[]");
+  if (!Array.isArray(previousNames) || !previousNames.every(n => typeof n === 'string')) throw new DeployGuardError('Invalid previous tool contract');
   const { summary } = await runChecks({ label: "verify" });
   if (summary.ok) {
     log("post-deploy checks passed; no rollback needed");
@@ -323,7 +332,10 @@ async function cmdVerify() {
   const rb = await wrangler(argv.slice(1), { timeoutMs: ROLLBACK_TIMEOUT_MS });
 
   // A rollback is not a rollback until the rolled-back Worker is verified.
-  const after = await runChecks({ label: "verify-rollback", attempts: ATTEMPTS + 1, delayMs: RETRY_DELAY_MS });
+  // The previous release may predate these tools. Verify its captured names,
+  // rather than imposing the failed new release's additions on the rollback.
+  const after = await runChecks({ label: "verify-rollback", attempts: ATTEMPTS + 1, delayMs: RETRY_DELAY_MS,
+    toolContract: { minTools: Math.max(24, previousNames.length), requiredTools: previousNames } });
   const rolledBackOk = rb.code === 0 && after.summary.ok;
 
   const excerpt = [

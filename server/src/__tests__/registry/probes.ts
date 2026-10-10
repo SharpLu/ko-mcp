@@ -21,10 +21,13 @@ import { registerForm144Tools } from '../../tools/form144.js';
 import { registerFilingTools } from '../../tools/filings.js';
 import { registerFinancialTools } from '../../tools/financials.js';
 import { registerMacroTools } from '../../tools/macro.js';
+import { registerGovTools } from '../../tools/gov.js';
 import { registerCryptoTools } from '../../tools/crypto.js';
 import { makeFakeServer, type CapturedTool } from '../helpers.js';
 
 export const PROBES: Record<string, Record<string, unknown>> = {
+  get_gov_contracts: { ticker: 'BA', period: '1Y', agency: '097', sub_agency: '2100', include: 'actions', sort: 'amount', page: 2, limit: 25 },
+  search_gov_contracts: { view: 'actions', ticker: 'BA', agency: '097', sub_agency: '2100', period: '1Y', recipient: 'BOEING', naics: '3364', award_type: 'D', min_amount: '1000000', sort_actions: 'amount', page: 2, limit: 25 },
   get_institution_holdings: { institution: 'Berkshire Hathaway', ticker: 'GOOG', entity: 'filer', page: 2, limit: 25 },
   list_institutions: { search: 'Baupost', page: 2, limit: 25 },
   get_stock_profile: { ticker: 'AAPL' },
@@ -61,11 +64,22 @@ export const PROBES: Record<string, Record<string, unknown>> = {
  * Extra argument sets for tools whose legs are MUTUALLY EXCLUSIVE, so no single
  * probe can reach them all. The behaviour gate runs the main probe AND every
  * variant and judges the union of the calls: each declared leg must be seen,
- * nothing undeclared may be sent. The main probe still has to set every input
- * (the coverage assertion reads PROBES only); a variant exists solely to take
- * the other branch.
+ * nothing undeclared may be sent. The union covers all inputs and, separately for each upstream leg, all wire
+ * parameters. Every individual call must remain a subset of its declaration.
  */
 export const PROBE_VARIANTS: Record<string, Array<Record<string, unknown>>> = {
+  get_gov_contracts: [
+    { ticker: 'BA', fiscal_year: 2026, include: 'actions', page: 1, limit: 50 },
+    { ticker: 'BA', from: '2025-10-01', to: '2026-03-31', include: 'actions', page: 1, limit: 50 },
+    { ticker: 'BA', award_id: 'CONT_AWD_X', page: 1, limit: 50 },
+  ],
+  search_gov_contracts: [
+    { view: 'actions', fiscal_year: 2026, page: 1, limit: 50 },
+    { view: 'actions', from: '2025-10-01', to: '2026-03-31', page: 1, limit: 50 },
+    { view: 'companies', fiscal_year: 2026, agency: '097', sort_companies: 'gross', page: 2, limit: 25 },
+    { view: 'companies', ticker: 'BA', sub_agency: '2100', period: '1Y', page: 1, limit: 50 },
+    { view: 'companies', from: '2025-10-01', to: '2026-03-31', page: 1, limit: 50 },
+  ],
   // executive_cik present -> /insider/:cik/transactions (main probe);
   // absent -> /insider-trades (this variant).
   get_insider_trades: [{ ticker: 'AAPL', period: '1Y', page: 2, limit: 25 }],
@@ -100,6 +114,7 @@ export function registerAllTools(): Map<string, CapturedTool> {
   registerFinancialTools(server, config);
   registerMacroTools(server, config);
   registerCryptoTools(server, config);
+  registerGovTools(server, config);
   return tools;
 }
 

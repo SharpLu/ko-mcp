@@ -186,17 +186,25 @@ describe("post-deploy checks", () => {
   });
 
   const toolsBody = (n) =>
-    JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: Array.from({ length: n }, (_, i) => ({ name: `t${i}` })) } });
+    JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: Array.from({ length: n }, (_, i) => ({ name: ['get_gov_contracts', 'search_gov_contracts'][i] ?? `t${i}` })) } });
 
-  it("tools/list needs at least 24 and reports the count it examined", () => {
-    const pass = evaluateTools(200, toolsBody(24));
+  it("rejects a full tool list missing either required government tool", () => {
+    for (const name of ['get_gov_contracts', 'search_gov_contracts']) {
+      const body = toolsBody(26).replace(name, 'unrelated_tool');
+      expect(evaluateTools(200, body).ok).toBe(false);
+      expect(evaluateTools(200, body).detail).toContain(name);
+    }
+  });
+
+  it("tools/list needs at least 26 and reports the count it examined", () => {
+    const pass = evaluateTools(200, toolsBody(26));
     expect(pass.ok).toBe(true);
     expect(pass.count).toBe(MIN_TOOLS);
-    expect(pass.examined).toBe(24);
+    expect(pass.examined).toBe(26);
 
-    const fail = evaluateTools(200, toolsBody(23));
+    const fail = evaluateTools(200, toolsBody(25));
     expect(fail.ok).toBe(false);
-    expect(fail.detail).toContain("23 tools");
+    expect(fail.detail).toContain("25 tools");
   });
 
   it("an empty tool list is a FAIL, not a pass -- a gate that examined nothing is not a pass", () => {
@@ -206,8 +214,8 @@ describe("post-deploy checks", () => {
   });
 
   it("reads SSE-framed Streamable HTTP responses", () => {
-    const sse = `event: message\ndata: ${toolsBody(24)}\n\n`;
-    expect(evaluateTools(200, sse).count).toBe(24);
+    const sse = `event: message\ndata: ${toolsBody(26)}\n\n`;
+    expect(evaluateTools(200, sse).count).toBe(26);
   });
 
   it("fails on a JSON-RPC error body or garbage instead of throwing out of the job", () => {
@@ -287,7 +295,7 @@ describe("Discord message is bounded at 2000 chars and says so", () => {
       outcome: "rolled_back",
       rolledBackTo: V1,
       failedCheck: "tools_list",
-      checkDetail: "FAIL tools_list: 12 tools (need >= 24)",
+      checkDetail: "FAIL tools_list: 12 tools (need >= 26)",
       logExcerpt: "L".repeat(100_000),
       runUrl: "https://github.com/SharpLu/ko-mcp/actions/runs/1",
       sha: "abcdef1234567890",
@@ -420,7 +428,9 @@ describe("deploy-server.yml rollback wiring", () => {
     const deploy = WORKFLOW.indexOf("deploy-guard.mjs deploy");
     const verify = WORKFLOW.indexOf("deploy-guard.mjs verify");
     expect(deploy).toBeLessThan(verify);
-    expect(WORKFLOW).toMatch(/deploy-guard\.mjs verify[\s\S]{0,300}--previous \$\{\{ steps\.capture\.outputs\.previous_version_id \}\}/);
+    expect(WORKFLOW).toContain('PREVIOUS_TOOLS: ${{ steps.capture.outputs.previous_tools }}');
+    expect(WORKFLOW).toContain('--previous-tools "$PREVIOUS_TOOLS"');
+    expect(WORKFLOW).toMatch(/deploy-guard\.mjs verify[\s\S]{0,300}--previous "\$\{\{ steps\.capture\.outputs\.previous_version_id \}\}"/);
   });
 
   it("gives the verify step the Discord webhook, so the rollback notice is sent from where it happens", () => {
