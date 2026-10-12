@@ -647,7 +647,8 @@ export const EU_MARKETS_OUTPUT = {
     country: z.string(),
     datasets: z.array(z.object({
       dataset: EU_DATASET,
-      status: EU_STATUS,
+      status: z.enum(["live", "pending", "not_offered", "unknown"])
+        .describe("unknown = ko-api sent a status this tool does not recognise (reported, never guessed)"),
       latest_source_date: Str,
       latest_retrieved_at: Str,
     })),

@@ -182,6 +182,22 @@ describe("EU lists: proxy contract", () => {
     expect(t).not.toMatch(/fca/i);
   });
 
+  it("UK: a URL that slips through upstream is still dropped here (second guard)", async () => {
+    const uk = PDMR({ country: "UK", source: { ...SRC, attribution: "Source: Acme plc via the National Storage Mechanism" } });
+    mock.mockResolvedValue({ data: [uk], meta: META(1) } as never);
+    const r = await call("get_eu_insider_dealings", { country: "uk", page: 1, limit: 25 });
+    expect(textOf(r)).not.toContain("[record]");
+    expect(textOf(r)).not.toContain("https://");
+    const row = (r.structuredContent!.rows as Array<Record<string, any>>)[0];
+    expect(row.source).toMatchObject({ url: null, link_policy: "none" });
+  });
+
+  it("trims the issuer filter before sending it", async () => {
+    mock.mockResolvedValue({ data: [], meta: META(0) } as never);
+    await call("get_eu_insider_dealings", { country: "se", issuer: "  lei:984500F33AB40805EE63 ", page: 1, limit: 25 });
+    expect((mock.mock.calls[0][2] as Record<string, unknown>).issuer).toBe("lei:984500F33AB40805EE63");
+  });
+
   it("annual reports surface the issuer copyright note once", async () => {
     const row = {
       record_id: "1", country: "NL", source_system: "AFM", publication_date: "2019-06-04", published_at: null, period_end: null,
@@ -229,6 +245,20 @@ describe("get_eu_issuer", () => {
     expect((r.structuredContent!.insider_dealings as unknown[]).length).toBe(1);
   });
 
+  it("states the per-dataset row bound from meta, and a keyless truncation in words (iron rule 12)", async () => {
+    const b = body({ insider_dealings: [PDMR()] }, ["pdmr_dealings"]);
+    mock.mockResolvedValue({ ...b, meta: { ...b.meta, rows_per_dataset: 100, softwall: { truncated: true, row_cap: 25 } } } as never);
+    const t = textOf(await call("get_eu_issuer", { country: "se", issuer: "lei:549300UINV5RINHGMG07" }));
+    expect(t).toContain("Newest rows per dataset (up to 100 each)");
+    expect(t).toContain("Keyless access caps each list at 25 rows; more rows may exist. Send a free ko.io API key");
+
+    mock.mockReset();
+    mock.mockResolvedValue({ ...b, meta: { country: "SE", live_datasets: ["pdmr_dealings"] } } as never);
+    const t2 = textOf(await call("get_eu_issuer", { country: "se", issuer: "lei:549300UINV5RINHGMG07" }));
+    expect(t2).toContain("*Newest rows per dataset, matched");
+    expect(t2).not.toMatch(/up to \d+ each|Keyless access caps/);
+  });
+
   it("UK: short positions are 'not offered', not pending", async () => {
     mock.mockResolvedValue(body({ short_positions: null }, ["pdmr_dealings"]) as never);
     const t = textOf(await call("get_eu_issuer", { country: "uk", issuer: "lei:549300UINV5RINHGMG07" }));
@@ -257,6 +287,13 @@ describe("get_eu_markets", () => {
     expect(t).toContain("| United Kingdom (`uk`) | pending | pending | not offered | pending |");
     expect(t).toMatch(/pending = offered but not activated yet \(not an outage/);
     expect(r.structuredContent).toMatchObject({ live_count: 1 });
+  });
+
+  it("an unrecognised upstream status is reported as unknown, never guessed as pending", async () => {
+    mock.mockResolvedValue([{ country: "SE", datasets: [{ dataset: "pdmr_dealings", status: "paused", latest_source_date: null, latest_retrieved_at: null }] }] as never);
+    const r = await call("get_eu_markets", {});
+    expect(textOf(r)).toContain("| Sweden (`se`) | paused |");
+    expect((r.structuredContent!.markets as Array<Record<string, any>>)[0].datasets[0].status).toBe("unknown");
   });
 });
 

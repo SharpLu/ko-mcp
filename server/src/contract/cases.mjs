@@ -504,11 +504,17 @@ export const PLAN_GATED_TOOLS = CASES.filter((t) => t.planGated).map((t) => t.to
  * 2026-10-12). Their `normal` case pins the pending STATUS answer -- a success
  * envelope that says "not live yet, not an outage" -- and contains no data. That
  * is the contract worth pinning today (a pending dataset must never read as an
- * error or as "no rows"), but it is NOT data coverage. Activating SE (ko-api
- * AGENTS.md#eu-activation) turns these `normal` cases red BY DESIGN: re-capture
- * them (`npm run golden:capture -- --tool <tool>`) and drop `activationGated` in
- * the same PR. `not_covered` / `not_offered` / `error` are configuration-only and
- * stay stable.
+ * error or as "no rows"), but it is NOT data coverage.
+ *
+ * TRIGGER: ko-api `KO_EU_LIVE` on the ko-api origins lists a market (ko-api
+ * AGENTS.md#eu-activation). From then on these `normal` cases are red BY DESIGN
+ * and every ko-mcp server deploy is blocked until, in the same sitting: purge
+ * everything (pending 404s carry s-maxage=3600) -> `npm run golden:capture --
+ * --tool <tool>` for each activated tool -> drop `activationGated` for those
+ * tools only -> update the two hard-coded lists in golden.test.ts -> merge,
+ * deploy, call each tool on live mcp.ko.io. Undo = the same, back to pending.
+ * Full runbook: docs/GOLDEN_CONTRACT.md section 6b. `not_covered` /
+ * `not_offered` / `error` are configuration-only and stay stable.
  */
 export const ACTIVATION_GATED_TOOLS = CASES.filter((t) => t.activationGated).map((t) => t.tool);
 

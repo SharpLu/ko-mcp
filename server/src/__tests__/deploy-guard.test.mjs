@@ -199,6 +199,14 @@ describe("post-deploy checks", () => {
     expect(fail.detail).toContain("29 tools");
   });
 
+  it("takes an explicit floor (verify-rollback judges the restored surface by previous_tools)", () => {
+    const ok = evaluateTools(200, toolsBody(24), 24);
+    expect(ok.ok).toBe(true);
+    expect(ok.detail).toBe("24 tools (need >= 24)");
+    expect(evaluateTools(200, toolsBody(23), 24).ok).toBe(false);
+    expect(evaluateTools(200, toolsBody(24)).ok).toBe(false); // default floor is MIN_TOOLS
+  });
+
   it("an empty tool list is a FAIL, not a pass -- a gate that examined nothing is not a pass", () => {
     const got = evaluateTools(200, toolsBody(0));
     expect(got.ok).toBe(false);

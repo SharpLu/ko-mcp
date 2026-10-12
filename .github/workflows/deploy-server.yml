@@ -102,6 +102,7 @@ jobs:
           node scripts/deploy-guard.mjs verify
           --deployed ${{ steps.upload.outputs.version_id }}
           --previous ${{ steps.capture.outputs.previous_version_id }}
+          --previous-tools ${{ steps.capture.outputs.previous_tools }}
 
   # ---------------------------------------------------------------------------
   # Discord notification (inline, best-effort)

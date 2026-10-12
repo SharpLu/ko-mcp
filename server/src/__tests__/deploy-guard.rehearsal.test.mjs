@@ -65,7 +65,10 @@ if (argv[0] === "deployments" && argv[1] === "status") {
   process.stdout.write("Deployed ko-mcp-server\\n");
 } else if (argv[0] === "rollback") {
   appendFileSync(LOG, JSON.stringify(argv) + "\\n");
-  if (process.env.FAKE_ROLLBACK_HEALS === "1") writeFileSync(STATE, "30");
+  // "1" = heal to the current surface (30); a number = heal to that many tools
+  // (the PREVIOUS surface, when this deploy raised MIN_TOOLS).
+  const heal = process.env.FAKE_ROLLBACK_HEALS;
+  if (heal) writeFileSync(STATE, heal === "1" ? "30" : heal);
   if (process.env.FAKE_ROLLBACK_FAILS === "1") { process.stderr.write("rollback exploded\\n"); process.exit(1); }
   process.stdout.write("Worker Version ${PREV} has been deployed to 100% of traffic.\\n");
 } else {
@@ -139,6 +142,8 @@ describe("deploy guard rehearsal", () => {
     expect(res.out).toContain("never deleted");
     expect(res.outputs).toContain(`previous_version_id=${PREV}`);
     expect(res.outputs).toContain("rollback_available=true");
+    // The live tool count before this deploy, for verify-rollback's floor.
+    expect(res.outputs).toContain("previous_tools=30");
   });
 
   it("upload parses the version id without grep -oP", async () => {
@@ -184,6 +189,31 @@ describe("deploy guard rehearsal", () => {
     expect(res.out).toContain("MCP DEPLOY ROLLED BACK");
     expect(res.out).toContain(NEW); // failed version named, kept for forensics
     expect(toolCount()).toBe(30);
+  });
+
+  it("a rollback to the PREVIOUS (smaller) surface is healthy when judged by previous_tools", async () => {
+    // The deploy that raised MIN_TOOLS 24 -> 30 fails; the restored version serves 24.
+    setToolCount(12);
+    writeFileSync(rollbackLog, "");
+    const res = await runGuard(
+      ["verify", "--deployed", NEW, "--previous", PREV, "--previous-tools", "24"],
+      { FAKE_ROLLBACK_HEALS: "24" },
+    );
+    expect(rollbackCalls()).toHaveLength(1);
+    expect(res.code).toBe(20);
+    expect(res.outputs).toContain("outcome=rolled_back");
+    expect(res.out).toContain("[verify-rollback] PASS tools_list: 24 tools (need >= 24)");
+  });
+
+  it("previous_tools never lowers the floor below what the old surface served", async () => {
+    setToolCount(12);
+    writeFileSync(rollbackLog, "");
+    const res = await runGuard(
+      ["verify", "--deployed", NEW, "--previous", PREV, "--previous-tools", "24"],
+      { FAKE_ROLLBACK_HEALS: "12" },
+    );
+    expect(res.code).toBe(21);
+    expect(res.out).toContain("[verify-rollback] FAIL tools_list: 12 tools (need >= 24)");
   });
 
   it("fails the job with a distinct code when the rollback does NOT restore health", async () => {

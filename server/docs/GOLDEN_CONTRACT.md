@@ -219,13 +219,35 @@ not data coverage. The fixtures carry `activationGated: true`, their `why` says
 `ACTIVATION GATE, NOT DATA`, the gate prints the five names on every run, and
 `npm test` asserts all five pin the pending state.
 
-**Activation turns these `normal` cases red, by design.** Whoever activates SE
-re-captures them in a ko-mcp PR (`npm run golden:capture -- --tool <tool>` for
-each), drops `activationGated` from the manifest, and lets the populated table
-become the contract. The `not_covered` (`fr`), `not_offered` (UK short
-positions) and `error` cases are answered from configuration or zod and stay
-stable across activation. `get_eu_markets` is not gated: its table body
-collapses and its legend line is constant, so its contract survives activation.
+**Activation turns these `normal` cases red, by design.** The `not_covered`
+(`fr`), `not_offered` (UK short positions) and `error` cases are answered from
+configuration or zod and stay stable. `get_eu_markets` is not gated: its table
+body collapses and its legend line is constant, so its contract survives
+activation.
+
+### Activation runbook (ko-mcp half)
+
+**Trigger:** ko-api's `KO_EU_LIVE` on the ko-api origins starts listing a market
+(`SE`) or a pair (`SE:pdmr_dealings`) -- the env flip in ko-api
+`AGENTS.md#eu-activation`. That flip is not a ko-mcp change, so nothing here
+notices it: after it, **every** ko-mcp `server/**` deploy fails its golden gate
+until the steps below land. Do them in the same authorized sitting as the flip:
+
+1. **Purge everything** on the ko.io zone (ko-api's activation step already
+   does). The pending 404s carry `s-maxage=3600`; without the purge a re-capture
+   can re-pin "pending".
+2. Branch ko-mcp from `origin/main`; for each activated tool run
+   `npm run golden:capture -- --tool <tool>` (keyless, live api.ko.io).
+3. Drop `activationGated` in `src/contract/cases.mjs` for **those tools only**
+   (a pair activation can leave others pending), and rewrite their `normal`
+   `why` (no longer `ACTIVATION GATE`).
+4. Update the two hard-coded lists in `src/__tests__/contract/golden.test.ts`:
+   "the five EU dataset tools are flagged" and the hollow-tool expectation
+   (`PLAN_GATED_TOOLS` + `ACTIVATION_GATED_TOOLS`) follow the manifest.
+5. Merge -> the deploy runs the golden gate -> call each activated tool on live
+   `mcp.ko.io` (iron rule 7).
+6. **Undo** (token removed from `KO_EU_LIVE`): purge, re-capture the pending
+   answer, restore `activationGated`, same files.
 
 ## 7. Refreshing the fixtures
 

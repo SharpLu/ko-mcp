@@ -255,8 +255,12 @@ export function countToolsFromBody(body) {
   return tools.length;
 }
 
-/** @param {number} status @param {string} body */
-export function evaluateTools(status, body) {
+/**
+ * @param {number} status @param {string} body
+ * @param {number} [min] floor; verify-rollback passes the PRE-deploy count, because a
+ *   healthy rollback restores the old surface, which may sit below a freshly raised MIN_TOOLS.
+ */
+export function evaluateTools(status, body, min = MIN_TOOLS) {
   if (status < 200 || status >= 300) {
     return { name: "tools_list", ok: false, examined: 0, count: 0, detail: `HTTP ${status}` };
   }
@@ -264,10 +268,10 @@ export function evaluateTools(status, body) {
     const count = countToolsFromBody(body);
     return {
       name: "tools_list",
-      ok: count >= MIN_TOOLS,
+      ok: count >= min,
       examined: count,
       count,
-      detail: `${count} tools (need >= ${MIN_TOOLS})`,
+      detail: `${count} tools (need >= ${min})`,
     };
   } catch (err) {
     return { name: "tools_list", ok: false, examined: 0, count: 0, detail: String(err?.message ?? err) };

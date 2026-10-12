@@ -313,6 +313,21 @@ function euMeta(meta: KoMeta): KoMeta {
 
 const segment = (country: string) => encodeURIComponent(country.toLowerCase());
 
+/**
+ * UK rows never carry a link (the National Storage Mechanism terms allow none).
+ * ko-api already nulls every UK URL; this is the second guard, so the UK note's
+ * "ko.io gives none" does not rest on upstream alone.
+ */
+function ukSafe(cc: string, rows: Row[]): Row[] {
+  if (cc !== "UK") return rows;
+  return rows.map((r) => ({
+    ...r,
+    ...("report_url" in r ? { report_url: null } : {}),
+    ...("package_url" in r ? { package_url: null } : {}),
+    source: r.source ? { ...r.source, url: null, link_policy: "none" } : r.source,
+  }));
+}
+
 const textResult = (lines: string[], structuredContent: Record<string, unknown>): ToolResultLike => ({
   content: [{ type: "text", text: lines.join("\n") }],
   structuredContent,
@@ -366,7 +381,8 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
             .filter((s) => (DATASETS as readonly string[]).includes(String(s.dataset)))
             .map((s) => ({
               dataset: s.dataset as EuDataset,
-              status: (["live", "pending", "not_offered"].includes(String(s.status)) ? s.status : "pending") as EuStatus,
+              // A status this tool does not know is reported as such, never guessed.
+              status: (["live", "pending", "not_offered"].includes(String(s.status)) ? s.status : "unknown") as EuStatus | "unknown",
               latest_source_date: str(s.latest_source_date),
               latest_retrieved_at: str(s.latest_retrieved_at),
             })),
@@ -419,8 +435,9 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
         page: PAGE,
         limit: LIMIT,
       },
-      async ({ country, issuer, page, limit }) => {
+      async ({ country, issuer: rawIssuer, page, limit }) => {
         const cc = country.toUpperCase();
+        const issuer = rawIssuer?.trim() || undefined;
         const heading = `## ${marketName(cc)} — ${meta.label}`;
         const base = {
           country: cc, dataset, issuer_filter: str(issuer), plan_limit: null,
@@ -443,7 +460,7 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
             ...base, status: ns.status, covered_countries: ns.covered, rows: null, paging: null,
           });
         }
-        const rows = Array.isArray(env.data) ? env.data : [];
+        const rows = ukSafe(cc, Array.isArray(env.data) ? env.data : []);
         const m = euMeta(env.meta);
         const lines = [heading, `*Grain: ${meta.grain}.*`];
         const latest = str(m.latest_source_date);
@@ -479,7 +496,7 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   defineTool(server,
     "get_eu_issuer",
-    "One European issuer in one market (se, nl, dk, uk): identity (name, LEI, ISIN, venue) and its newest rows (up to 100 each) of insider dealings, major holdings, net short positions and annual reports, each with source credit. Takes the issuer id from any get_eu_* row (issuer.id).",
+    "One European issuer in one market (se, nl, dk, uk): identity (name, LEI, ISIN, venue) and its newest rows of insider dealings, major holdings, net short positions and annual reports, each with source credit. Takes the issuer id from any get_eu_* row (issuer.id).",
     {
       country: COUNTRY,
       issuer: ISSUER_ID,
@@ -518,7 +535,7 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
       };
       // A dataset that is not live comes back as [] upstream: that is "not served", not "no rows".
       const rowsOf = (ds: EuDataset): Row[] | null =>
-        live.has(ds) && Array.isArray(d[KEY[ds]]) ? (d[KEY[ds]] as Row[]) : null;
+        live.has(ds) && Array.isArray(d[KEY[ds]]) ? ukSafe(cc, d[KEY[ds]] as Row[]) : null;
 
       const lines = [`## ${cell(i.name)} — ${marketName(cc)} issuer`];
       const ids = [
@@ -529,9 +546,18 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
         i.ticker ? `**Ticker:** ${cell(i.ticker)}` : null,
       ].filter(Boolean);
       lines.push(ids.join(" · "));
-      lines.push("*Newest rows per dataset (up to 100 each), matched through the id's LEI/ISIN/name closure in this market.*");
+      const per = int(env.meta.rows_per_dataset);
+      lines.push(`*Newest rows per dataset${per ? ` (up to ${per} each)` : ""}, matched through the id's LEI/ISIN/name closure in this market.*`);
       const w = windowLine(env.meta);
       if (w) lines.push(w);
+      // Iron rule 12: a keyless cap must not let a cut list read as complete.
+      const sw = env.meta.softwall;
+      if (sw?.truncated) {
+        lines.push(
+          `*Keyless access caps each list at ${sw.row_cap ?? "a fixed number of"} rows; more rows may exist. ` +
+          "Send a free ko.io API key (Authorization: Bearer ko_...) for the full list.*",
+        );
+      }
 
       const shown: Row[][] = [];
       for (const ds of DATASETS) {
