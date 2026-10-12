@@ -36,5 +36,7 @@ export type {
   FinancialStressOptions,
   FilingsListOptions,
   FilingShareOptions,
+  EuCountry,
+  EuListOptions,
 } from "./types.js";
 export { VERSION } from "./version.js";

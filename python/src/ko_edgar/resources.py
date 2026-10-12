@@ -319,3 +319,60 @@ class Filings(_Resource):
     def share(self, cik: str, accession: str, file: str | None = None) -> ApiResult:
         """Mint a signed, keyless, browser-openable link to a document. **Paid**"""
         return self._get(*ep.filings_share(cik, accession, file))
+
+
+class Eu(_Resource):
+    """European market disclosures: Sweden, Netherlands, Denmark, UK (``country`` = se/nl/dk/uk).
+
+    Until ko.io activates a market its datasets raise ``NotFoundError`` with code
+    ``DATASET_NOT_LIVE`` (pending -- not an outage); UK short positions raise
+    ``DATASET_NOT_OFFERED``. Every row carries its source credit in ``source.attribution``.
+    """
+
+    def markets(self) -> ApiResult:
+        """Status per market and dataset: live, pending (not activated yet) or not_offered."""
+        return self._get(*ep.eu_markets())
+
+    def insider_dealings(
+        self,
+        country: str,
+        issuer: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        """Insider dealings (PDMR, MAR art. 19), newest disclosure first."""
+        return self._get(*ep.eu_list(country, "insider_dealings", issuer, page, per_page))
+
+    def major_holdings(
+        self,
+        country: str,
+        issuer: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        """Major holdings (voting-rights) notifications, newest first."""
+        return self._get(*ep.eu_list(country, "major_holdings", issuer, page, per_page))
+
+    def short_positions(
+        self,
+        country: str,
+        issuer: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        """Disclosed net short positions (not offered for the UK)."""
+        return self._get(*ep.eu_list(country, "short_positions", issuer, page, per_page))
+
+    def annual_reports(
+        self,
+        country: str,
+        issuer: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        """Annual financial report filings, newest first."""
+        return self._get(*ep.eu_list(country, "annual_reports", issuer, page, per_page))
+
+    def issuer(self, country: str, issuer: str) -> ApiResult:
+        """One issuer (an ``issuer.id`` from any EU row) with its newest rows per live dataset."""
+        return self._get(*ep.eu_issuer(country, issuer))

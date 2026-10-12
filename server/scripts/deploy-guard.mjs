@@ -126,7 +126,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function arg(name, fallback = "") {
   const i = process.argv.indexOf(`--${name}`);
-  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
+  // An empty workflow output leaves `--previous --previous-tools 30`: the next
+  // token is a flag, never this flag's value.
+  const v = i >= 0 ? process.argv[i + 1] : undefined;
+  return v && !v.startsWith("--") ? v : fallback;
 }
 
 // --- post-deploy checks ----------------------------------------------------
@@ -137,7 +140,7 @@ const TOOLS_RPC = {
   body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
 };
 
-async function runChecks({ label, attempts = ATTEMPTS, delayMs = RETRY_DELAY_MS }) {
+async function runChecks({ label, attempts = ATTEMPTS, delayMs = RETRY_DELAY_MS, minTools = MIN_TOOLS }) {
   let checks = [];
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const health = await httpText(`${MCP_BASE}/health`);
@@ -148,7 +151,7 @@ async function runChecks({ label, attempts = ATTEMPTS, delayMs = RETRY_DELAY_MS 
     const tools = await httpText(`${MCP_BASE}/mcp`, TOOLS_RPC);
     const toolsCheck = tools.error
       ? { name: "tools_list", ok: false, examined: 0, count: 0, detail: `request failed: ${tools.error}` }
-      : evaluateTools(tools.status, tools.body);
+      : evaluateTools(tools.status, tools.body, minTools);
 
     checks = [healthCheck, toolsCheck];
     if (checks.every((c) => c.ok)) break;
@@ -218,6 +221,14 @@ async function notifyDiscord(message) {
  * first, and the command it prints must be runnable by a human as-is.
  */
 async function cmdCapture() {
+  // The live tool count BEFORE this deploy: verify-rollback must judge the
+  // restored version against what it served, not against a MIN_TOOLS this very
+  // deploy raised (otherwise a healthy 24-tool rollback reads as "needs a human").
+  const live = await httpText(`${MCP_BASE}/mcp`, TOOLS_RPC);
+  const liveTools = live.error ? null : evaluateTools(live.status, live.body, 1);
+  setOutput("previous_tools", String(liveTools?.ok ? liveTools.count : 0));
+  log(`tools/list before deploy: ${liveTools?.ok ? liveTools.count : "unknown"}`);
+
   const res = await wrangler(["deployments", "status", "--json", "--name", WORKER_NAME], { echo: false });
   if (res.code !== 0) {
     log(res.output);
@@ -323,7 +334,13 @@ async function cmdVerify() {
   const rb = await wrangler(argv.slice(1), { timeoutMs: ROLLBACK_TIMEOUT_MS });
 
   // A rollback is not a rollback until the rolled-back Worker is verified.
-  const after = await runChecks({ label: "verify-rollback", attempts: ATTEMPTS + 1, delayMs: RETRY_DELAY_MS });
+  // The rolled-back version is held to the surface it served before this deploy
+  // (capture's previous_tools), capped at MIN_TOOLS; unknown (0) falls back to MIN_TOOLS.
+  const prevTools = Number(arg("previous-tools", "0")) || MIN_TOOLS;
+  const after = await runChecks({
+    label: "verify-rollback", attempts: ATTEMPTS + 1, delayMs: RETRY_DELAY_MS,
+    minTools: Math.min(prevTools, MIN_TOOLS),
+  });
   const rolledBackOk = rb.code === 0 && after.summary.ok;
 
   const excerpt = [

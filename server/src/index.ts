@@ -10,13 +10,14 @@ import { registerFilingTools } from "./tools/filings.js";
 import { registerFinancialTools } from "./tools/financials.js";
 import { registerMacroTools } from "./tools/macro.js";
 import { registerCryptoTools } from "./tools/crypto.js";
+import { registerEuTools } from "./tools/eu.js";
 import { extractUserKey, resolveApiKey, keyTransport } from "./auth.js";
 import type { KoConfig } from "./ko-fetch.js";
 
 function createServer(env: Env, userApiKey?: string): McpServer {
   const server = new McpServer({
     name: "ko-sec-data",
-    version: "1.2.0",
+    version: "1.3.0",
   });
 
   const config: KoConfig = {
@@ -37,6 +38,7 @@ function createServer(env: Env, userApiKey?: string): McpServer {
   registerFinancialTools(server, config);
   registerMacroTools(server, config);
   registerCryptoTools(server, config);
+  registerEuTools(server, config);
 
   return server;
 }

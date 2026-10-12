@@ -26,6 +26,7 @@ from ._transport import (
 from .aresources import (
     AsyncCongress,
     AsyncCrypto,
+    AsyncEu,
     AsyncFilings,
     AsyncForm144,
     AsyncInsiders,
@@ -37,6 +38,7 @@ from .aresources import (
 from .resources import (
     Congress,
     Crypto,
+    Eu,
     Filings,
     Form144,
     Insiders,
@@ -89,6 +91,7 @@ class KoClient:
         self.short: Short = Short(self.get)
         self.macro: Macro = Macro(self.get)
         self.filings: Filings = Filings(self.get)
+        self.eu: Eu = Eu(self.get)
 
     @property
     def demo_mode(self) -> bool:
@@ -157,6 +160,7 @@ class AsyncKoClient:
         self.short: AsyncShort = AsyncShort(self.get)
         self.macro: AsyncMacro = AsyncMacro(self.get)
         self.filings: AsyncFilings = AsyncFilings(self.get)
+        self.eu: AsyncEu = AsyncEu(self.get)
 
     @property
     def demo_mode(self) -> bool:

@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 import {
   DERIVED_FROM, SCANNED_ROUTE_FILES, MCP_UPSTREAM_ROUTES, findKoApiRepo, blobSha, fileAt,
   commitSha, splitHandlers, readParams, unscannableReads, parseRouteRegistry,
-  parseFreeBlockedPrefixes, PARAM_HELPERS, resolveHelperReads,
+  parseFreeBlockedPrefixes, PARAM_HELPERS, resolveHelperReads, handlerFactory, functionBody,
 } from './upstream-pin-lib.mjs';
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/registry/upstream');
@@ -101,7 +101,21 @@ for (const src of SCANNED_ROUTE_FILES) {
   files[src] = blobSha(repo, REV, src);
   for (const h of splitHandlers(body)) {
     handlerCount++;
-    reads[`${h.method} ${h.path}`] = readParams(h.body, helperReads);
+    // A same-file handler factory carries the reads (handlerFactory()).
+    const factory = handlerFactory(h.body);
+    let scanned = h.body;
+    if (factory) {
+      try {
+        scanned = `${h.body}\n${functionBody(body, factory, { exported: false })}`;
+      } catch {
+        console.error(
+          `FATAL: ${src} registers ${h.method} ${h.path} through ${factory}(), which is not declared ` +
+          'in that file, so its param reads cannot be scanned.',
+        );
+        process.exit(1);
+      }
+    }
+    reads[`${h.method} ${h.path}`] = readParams(scanned, helperReads);
   }
 }
 

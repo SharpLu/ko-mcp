@@ -22,7 +22,7 @@ Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "messa
 - Codex CLI: codex mcp add ko-sec-data --url https://mcp.ko.io/mcp
 - stdio-only clients: npx -y @ko-io/mcp-sec-data (env KO_API_KEY)
 
-## MCP tools (24)
+## MCP tools (30)
 
 - search(query, limit): universal search across institutions, stocks, Congress members
 - get_institution_holdings(institution, ticker, entity, page, limit): 13F holdings by CIK or fuzzy name; states entity grain (filer vs family) and security grain (share classes merged vs one security)
@@ -48,6 +48,13 @@ Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "messa
 - get_fed_rates(days) [Pro]
 - get_economic_indicators(category, days) [Pro]
 - get_financial_stress(days) [Pro]
+- get_eu_markets(): status per European market (se, nl, dk, uk) and dataset -- live / pending (not activated yet) / not offered
+- get_eu_insider_dealings(country, issuer, page, limit): PDMR (MAR art. 19) transaction lines, newest first, per-row source credit
+- get_eu_major_holdings(country, issuer, page, limit): voting-rights notifications (votes % incl. instruments, shares %)
+- get_eu_short_positions(country, issuer, page, limit): disclosed net short positions (not offered for uk)
+- get_eu_annual_reports(country, issuer, page, limit): annual financial report filings with links where the source allows
+- get_eu_issuer(country, issuer): one issuer's identity + newest rows of every live dataset (issuer = issuer.id from any row)
+  EU status: a pending / not-offered dataset or uncovered market is a normal answer naming the state, with rows null (not empty, not an outage). UK rows credit the filer and the National Storage Mechanism and carry no record links.
 
 Output contract: every tool is annotated readOnlyHint/openWorldHint, declares an outputSchema and
 returns structuredContent (exact integers / decimal strings) on every successful answer, empty ones included. A plan limit is
@@ -74,6 +81,7 @@ an isError result that names the plan, never an empty "no data" answer.
 - /api/v1/economic/indicators [Pro] · /api/v1/stress/ofr [Pro]
 - /api/v1/filings/{cik}?form=&from=&to= · /{accession} · /{accession}/share
 - /api/v1/search?q=
+- /api/v1/eu/markets · /api/v1/eu/{country}/insider-dealings|major-holdings|short-positions|annual-reports?issuer=&page=&per_page= · /api/v1/eu/{country}/issuers/{issuer}
 
 ## SDKs
 

@@ -52,6 +52,12 @@ export const MCP_UPSTREAM_ROUTES = [
   'GET /api/v1/crypto/exposure-summary',
   'GET /api/v1/crypto/institutional-holders',
   'GET /api/v1/crypto/holder/:cik',
+  'GET /api/v1/eu/markets',
+  'GET /api/v1/eu/:country/insider-dealings',
+  'GET /api/v1/eu/:country/major-holdings',
+  'GET /api/v1/eu/:country/short-positions',
+  'GET /api/v1/eu/:country/annual-reports',
+  'GET /api/v1/eu/:country/issuers/:issuer',
 ];
 
 /**
@@ -81,6 +87,7 @@ export const SCANNED_ROUTE_FILES = [
   'src/routes/v1/sec-ftd.ts',
   'src/routes/v1/financial-stress.ts',
   'src/routes/v1/crypto.ts',
+  'src/routes/v1/eu.ts',
 ];
 
 /**
@@ -193,12 +200,13 @@ export function readParams(body, helperReads = {}) {
 }
 
 /**
- * The body of `export function <name>(...) { ... }` in a ko-api source file,
- * brace-matched. Throws when the declaration is not found -- a helper that
+ * The body of `export function <name>(...) { ... }` in a ko-api source file
+ * (any `function <name>` with `exported: false`), brace-matched. Throws when the declaration is not found -- a helper that
  * moved or was renamed must not silently resolve to "reads nothing".
  */
-export function functionBody(source, name) {
-  const m = new RegExp(`export\\s+function\\s+${name}\\s*\\(`).exec(source);
+export function functionBody(source, name, { exported = true } = {}) {
+  const decl = exported ? `export\\s+function\\s+${name}\\s*\\(` : `(?:^|\\n)(?:export\\s+)?function\\s+${name}\\s*\\(`;
+  const m = new RegExp(decl).exec(source);
   if (!m) throw new Error(`helper ${name}() not found`);
   const open = source.indexOf('{', source.indexOf(')', m.index));
   let depth = 0;
@@ -225,6 +233,25 @@ export function resolveHelperReads(sourceOf) {
     out[name] = params;
   }
   return out;
+}
+
+/**
+ * A handler registered through a same-file FACTORY:
+ *
+ *   app.get('/api/v1/eu/:country/insider-dealings', listHandler('pdmr_dealings'));
+ *
+ * The `app.get(...)` body then holds no reads at all -- they live in
+ * `function listHandler(...)` -- so without this the scanner would pin the
+ * route as reading nothing and gate (d) would call every param inert.
+ *
+ * Returns the factory's name only for exactly that shape (the handler is one
+ * call whose arguments contain no parentheses, and it is the last argument);
+ * the caller resolves it with functionBody(source, name, { exported: false })
+ * and must refuse to pin when the factory is not declared in the same file.
+ */
+export function handlerFactory(handlerBody) {
+  const m = /^app\.\w+\(\s*'[^']+'\s*,\s*([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\)$/.exec(handlerBody.trim());
+  return m ? m[1] : null;
 }
 
 /**

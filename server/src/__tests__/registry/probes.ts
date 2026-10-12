@@ -22,6 +22,7 @@ import { registerFilingTools } from '../../tools/filings.js';
 import { registerFinancialTools } from '../../tools/financials.js';
 import { registerMacroTools } from '../../tools/macro.js';
 import { registerCryptoTools } from '../../tools/crypto.js';
+import { registerEuTools } from '../../tools/eu.js';
 import { makeFakeServer, type CapturedTool } from '../helpers.js';
 
 export const PROBES: Record<string, Record<string, unknown>> = {
@@ -55,6 +56,12 @@ export const PROBES: Record<string, Record<string, unknown>> = {
   get_crypto_exposure: {},
   get_crypto_holders: { product: 'IBIT', page: 2, limit: 25 },
   get_crypto_holder: { institution: 'Goldman Sachs' },
+  get_eu_markets: {},
+  get_eu_insider_dealings: { country: 'se', issuer: 'lei:549300UINV5RINHGMG07', page: 2, limit: 25 },
+  get_eu_major_holdings: { country: 'nl', issuer: 'co:kvk:33216172', page: 2, limit: 25 },
+  get_eu_short_positions: { country: 'se', issuer: 'isin:SE0000806994', page: 2, limit: 25 },
+  get_eu_annual_reports: { country: 'dk', issuer: 'lei:549300UINV5RINHGMG07', page: 2, limit: 25 },
+  get_eu_issuer: { country: 'se', issuer: 'lei:549300UINV5RINHGMG07' },
 };
 
 /**
@@ -100,6 +107,7 @@ export function registerAllTools(): Map<string, CapturedTool> {
   registerFinancialTools(server, config);
   registerMacroTools(server, config);
   registerCryptoTools(server, config);
+  registerEuTools(server, config);
   return tools;
 }
 

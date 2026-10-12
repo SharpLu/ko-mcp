@@ -30,8 +30,8 @@ describe('ko-api pin integrity', () => {
     expect(UPSTREAM_PIN.contractSha256).toMatch(/^[0-9a-f]{64}$/);
     const shas = Object.values(UPSTREAM_PIN.files);
     // 3 declaration files (routes, api-auth, entitlements catalog) + 1 param
-    // helper (pagination.ts: pageSizeParam) + 19 route files
-    expect(shas.length).toBe(23);
+    // helper (pagination.ts: pageSizeParam) + 20 route files (eu.ts since 2026-10-12)
+    expect(shas.length).toBe(24);
     expect(shas.every((s) => /^[0-9a-f]{40}$/.test(s))).toBe(true);
   });
 
@@ -51,10 +51,10 @@ describe('ko-api pin integrity', () => {
 
   it('pins every route the contract describes, and nothing outside the MCP surface', () => {
     const keys = Object.keys(UPSTREAM_CONTRACT.routes);
-    expect(keys.length).toBe(24);
+    expect(keys.length).toBe(30);
     expect(keys.every((k) => k.startsWith('GET /api/v1/'))).toBe(true);
     // Scalar only: the ko-api route inventory stays in the private repo.
-    expect(UPSTREAM_CONTRACT.sourceRouteCount).toBe(185);
+    expect(UPSTREAM_CONTRACT.sourceRouteCount).toBe(191);
   });
 
   it(`the pin is younger than ${MAX_PIN_AGE_DAYS} days`, () => {

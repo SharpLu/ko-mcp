@@ -1,0 +1,150 @@
+{
+  "tool": "get_eu_issuer",
+  "planGated": false,
+  "activationGated": true,
+  "capturedAt": "2026-10-12",
+  "provenance": {
+    "source": "in-process Worker fetch handler (src/index.ts), keyless, upstream https://api.ko.io",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree by calling its fetch handler in process (the same JSON-RPC bodies wrangler dev serves). Each case was probed twice and written only because the two probes agreed. Every EU market was pending at capture (2026-10-12)."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "country": "se",
+        "issuer": "lei:549300UINV5RINHGMG07"
+      },
+      "why": "ACTIVATION GATE, NOT DATA (while SE is pending). Skanska AB's LEI; pins the pending status answer. Turns red when SE is activated -- re-capture then.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "annual_reports": "null",
+              "country": "string",
+              "covered_countries": "null",
+              "insider_dealings": "null",
+              "issuer": "null",
+              "live_datasets": "null",
+              "major_holdings": "null",
+              "match_basis": "null",
+              "plan_limit": "null",
+              "requested": "string",
+              "short_positions": "null",
+              "status": "string"
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Sweden — issuer <VAL>",
+              "BLANK",
+              "TEXT **Status: pending** -- no dataset for Sweden (SE) is live on ko.io yet. This is not an outage and not an empty result: no rows are served until ko.io activates it. `get_eu_markets` shows what is live."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "not_covered",
+      "arguments": {
+        "country": "fr",
+        "issuer": "lei:549300UINV5RINHGMG07"
+      },
+      "why": "Uncovered market: COUNTRY_NOT_COVERED as a status answer, stable across activation.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "annual_reports": "null",
+              "country": "string",
+              "covered_countries": {
+                "_array": "string"
+              },
+              "insider_dealings": "null",
+              "issuer": "null",
+              "live_datasets": "null",
+              "major_holdings": "null",
+              "match_basis": "null",
+              "plan_limit": "null",
+              "requested": "string",
+              "short_positions": "null",
+              "status": "string"
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 FR — issuer <VAL>",
+              "BLANK",
+              "TEXT **Status: not covered** -- ko.io covers no European market `fr`. Covered markets: se, nl, dk, uk."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "country": "se",
+        "issuer": "notanid"
+      },
+      "why": "Malformed issuer id: ko-api validates it before the liveness check, so this is a 400 isError naming the id forms in every activation state.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (400): Bad request: issuer must be an issuer id (lei:, isin:, co: or name:)"
+            ],
+            "tables": []
+          }
+        ]
+      }
+    }
+  ]
+}

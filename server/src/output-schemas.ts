@@ -525,3 +525,151 @@ export const CRYPTO_HOLDER_OUTPUT = {
   })),
   plan_limit: PLAN_LIMIT,
 };
+
+// ── European markets (get_eu_*) ─────────────────────────────────────────────
+// Rows keep ko-api's /api/v1/eu row shape (ko-api src/lib/eu/rows.ts), with every
+// quantity, price and percentage as an exact decimal string. `source` is the
+// per-row credit and must travel with any row an agent quotes.
+
+const EU_DATASET = z.enum(["pdmr_dealings", "major_holdings", "short_positions", "annual_reports"]);
+
+const EU_STATUS = z
+  .enum(["live", "pending", "not_offered", "not_covered"])
+  .describe("live = served; pending = offered but not activated yet (not an outage, not empty); not_offered = a fixed source/licensing fact; not_covered = no such market");
+
+const EU_SOURCE = z
+  .object({
+    attribution: Str.describe("Source credit, verbatim from the register; show it with the row"),
+    source_date: Str,
+    retrieved_at: Str,
+    url: Str.describe("Link to the original record; null where the source terms allow none (all UK rows)"),
+    link_policy: Str,
+    copyright_note: Str,
+  })
+  .describe("Per-row source credit");
+
+const EU_ISSUER_REF = z.object({
+  id: Str.describe("ko.io issuer id (lei:, isin:, co: or name:) -- pass to get_eu_issuer or as `issuer`"),
+  name: Str,
+  lei: Str,
+  isin: Str,
+});
+
+const EU_PDMR_ROW = z.object({
+  record_id: Str,
+  notice_id: Str,
+  notice_version: Int,
+  latest_version: Int.describe("Higher than notice_version = this row was superseded by an amended notice"),
+  notice_status_label: Str,
+  published_at: Str,
+  publication_date: Str,
+  issuer: EU_ISSUER_REF,
+  person: z.object({ name: Str, reporting_person: Str, role: Str, closely_associated: Bool }),
+  transaction: z.object({
+    date: Str, nature_label: Str, instrument_name: Str, instrument_type_label: Str,
+    quantity: Dec, quantity_unit: Str, price: Dec, currency: Str, price_unit: Str, venue: Str,
+  }),
+  source: EU_SOURCE,
+});
+
+const EU_MAJOR_ROW = z.object({
+  record_id: Str,
+  notice_status_label: Str,
+  published_at: Str,
+  publication_date: Str,
+  transaction_date: Str,
+  event_date: Str,
+  event_date_kind: Str.describe("published = event_date is the publication date; transaction = the source published none"),
+  issuer: EU_ISSUER_REF,
+  holders: z.array(z.string()),
+  reason_label: Str,
+  instrument: Str,
+  after: z.object({
+    shares: Dec, shares_pct: Dec, potential_shares_pct: Dec,
+    total_votes_pct: Dec.describe("Notified voting-rights total after the event, including financial instruments"),
+    direct_votes: Dec, indirect_votes: Dec, direct_votes_pct: Dec, indirect_votes_pct: Dec,
+  }),
+  before: z.object({ shares: Dec, votes: Dec }),
+  instruments: z.object({
+    votes: Dec, votes_pct: Dec, physical_votes: Dec, physical_votes_pct: Dec, cash_votes: Dec, cash_votes_pct: Dec,
+  }),
+  missing_fields: z.array(z.string()).describe("Numeric fields the source left blank (null above = unknown, not 0)"),
+  comment: Str,
+  source: EU_SOURCE,
+});
+
+const EU_SHORT_ROW = z.object({
+  record_id: Str,
+  position_date: Str,
+  holder: Str,
+  issuer: EU_ISSUER_REF,
+  position_pct: Dec.describe("Exact net short position, % of issued capital; null when only a bound is disclosed"),
+  position_upper_bound_pct: Dec,
+  is_below_threshold: Bool,
+  is_position_missing: Bool,
+  comment: Str,
+  source: EU_SOURCE,
+});
+
+const EU_ANNUAL_ROW = z.object({
+  record_id: Str,
+  source_system: Str,
+  publication_date: Str,
+  published_at: Str,
+  period_end: Str,
+  issuer: EU_ISSUER_REF,
+  report_url: Str,
+  package_url: Str,
+  package_sha256: Str,
+  source: EU_SOURCE,
+});
+
+const euList = (row: z.ZodTypeAny) => ({
+  country: z.string().describe("Market code as requested, upper-case"),
+  dataset: EU_DATASET,
+  status: EU_STATUS,
+  covered_countries: z.array(z.string()).nullable().describe("Markets ko.io covers; set when status is not_covered"),
+  issuer_filter: Str,
+  latest_source_date: Str,
+  latest_retrieved_at: Str,
+  rows: z.array(row).nullable().describe("null = the dataset is not served (status is not live): unknown, NOT empty"),
+  paging: PAGING.nullable(),
+  plan_limit: PLAN_LIMIT,
+});
+
+export const EU_INSIDER_DEALINGS_OUTPUT = euList(EU_PDMR_ROW);
+export const EU_MAJOR_HOLDINGS_OUTPUT = euList(EU_MAJOR_ROW);
+export const EU_SHORT_POSITIONS_OUTPUT = euList(EU_SHORT_ROW);
+export const EU_ANNUAL_REPORTS_OUTPUT = euList(EU_ANNUAL_ROW);
+
+export const EU_MARKETS_OUTPUT = {
+  markets: z.array(z.object({
+    country: z.string(),
+    datasets: z.array(z.object({
+      dataset: EU_DATASET,
+      status: z.enum(["live", "pending", "not_offered", "unknown"])
+        .describe("unknown = ko-api sent a status this tool does not recognise (reported, never guessed)"),
+      latest_source_date: Str,
+      latest_retrieved_at: Str,
+    })),
+  })),
+  live_count: z.number().int().describe("Live (country, dataset) pairs"),
+};
+
+export const EU_ISSUER_OUTPUT = {
+  country: z.string(),
+  requested: z.string(),
+  status: EU_STATUS,
+  covered_countries: z.array(z.string()).nullable(),
+  issuer: z.object({
+    id: Str, name: Str, lei: Str, isin: Str, lei_valid: Bool, isin_valid: Bool, ticker: Str, venue: Str,
+    lei_entity_verified: Bool,
+  }).nullable(),
+  match_basis: Str,
+  live_datasets: z.array(EU_DATASET).nullable(),
+  insider_dealings: z.array(EU_PDMR_ROW).nullable().describe("null = dataset not live in this market (unknown, not empty)"),
+  major_holdings: z.array(EU_MAJOR_ROW).nullable(),
+  short_positions: z.array(EU_SHORT_ROW).nullable().describe("null also where short positions are not offered (UK)"),
+  annual_reports: z.array(EU_ANNUAL_ROW).nullable(),
+  plan_limit: PLAN_LIMIT,
+};

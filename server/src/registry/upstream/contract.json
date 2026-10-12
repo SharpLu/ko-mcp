@@ -1,8 +1,8 @@
 {
   "_comment": "DERIVED from ko-api at the commit in pin.json -- do not hand-edit; src/__tests__/registry/upstream-pin.test.ts hashes this file and compares it with pin.json.contractSha256. Regenerate with: npm run registry:refresh-pin.",
   "koApiRepo": "SharpLu/ko-api",
-  "koApiCommit": "118f1b04d40a33a37b9fcef681d72e46593e7f1d",
-  "sourceRouteCount": 185,
+  "koApiCommit": "8b3155eccd9b0e1814799029cc260bcbb2108902",
+  "sourceRouteCount": 191,
   "freeBlockedPrefixes": [
     "/api/v1/treasury",
     "/api/v1/fed",
@@ -397,6 +397,96 @@
     "GET /api/v1/crypto/holder/:cik": {
       "auth": "apiKey",
       "cache": "hourly",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": []
+    },
+    "GET /api/v1/eu/markets": {
+      "auth": "public",
+      "cache": "quarterly",
+      "pagination": null,
+      "timeoutMs": 20000,
+      "readParams": []
+    },
+    "GET /api/v1/eu/:country/insider-dealings": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page",
+          "limit"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "issuer",
+        "limit",
+        "page",
+        "per_page"
+      ]
+    },
+    "GET /api/v1/eu/:country/major-holdings": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page",
+          "limit"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "issuer",
+        "limit",
+        "page",
+        "per_page"
+      ]
+    },
+    "GET /api/v1/eu/:country/short-positions": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page",
+          "limit"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "issuer",
+        "limit",
+        "page",
+        "per_page"
+      ]
+    },
+    "GET /api/v1/eu/:country/annual-reports": {
+      "auth": "apiKey",
+      "cache": "daily",
+      "pagination": {
+        "style": "page",
+        "params": [
+          "page",
+          "per_page",
+          "limit"
+        ]
+      },
+      "timeoutMs": 20000,
+      "readParams": [
+        "issuer",
+        "limit",
+        "page",
+        "per_page"
+      ]
+    },
+    "GET /api/v1/eu/:country/issuers/:issuer": {
+      "auth": "apiKey",
+      "cache": "daily",
       "pagination": null,
       "timeoutMs": 20000,
       "readParams": []

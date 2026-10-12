@@ -393,6 +393,91 @@ export const CASES = [
       { name: 'error', arguments: {}, why: 'Required `institution` missing.' },
     ],
   },
+  // ── European markets (2026-10-12: every market pending, see ACTIVATION_GATED_TOOLS) ──
+  {
+    tool: 'get_eu_markets',
+    cases: [
+      { name: 'normal', arguments: {},
+        why: 'The per-market status table. Cells are table body (collapsed), the legend line is constant, so ' +
+             'this contract survives activation unchanged.' },
+      { name: 'error', arguments: { unexpected: 'x' },
+        why: 'Input schema is `{}`: an unexpected argument is dropped and the normal answer comes back -- pinned ' +
+             'for the same reason as get_crypto_exposure.error.' },
+    ],
+  },
+  {
+    tool: 'get_eu_insider_dealings',
+    activationGated: true,
+    cases: [
+      { name: 'normal', arguments: { country: 'se', limit: 5 },
+        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope ' +
+             'naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.' },
+      { name: 'not_covered', arguments: { country: 'fr' },
+        why: 'A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing ' +
+             'the covered markets. Configuration-only upstream, so stable across activation.' },
+      { name: 'error', arguments: { country: 'sweden' },
+        why: 'Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.' },
+    ],
+  },
+  {
+    tool: 'get_eu_major_holdings',
+    activationGated: true,
+    cases: [
+      { name: 'normal', arguments: { country: 'se', limit: 5 },
+        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope ' +
+             'naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.' },
+      { name: 'not_covered', arguments: { country: 'fr' },
+        why: 'A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing ' +
+             'the covered markets. Configuration-only upstream, so stable across activation.' },
+      { name: 'error', arguments: { country: 'sweden' },
+        why: 'Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.' },
+    ],
+  },
+  {
+    tool: 'get_eu_short_positions',
+    activationGated: true,
+    cases: [
+      { name: 'normal', arguments: { country: 'se', limit: 5 },
+        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope ' +
+             'naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.' },
+      { name: 'not_offered', arguments: { country: 'uk' },
+        why: 'UK short positions are not offered (a fixed licensing/source fact): 404 DATASET_NOT_OFFERED rendered ' +
+             'as a status answer. Configuration-only upstream, so stable across activation.' },
+      { name: 'not_covered', arguments: { country: 'fr' },
+        why: 'A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing ' +
+             'the covered markets. Configuration-only upstream, so stable across activation.' },
+      { name: 'error', arguments: { country: 'sweden' },
+        why: 'Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.' },
+    ],
+  },
+  {
+    tool: 'get_eu_annual_reports',
+    activationGated: true,
+    cases: [
+      { name: 'normal', arguments: { country: 'se', limit: 5 },
+        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope ' +
+             'naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.' },
+      { name: 'not_covered', arguments: { country: 'fr' },
+        why: 'A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing ' +
+             'the covered markets. Configuration-only upstream, so stable across activation.' },
+      { name: 'error', arguments: { country: 'sweden' },
+        why: 'Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.' },
+    ],
+  },
+  {
+    tool: 'get_eu_issuer',
+    activationGated: true,
+    cases: [
+      { name: 'normal', arguments: { country: 'se', issuer: 'lei:549300UINV5RINHGMG07' },
+        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Skanska AB\'s LEI; pins the pending status answer. ' +
+             'Turns red when SE is activated -- re-capture then.' },
+      { name: 'not_covered', arguments: { country: 'fr', issuer: 'lei:549300UINV5RINHGMG07' },
+        why: 'Uncovered market: COUNTRY_NOT_COVERED as a status answer, stable across activation.' },
+      { name: 'error', arguments: { country: 'se', issuer: 'notanid' },
+        why: 'Malformed issuer id: ko-api validates it before the liveness check, so this is a 400 isError ' +
+             'naming the id forms in every activation state.' },
+    ],
+  },
 ];
 
 /**
@@ -413,6 +498,26 @@ export const CASES = [
  * be read. See docs/GOLDEN_CONTRACT.md, "What this gate does not prove".
  */
 export const PLAN_GATED_TOOLS = CASES.filter((t) => t.planGated).map((t) => t.tool);
+
+/**
+ * The EU dataset tools while their markets are PENDING (ko-api KO_EU_LIVE unset,
+ * 2026-10-12). Their `normal` case pins the pending STATUS answer -- a success
+ * envelope that says "not live yet, not an outage" -- and contains no data. That
+ * is the contract worth pinning today (a pending dataset must never read as an
+ * error or as "no rows"), but it is NOT data coverage.
+ *
+ * TRIGGER: ko-api `KO_EU_LIVE` on the ko-api origins includes SE (ko-api
+ * AGENTS.md#eu-activation) -- these cases call `se` only; NL or DK alone leaves
+ * them green and needs a manual live tool call instead. From then on these `normal` cases are red BY DESIGN
+ * and every ko-mcp server deploy is blocked until, in the same sitting: purge
+ * everything (pending 404s carry s-maxage=3600) -> `npm run golden:capture --
+ * --tool <tool>` for each activated tool -> drop `activationGated` for those
+ * tools only -> update the two hard-coded lists in golden.test.ts -> merge,
+ * deploy, call each tool on live mcp.ko.io. Undo = the same, back to pending.
+ * Full runbook: docs/GOLDEN_CONTRACT.md section 6b. `not_covered` /
+ * `not_offered` / `error` are configuration-only and stay stable.
+ */
+export const ACTIVATION_GATED_TOOLS = CASES.filter((t) => t.activationGated).map((t) => t.tool);
 
 /** Every tool the gate replays. */
 export const TOOLS = CASES.map((t) => t.tool);

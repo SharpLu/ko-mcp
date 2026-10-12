@@ -168,3 +168,11 @@ export interface FilingsListOptions {
 export interface FilingShareOptions {
   file?: string;
 }
+
+/** European market code served under /api/v1/eu (case-insensitive). */
+export type EuCountry = "se" | "nl" | "dk" | "uk" | "SE" | "NL" | "DK" | "UK";
+
+export interface EuListOptions extends PageOptions {
+  /** Only rows of this issuer: an `issuer.id` from any EU row (`lei:`, `isin:`, `co:` or `name:`). */
+  issuer?: string;
+}

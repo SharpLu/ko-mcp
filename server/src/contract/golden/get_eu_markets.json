@@ -1,0 +1,143 @@
+{
+  "tool": "get_eu_markets",
+  "planGated": false,
+  "activationGated": false,
+  "capturedAt": "2026-10-12",
+  "provenance": {
+    "source": "in-process Worker fetch handler (src/index.ts), keyless, upstream https://api.ko.io",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree by calling its fetch handler in process (the same JSON-RPC bodies wrangler dev serves). Each case was probed twice and written only because the two probes agreed. Every EU market was pending at capture (2026-10-12)."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {},
+      "why": "The per-market status table. Cells are table body (collapsed), the legend line is constant, so this contract survives activation unchanged.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "live_count": "number",
+              "markets": {
+                "_array": {
+                  "country": "string",
+                  "datasets": {
+                    "_array": {
+                      "dataset": "string",
+                      "latest_retrieved_at": "null",
+                      "latest_source_date": "null",
+                      "status": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 European markets on ko.io",
+              "BLANK",
+              "THEAD Market | Insider dealings (PDMR) | Major holdings | Net short positions | Annual reports",
+              "TBODY",
+              "BLANK",
+              "TEXT *live = served; pending = offered but not activated yet (not an outage, not empty); not offered = a fixed source/licensing decision.*",
+              "TEXT *UK: rows credit the filer and the National Storage Mechanism. Its terms allow no link to an individual record, so ko.io gives none (`source.url` is null).*"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Market",
+                  "Insider dealings (PDMR)",
+                  "Major holdings",
+                  "Net short positions",
+                  "Annual reports"
+                ],
+                "dataRows": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "unexpected": "x"
+      },
+      "why": "Input schema is `{}`: an unexpected argument is dropped and the normal answer comes back -- pinned for the same reason as get_crypto_exposure.error.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "live_count": "number",
+              "markets": {
+                "_array": {
+                  "country": "string",
+                  "datasets": {
+                    "_array": {
+                      "dataset": "string",
+                      "latest_retrieved_at": "null",
+                      "latest_source_date": "null",
+                      "status": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 European markets on ko.io",
+              "BLANK",
+              "THEAD Market | Insider dealings (PDMR) | Major holdings | Net short positions | Annual reports",
+              "TBODY",
+              "BLANK",
+              "TEXT *live = served; pending = offered but not activated yet (not an outage, not empty); not offered = a fixed source/licensing decision.*",
+              "TEXT *UK: rows credit the filer and the National Storage Mechanism. Its terms allow no link to an individual record, so ko.io gives none (`source.url` is null).*"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Market",
+                  "Insider dealings (PDMR)",
+                  "Major holdings",
+                  "Net short positions",
+                  "Annual reports"
+                ],
+                "dataRows": 4
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -84,8 +84,8 @@ describe('registry gate (a): tool completeness', () => {
     ).toEqual(registered);
   });
 
-  it('declares 24 tools, the number the deploy health gate asserts', () => {
-    expect(TOOL_REGISTRY.length).toBe(24);
+  it('declares 30 tools, the number the deploy health gate asserts', () => {
+    expect(TOOL_REGISTRY.length).toBe(30);
   });
 
   it('tool names are unique', () => {

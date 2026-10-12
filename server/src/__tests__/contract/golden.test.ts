@@ -13,7 +13,7 @@ import {
   goldenDir,
   loadFixtures,
 } from "../../contract/skeleton.mjs";
-import { CASES, CASE_COUNT, EXCLUDED, PLAN_GATED_TOOLS, TOOLS } from "../../contract/cases.mjs";
+import { ACTIVATION_GATED_TOOLS, CASES, CASE_COUNT, EXCLUDED, PLAN_GATED_TOOLS, TOOLS } from "../../contract/cases.mjs";
 import type { GoldenFixture } from "../../contract/skeleton.d.mts";
 
 /**
@@ -30,7 +30,7 @@ import type { GoldenFixture } from "../../contract/skeleton.d.mts";
 const fixtures: GoldenFixture[] = await loadFixtures(goldenDir());
 const allCases = fixtures.flatMap((f) => f.cases.map((c) => ({ fixture: f, c })));
 
-// The 24 tools the deploy health check counts, asserted independently of the
+// The 30 tools the deploy health check counts, asserted independently of the
 // manifest so the two cannot drift into agreeing with each other while both
 // being wrong.
 const EXPECTED_TOOLS = [
@@ -43,6 +43,8 @@ const EXPECTED_TOOLS = [
   "get_stock_financials",
   "get_treasury_yields", "get_fed_rates", "get_economic_indicators", "get_ftd_data", "get_financial_stress",
   "get_crypto_exposure", "get_crypto_holders", "get_crypto_holder",
+  "get_eu_markets", "get_eu_insider_dealings", "get_eu_major_holdings", "get_eu_short_positions",
+  "get_eu_annual_reports", "get_eu_issuer",
 ];
 
 // ---------------------------------------------------------------------------
@@ -148,7 +150,7 @@ describe("envelope shape", () => {
 // ---------------------------------------------------------------------------
 
 describe("fixtures", () => {
-  it("one fixture per tool, and exactly the 24 tools the deploy check counts", () => {
+  it("one fixture per tool, and exactly the 30 tools the deploy check counts", () => {
     expect(fixtures.map((f) => f.tool).sort()).toEqual([...EXPECTED_TOOLS].sort());
     expect(TOOLS.sort()).toEqual([...EXPECTED_TOOLS].sort());
   });
@@ -226,9 +228,10 @@ describe("fixtures", () => {
       .filter((f) => !f.cases.some((c) =>
         !c.contract.isError && c.contract.blocks.some((b) => b.tables.length > 0 || b.lines.length >= 4)))
       .map((f) => f.tool);
-    // The 5 plan-gated tools cannot reach data from the free tier, by design.
+    // The 5 plan-gated tools cannot reach data from the free tier, by design;
+    // the activation-gated EU tools serve no rows until their market goes live.
     expect(hollow.sort(), `no populated contract pinned for:\n${hollow.join("\n")}`)
-      .toEqual([...PLAN_GATED_TOOLS].sort());
+      .toEqual([...PLAN_GATED_TOOLS, ...ACTIVATION_GATED_TOOLS].sort());
   });
 });
 
@@ -250,6 +253,35 @@ describe("plan-gated tools are labelled, so nobody mistakes a 403 for coverage",
 
   it("a fixture flagged planGated is one of the four, and vice versa", () => {
     expect(fixtures.filter((f) => f.planGated).map((f) => f.tool).sort()).toEqual([...PLAN_GATED_TOOLS].sort());
+  });
+});
+
+describe("activation-gated EU tools pin the PENDING state, labelled so nobody mistakes it for coverage", () => {
+  it("the five EU dataset tools are flagged, and only they", () => {
+    expect([...ACTIVATION_GATED_TOOLS].sort()).toEqual([
+      "get_eu_annual_reports", "get_eu_insider_dealings", "get_eu_issuer", "get_eu_major_holdings", "get_eu_short_positions",
+    ]);
+    expect(fixtures.filter((f) => f.activationGated).map((f) => f.tool).sort()).toEqual([...ACTIVATION_GATED_TOOLS].sort());
+  });
+
+  it("each normal case is a pending STATUS answer in a success envelope, never an outage-shaped error", () => {
+    for (const tool of ACTIVATION_GATED_TOOLS) {
+      const normal = fixtures.find((x) => x.tool === tool)!.cases.find((c) => c.name === "normal")!;
+      expect(normal.contract.isError, `${tool}.normal must not be isError`).toBeFalsy();
+      const text = normal.contract.blocks.flatMap((b) => b.lines).join(" ");
+      expect(text, tool).toContain("**Status: pending**");
+      expect(text, tool).toContain("not an outage");
+      expect(text, tool).not.toMatch(/ko\.io API error/);
+      expect(normal.why).toContain("ACTIVATION GATE");
+    }
+  });
+
+  it("an uncovered market is a status answer too, naming the covered markets", () => {
+    for (const tool of ACTIVATION_GATED_TOOLS) {
+      const c = fixtures.find((x) => x.tool === tool)!.cases.find((x) => x.name === "not_covered")!;
+      expect(c.contract.isError, tool).toBeFalsy();
+      expect(c.contract.blocks.flatMap((b) => b.lines).join(" "), tool).toContain("Covered markets: se, nl, dk, uk");
+    }
   });
 });
 

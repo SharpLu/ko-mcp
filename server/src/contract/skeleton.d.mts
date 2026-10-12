@@ -43,6 +43,7 @@ export interface GoldenCase {
 export interface GoldenFixture {
   tool: string;
   planGated: boolean;
+  activationGated?: boolean;
   capturedAt: string;
   provenance: { source: string; mode: 'recordings' | 'build'; note: string };
   cases: GoldenCase[];

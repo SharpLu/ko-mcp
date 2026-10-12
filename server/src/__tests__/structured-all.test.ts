@@ -30,6 +30,7 @@ import { registerFilingTools } from "../tools/filings.js";
 import { registerFinancialTools } from "../tools/financials.js";
 import { registerMacroTools } from "../tools/macro.js";
 import { registerCryptoTools } from "../tools/crypto.js";
+import { registerEuTools } from "../tools/eu.js";
 
 const mock = vi.mocked(koFetch);
 
@@ -39,6 +40,7 @@ async function connect(apiKey = "") {
   for (const reg of [
     registerInstitutionTools, registerStockTools, registerInsiderTools, registerCongressTools, registerSearchTool,
     registerForm144Tools, registerFilingTools, registerFinancialTools, registerMacroTools, registerCryptoTools,
+    registerEuTools,
   ]) reg(server, config);
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "t", version: "0" });
@@ -100,6 +102,51 @@ interface Fixture {
 }
 
 const same = (body: unknown) => () => body;
+
+// EU rows, shapes from ko-api openapi.public.yaml examples (captured 2026-10-12).
+const EU_SRC = { attribution: "Källa: Finansinspektionen (FI), 2026-10-11", source_date: "2026-10-10", retrieved_at: "2026-10-11T21:31:22Z", url: "https://marknadssok.fi.se/x", link_policy: "record", copyright_note: null };
+const EU_PDMR = {
+  record_id: "A004D046-1:1", country: "SE", notice_id: "A004D046", notice_version: 1, latest_version: 1, notice_status_label: "Aktuell",
+  published_at: "2026-10-10T11:43:38Z", publication_date: "2026-10-10",
+  issuer: { id: "lei:984500F33AB40805EE63", name: "Proport invest ab", lei: "984500F33AB40805EE63", isin: "SE0027767724" },
+  person: { name: "I T", reporting_person: "I T", role: "Styrelseordförande", closely_associated: false },
+  transaction: { date: "2026-10-09", nature_label: "Förvärv", nature_code: null, instrument_name: "Proport invest AB", instrument_type_label: "Aktie",
+    quantity: 11600, quantity_unit: "Antal", price: 2.01, currency: "SEK", price_unit: "SEK", venue: "SPOTLIGHT STOCK MARKET" },
+  source: EU_SRC,
+};
+const EU_MAJOR = {
+  record_id: "201302", country: "NL", notice_status_label: "Published", published_at: null, publication_date: null, transaction_date: "2026-10-07",
+  event_date: "2026-10-07", event_date_kind: "transaction", issuer: { id: "co:kvk:33216172", name: "Randstad N.V.", lei: null, isin: null },
+  holders: ["BlackRock Inc."], reason_label: "", instrument: "",
+  after: { shares: 6278411, shares_pct: 2.5, potential_shares_pct: 0.48, total_votes_pct: 3.31, direct_votes: 0, indirect_votes: 6821519, direct_votes_pct: 0, indirect_votes_pct: 2.71 },
+  before: { shares: null, votes: null },
+  instruments: { votes: 1496908, votes_pct: 0.6, physical_votes: 759194, physical_votes_pct: null, cash_votes: 509371, cash_votes_pct: null },
+  control_chain: [], missing_fields: [], comment: "", source: { ...EU_SRC, attribution: "Bron/Source: AFM", url: null, link_policy: "none" },
+};
+const EU_SHORT = {
+  record_id: "00af:1", country: "SE", position_date: "2026-10-08", holder: "PDT Partners LLC",
+  issuer: { id: "isin:SE0000806994", name: "JM AB", lei: null, isin: "SE0000806994" }, position_pct: 1.42, position_upper_bound_pct: null,
+  is_below_threshold: false, is_position_missing: false, comment: "", source: EU_SRC,
+};
+const EU_ANNUAL = {
+  record_id: "44923", country: "NL", source_system: "AFM financial reporting", publication_date: "2019-06-04", published_at: "2019-06-04T16:37:00Z",
+  index_added_date: null, period_end: null, issuer: { id: "name:1b31", name: "Holland Colours N.V.", lei: null, isin: null },
+  package_url: null, report_url: "https://www.afm.nl/x", package_sha256: null, error_count: null, warning_count: null,
+  source: { ...EU_SRC, copyright_note: "Issuer-authored annual reports remain the issuer's copyright." },
+};
+const EU_META = { page: 1, per_page: 25, total: 1, has_more: false, latest_source_date: "2026-10-11", latest_retrieved_at: "2026-10-11T23:31:21Z", pagination: { page: 1, per_page: 25, total_count: 1, total_pages: 1 } };
+const EU_EMPTY_META = { ...EU_META, total: 0, pagination: { page: 1, per_page: 25, total_count: 0, total_pages: 0 } };
+const EU_MARKETS = [{ country: "SE", datasets: [
+  { dataset: "pdmr_dealings", status: "live", latest_source_date: "2026-10-11", latest_retrieved_at: "2026-10-11T23:31:21Z" },
+  { dataset: "major_holdings", status: "pending", latest_source_date: null, latest_retrieved_at: null },
+  { dataset: "short_positions", status: "pending", latest_source_date: null, latest_retrieved_at: null },
+  { dataset: "annual_reports", status: "pending", latest_source_date: null, latest_retrieved_at: null }] }];
+const EU_ISSUER_BODY = (rows: boolean) => env({
+  issuer: { id: "lei:549300UINV5RINHGMG07", name: "Skanska AB", lei: "549300UINV5RINHGMG07", isin: "SE0000113250", country: "SE",
+    lei_valid: true, isin_valid: true, ticker: null, venue: "NASDAQ STOCKHOLM AB", lei_entity_verified: false },
+  match_basis: "lei",
+  insider_dealings: rows ? [EU_PDMR] : [], major_holdings: [], short_positions: rows ? [EU_SHORT] : [], annual_reports: [],
+}, { country: "SE", live_datasets: ["pdmr_dealings", "short_positions"], rows_per_dataset: 100 });
 
 const FIXTURES: Record<string, Fixture> = {
   get_institution_holdings: { args: { institution: "1067983" }, populated: same(env([HOLDING], { total_count: "1" })), empty: same(env([])) },
@@ -179,6 +226,12 @@ const FIXTURES: Record<string, Fixture> = {
       positions: [{ product_ticker: "IBIT", product_name: "iShares", sponsor: "B", shares_held: "10", usd_value: "5", prev_usd_value: "4", qoq_value_change: "1", share_change: "1", action: "ADDED", portfolio_weight_pct: 1 }] })),
     empty: same(env({ institution: null, positions: [] })),
   },
+  get_eu_markets: { args: {}, populated: same(EU_MARKETS), empty: same([]) },
+  get_eu_insider_dealings: { args: { country: "se" }, populated: same(env([EU_PDMR], EU_META)), empty: same(env([], EU_EMPTY_META)) },
+  get_eu_major_holdings: { args: { country: "nl" }, populated: same(env([EU_MAJOR], EU_META)), empty: same(env([], EU_EMPTY_META)) },
+  get_eu_short_positions: { args: { country: "se" }, populated: same(env([EU_SHORT], EU_META)), empty: same(env([], EU_EMPTY_META)) },
+  get_eu_annual_reports: { args: { country: "nl" }, populated: same(env([EU_ANNUAL], EU_META)), empty: same(env([], EU_EMPTY_META)) },
+  get_eu_issuer: { args: { country: "se", issuer: "lei:549300UINV5RINHGMG07" }, populated: same(EU_ISSUER_BODY(true)), empty: same(EU_ISSUER_BODY(false)) },
 };
 
 let realFetch: typeof fetch;
@@ -191,7 +244,7 @@ function stubExcerpt(status: number) {
   })) as unknown as typeof fetch;
 }
 
-describe("all 24 tools return schema-valid structuredContent (R1 #7)", () => {
+describe("all 30 tools return schema-valid structuredContent (R1 #7)", () => {
   it("the fixture table covers exactly the tools/list surface", async () => {
     const { tools } = await (await connect()).listTools();
     expect(Object.keys(FIXTURES).sort()).toEqual(tools.map((t) => t.name).sort());

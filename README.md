@@ -69,7 +69,7 @@ Browse the [documentation index](docs/README.md) for setup guides, package docs,
 
 | Directory | What it is |
 |-----------|------------|
-| [`server/`](server) | **The hosted MCP server** (mcp.ko.io) — Cloudflare Worker, 24 tools, deployed from this repo |
+| [`server/`](server) | **The hosted MCP server** (mcp.ko.io) — Cloudflare Worker, 30 tools, deployed from this repo |
 | [`docs/clients/`](docs/clients) | Verified setup guides for every MCP client |
 | [`python/`](python) | `ko-edgar` — official Python SDK (sync + async, typed) |
 | [`typescript/sdk/`](typescript/sdk) | `@ko-io/sdk` — official TypeScript SDK (Node 18+, browsers, edge) |
@@ -118,12 +118,13 @@ URL, or send `Authorization: Bearer YOUR_KEY`.
 | Stock prices & financials | Daily OHLCV + XBRL-derived statements | ✅ |
 | SEC filings gateway | Any filing document, signed shareable links | list/index ✅ · documents Pro |
 | Macro (Treasury, Fed, CPI, OFR stress) | Daily federal sources | Pro |
+| European disclosures (SE, NL, DK, UK) | Insider dealings (PDMR), major holdings, net short positions (not UK), annual reports; per-row source credit. **Pending activation** -- `get_eu_markets` shows what is live | ✅ (trailing window) |
 
 All data is source-traced through the pipeline, and the filings gateway can
 pull the underlying SEC documents — so your agent cites real filings instead
 of inventing numbers.
 
-## The 24 MCP tools
+## The 30 MCP tools
 
 **Institutions**: `get_institution_holdings` · `list_institutions` ·
 **Stocks**: `get_stock_profile` · `get_stock_holders` · `get_stock_activity` ·
@@ -135,7 +136,9 @@ of inventing numbers.
 **Short data**: `get_ftd_data` ·
 **Search**: `search` · **Form 144**: `get_form144_notices` ·
 **Macro (Pro)**: `get_treasury_yields` · `get_fed_rates` ·
-`get_economic_indicators` · `get_financial_stress`
+`get_economic_indicators` · `get_financial_stress` ·
+**Europe**: `get_eu_markets` · `get_eu_insider_dealings` · `get_eu_major_holdings` ·
+`get_eu_short_positions` · `get_eu_annual_reports` · `get_eu_issuer`
 
 Full parameter reference: [llms.txt](llms.txt) · [ko.io/docs](https://ko.io/docs)
 

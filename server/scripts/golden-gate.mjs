@@ -43,7 +43,7 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadFixtures, runGoldenGate } from '../src/contract/skeleton.mjs';
-import { CASES, CASE_COUNT, EXCLUDED, PLAN_GATED_TOOLS } from '../src/contract/cases.mjs';
+import { CASES, CASE_COUNT, EXCLUDED, PLAN_GATED_TOOLS, ACTIVATION_GATED_TOOLS } from '../src/contract/cases.mjs';
 import { startLocalWorker } from './lib/local-worker.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -66,6 +66,7 @@ if (fixtures.length !== CASES.length || pinnedCases !== CASE_COUNT) {
 
 console.log(`golden gate: ${fixtures.length} tools, ${pinnedCases} cases pinned, ${Object.keys(EXCLUDED).length} excluded`);
 console.log(`             ${PLAN_GATED_TOOLS.length} plan-gated tools pin a 403 GATE, not data: ${PLAN_GATED_TOOLS.join(', ')}`);
+console.log(`             ${ACTIVATION_GATED_TOOLS.length} activation-gated EU tools pin the PENDING state, not data: ${ACTIVATION_GATED_TOOLS.join(', ')}`);
 
 const worker = await startLocalWorker({ cwd: SERVER });
 console.log(`             worker under test: ${worker.base} (built from this working tree, this job)`);

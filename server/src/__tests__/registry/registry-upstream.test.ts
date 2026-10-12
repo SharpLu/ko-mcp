@@ -66,12 +66,13 @@ describe('registry gate (c): every tool route exists upstream', () => {
     const legs = TOOL_REGISTRY.flatMap((t) => t.upstreamRoutes);
     // 27 -> 28 (2026-09-26): get_insider_trades has two mutually exclusive
     // legs now (per-day aggregate / per-transaction line) where it had one.
-    expect(legs.length).toBe(28);
+    expect(legs.length).toBe(34);
     // 24 distinct ko-api paths. The M0 audit's headline said 20, but its own
     // per-tool matrix lists 24 -- the four EDGAR filing routes are the gap.
     // Still 24 after 2026-09-26: /executive-trades/:ticker left the surface and
-    // /insider/:cik/transactions joined it.
-    expect(new Set(legs.map((l) => `${l.method} ${l.path}`)).size).toBe(24);
+    // /insider/:cik/transactions joined it. 30 since 2026-10-12: the six
+    // /api/v1/eu routes (one leg each), so 28 -> 34 legs as well.
+    expect(new Set(legs.map((l) => `${l.method} ${l.path}`)).size).toBe(30);
   });
 });
 
@@ -254,7 +255,7 @@ describe('registry gate (f): declared plan matches what ko-api enforces', () => 
     expect(blocked.some((p) => '/api/v1/sec/ftd'.startsWith(p))).toBe(false);
   });
 
-  it('upstream auth modes across the tool surface are the three the audit measured', () => {
+  it('upstream auth modes across the tool surface: the three the audit measured + the public EU status route', () => {
     const counts: Record<string, number> = {};
     for (const leg of TOOL_REGISTRY.flatMap((t) => t.upstreamRoutes)) {
       const auth = route(leg.method, leg.path)?.auth ?? 'MISSING';
@@ -263,6 +264,8 @@ describe('registry gate (f): declared plan matches what ko-api enforces', () => 
     expect(counts.MISSING ?? 0).toBe(0);
     expect(counts.apiKeyPaid).toBe(1);
     expect(counts.signedTokenOrApiKeyPaid).toBe(1);
-    expect(counts.apiKey).toBe(26);
+    expect(counts.apiKey).toBe(31);
+    // GET /api/v1/eu/markets: configuration-only status, no key needed (2026-10-12).
+    expect(counts.public).toBe(1);
   });
 });
