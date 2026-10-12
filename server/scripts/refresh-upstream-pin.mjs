@@ -107,10 +107,10 @@ for (const src of SCANNED_ROUTE_FILES) {
     if (factory) {
       try {
         scanned = `${h.body}\n${functionBody(body, factory, { exported: false })}`;
-      } catch {
+      } catch (e) {
         console.error(
-          `FATAL: ${src} registers ${h.method} ${h.path} through ${factory}(), which is not declared ` +
-          'in that file, so its param reads cannot be scanned.',
+          `FATAL: ${src} registers ${h.method} ${h.path} through ${factory}(), whose declaration in ` +
+          `that file cannot be scanned, so its param reads cannot be pinned: ${e.message}`,
         );
         process.exit(1);
       }

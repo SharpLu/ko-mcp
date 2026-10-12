@@ -50,8 +50,9 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci
-      # Same backstop as deploy-server.yml: the gate does ~70 s of work; a
-      # process that never exits becomes a loud 6-minute failure.
+      # Same backstop as deploy-server.yml: the gate takes ~15-20 s (measured
+      # 14-20 s in CI, 2026-10-09..12, incl. wrangler dev boot); a process that
+      # never exits becomes a loud 6-minute failure.
       - name: Golden contract gate (local build, keyless)
         timeout-minutes: 6
         run: npm run golden:gate

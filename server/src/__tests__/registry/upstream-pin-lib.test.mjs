@@ -162,4 +162,34 @@ app.get('/api/v1/x', cacheFor(60), async (c) => c.json({ q: c.req.query('q') }))
     expect(body).toContain("c.req.query('page')");
     expect(body).not.toContain("leak");
   });
+
+  // Review of #36, nit 2: `function f(a): { x: number } {` used to return the
+  // return-type literal `{ x: number }` as the body, so a handler factory with
+  // an object return type would have been pinned as reading [].
+  it("skips an object-literal return type to the real body", () => {
+    const OBJ = "function f(a: string): { x: number; y: string } {\n  return { x: Number(c.req.query('page')), y: '' };\n}\nfunction after() { c.req.query('leak'); }\n";
+    const body = functionBody(OBJ, "f", { exported: false });
+    expect(body).toContain("c.req.query('page')");
+    expect(body).not.toContain("leak");
+    expect(readParams(body)).toEqual(["page"]);
+  });
+
+  it.each([
+    ["generic object", "Promise<{ a: string }>"],
+    ["union with object", "Handler | { b: 1 }"],
+    ["array of objects", "{ a: 1 }[]"],
+    ["function type", "(() => { a: 1 })"],
+    ["type predicate", "x is Foo"],
+    ["string literal with a brace", "'{' | '}'"],
+    ["commented", "/* { not a body } */ Handler"],
+  ])("finds the body behind a %s return type", (_label, type) => {
+    const SRC = `function g(x: unknown): ${type} {\n  return c.req.query('q');\n}\nconst other = () => { c.req.query('leak'); };\n`;
+    const body = functionBody(SRC, "g", { exported: false });
+    expect(readParams(body)).toEqual(["q"]);
+  });
+
+  it("still refuses a bodiless signature that has an object return type", () => {
+    const SIG = "function sig(a: string): { x: number };\nconst other = () => { c.req.query('leak'); };\n";
+    expect(() => functionBody(SIG, "sig", { exported: false })).toThrow(/no body/);
+  });
 });

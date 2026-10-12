@@ -211,7 +211,11 @@ export function readParams(body, helperReads = {}) {
  *   - a bodiless signature (`function f(a: string): T;`): refuses rather than
  *     brace-matching whatever block happens to come next.
  * The parameter list is paren-balanced, so a callback-typed parameter
- * (`cb: () => void`) cannot end it early.
+ * (`cb: () => void`) cannot end it early, and a return-type annotation is
+ * skipped bracket-balanced up to the real body (bodyOpen()), so an object
+ * return type (`function f(a): { x: number } {`) cannot pose as the body
+ * (review of ko-mcp #36, nit 2). Generic (`function f<T>(`) and `async`
+ * declarations are not matched at all and throw "not found" (fail-closed).
  */
 export function functionBody(source, name, { exported = true } = {}) {
   const decl = exported ? `export\\s+function\\s+${name}\\s*\\(` : `(?:^|\\n)(?:export\\s+)?function\\s+${name}\\s*\\(`;
@@ -228,14 +232,67 @@ export function functionBody(source, name, { exported = true } = {}) {
     else if (source[i] === ')' && --depth === 0) { close = i; break; }
   }
   if (close < 0) throw new Error(`helper ${name}() has an unterminated parameter list`);
-  const open = source.indexOf('{', close);
-  if (open < 0 || source.slice(close + 1, open).includes(';')) throw new Error(`helper ${name}() has no body`);
+  const open = bodyOpen(source, close, name);
   let depth = 0;
   for (let i = open; i < source.length; i++) {
     if (source[i] === '{') depth++;
     else if (source[i] === '}' && --depth === 0) return source.slice(m.index, i + 1);
   }
   throw new Error(`helper ${name}() has no closing brace`);
+}
+
+// Words after which a TS type position is still open (`A extends {`, `keyof {`).
+const TYPE_CONTINUATION_WORDS = new Set(['extends', 'keyof', 'typeof', 'infer', 'readonly', 'unique', 'asserts', 'is', 'new']);
+
+/**
+ * Index of the body's `{` for a declaration whose parameter list closes at
+ * `close`. Without a return-type annotation that is the next non-blank char.
+ * With one (`): <type> {`), the type is walked bracket-balanced over (), [],
+ * {}, <> (skipping strings and comments), and a depth-0 `{` opens the body
+ * only where a complete type has just ended -- a `{` where a type is still
+ * expected (right after `:`, `|`, `&`, `=>`, `extends` ...) is an object
+ * type literal and is skipped like any other bracket. A depth-0 `;`, or
+ * anything else before the body, means a bodiless signature.
+ */
+function bodyOpen(source, close, name) {
+  const noBody = () => new Error(`helper ${name}() has no body`);
+  let i = close + 1;
+  while (i < source.length && /\s/.test(source[i])) i++;
+  if (source[i] === '{') return i;
+  if (source[i] !== ':') throw noBody();
+  let depth = 0;
+  let expectType = true;
+  for (i += 1; i < source.length; i++) {
+    const ch = source[i];
+    if (/\s/.test(ch)) continue;
+    if (ch === '/' && source[i + 1] === '/') { const nl = source.indexOf('\n', i); i = nl < 0 ? source.length : nl; continue; }
+    if (ch === '/' && source[i + 1] === '*') { const end = source.indexOf('*/', i + 2); if (end < 0) break; i = end + 1; continue; }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      let j = i + 1;
+      while (j < source.length && source[j] !== ch) j += source[j] === '\\' ? 2 : 1;
+      i = j;
+      expectType = false;
+      continue;
+    }
+    if (depth === 0 && ch === '{' && !expectType) return i;
+    if (depth === 0 && ch === ';') throw noBody();
+    if (ch === '>' && source[i - 1] === '=') { expectType = true; continue; } // `=>`, not a closer
+    if ('([{<'.includes(ch)) { depth++; expectType = true; continue; }
+    if (')]}>'.includes(ch)) {
+      if (--depth < 0) throw noBody();
+      expectType = false;
+      continue;
+    }
+    if ('|&:?,='.includes(ch)) { expectType = true; continue; }
+    if (/[A-Za-z_$]/.test(ch)) {
+      const word = /^[A-Za-z_$][\w$]*/.exec(source.slice(i))[0];
+      expectType = TYPE_CONTINUATION_WORDS.has(word);
+      i += word.length - 1;
+      continue;
+    }
+    expectType = false; // digits, `.`, `-`, ...
+  }
+  throw noBody();
 }
 
 /**

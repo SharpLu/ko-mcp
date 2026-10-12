@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   shapeOf,
   diffShape,
@@ -10,6 +10,7 @@ import {
   checkDefect,
   assertLoopback,
   runGoldenGate,
+  isRateLimited,
   goldenDir,
   loadFixtures,
 } from "../../contract/skeleton.mjs";
@@ -251,7 +252,7 @@ describe("plan-gated tools are labelled, so nobody mistakes a 403 for coverage",
     }
   });
 
-  it("a fixture flagged planGated is one of the four, and vice versa", () => {
+  it("a fixture flagged planGated is one of the five, and vice versa", () => {
     expect(fixtures.filter((f) => f.planGated).map((f) => f.tool).sort()).toEqual([...PLAN_GATED_TOOLS].sort());
   });
 });
@@ -462,6 +463,39 @@ describe("gate runner (offline, injected fetch)", () => {
       fetchImpl: reply({ jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text: "ko.io API error (500): Upstream error" }], isError: true } }),
     });
     expect(r.failures[0].problems.join(" ")).toContain("isError");
+  });
+
+  // Review of #36, nit 7: a ko-api 429 is a rate limit, not a contract move.
+  const limited = { jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text: "ko.io API error (429): Rate limit exceeded: demo quota" }], isError: true } };
+  const good = { jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text }] } };
+  const sequence = (...bodies: unknown[]) => {
+    let i = 0;
+    const f = vi.fn(async () => ({ status: 200, text: async () => JSON.stringify(bodies[Math.min(i++, bodies.length - 1)]) }));
+    return f as unknown as typeof fetch & { mock: { calls: unknown[] } };
+  };
+  const noWait = async () => {};
+
+  it("a 429 that clears after one backoff retry is checked normally", async () => {
+    const f = sequence(limited, good);
+    const r = await runGoldenGate(fx as never, { base: "http://127.0.0.1:1", fetchImpl: f, sleep: noWait });
+    expect(r).toMatchObject({ checked: 1, failures: [], rateLimited: [], retries: 1 });
+    expect(f.mock.calls).toHaveLength(2);
+  });
+
+  it("a sustained 429 is reported as rate-limited, never as CONTRACT MOVED, and retried only once per run", async () => {
+    const two = [fx[0], { ...fx[0], tool: "probe2" }];
+    const f = sequence(limited);
+    const r = await runGoldenGate(two as never, { base: "http://127.0.0.1:1", fetchImpl: f, sleep: noWait });
+    expect(r.failures).toEqual([]);
+    expect(r.checked).toBe(0);
+    expect(r.rateLimited).toEqual([{ tool: "probe", case: "normal" }, { tool: "probe2", case: "normal" }]);
+    expect(r.retries).toBe(1);
+    expect(f.mock.calls).toHaveLength(3); // probe x2 (one retry), probe2 x1 (retries now off)
+  });
+
+  it("isRateLimited matches the 429 class only (a 500 stays a contract failure)", async () => {
+    expect(isRateLimited(limited)).toBe(true);
+    expect(isRateLimited({ result: { content: [{ type: "text", text: "ko.io API error (500): Upstream error" }] } })).toBe(false);
   });
 
   it("reports an unanswering worker as unreachable and never as intact", async () => {

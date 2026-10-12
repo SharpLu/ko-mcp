@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
 
 // Mock ONLY the transport (iron rule 6): real KoApiError / constants stay in place.
 vi.mock("../ko-fetch.js", async () => ({
@@ -204,6 +205,16 @@ describe("EU lists: proxy contract", () => {
     expect(mock.mock.calls[0][1]).toBe("/api/v1/eu/se/issuers/lei%3A549300UINV5RINHGMG07");
     expect(textOf(r)).toContain("## Sweden — issuer `lei:549300UINV5RINHGMG07`\n");
     expect(r.structuredContent).toMatchObject({ requested: "lei:549300UINV5RINHGMG07", status: "pending" });
+  });
+
+  it("the issuer id schema trims before its length check (whitespace-only never reaches /issuers/)", () => {
+    for (const name of ["get_eu_issuer", "get_eu_insider_dealings"]) {
+      const schema = z.object(tools().get(name)!.schema as z.ZodRawShape);
+      expect(schema.safeParse({ country: "se", issuer: "   " }).success, `${name}: blank id`).toBe(false);
+      expect(schema.safeParse({ country: "se", issuer: "  ab " }).success, `${name}: 2 chars after trim`).toBe(false);
+      const ok = schema.safeParse({ country: "se", issuer: "  lei:549300UINV5RINHGMG07 " });
+      expect(ok.success && (ok.data as { issuer: string }).issuer).toBe("lei:549300UINV5RINHGMG07");
+    }
   });
 
   it("annual reports surface the issuer copyright note once", async () => {

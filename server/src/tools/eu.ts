@@ -58,8 +58,11 @@ const COUNTRY = z
   .regex(/^[A-Za-z]{2}$/, "a two-letter market code")
   .describe("Market: se (Sweden), nl (Netherlands), dk (Denmark) or uk (United Kingdom)");
 
+// trim() before min(3): a whitespace-only id is a -32602 at the schema layer,
+// never a call to `/issuers/` (review of ko-mcp #36, nit 5).
 const ISSUER_ID = z
   .string()
+  .trim()
   .min(3)
   .max(200)
   .describe("ko.io issuer id as returned in a row's issuer.id: lei:<LEI>, isin:<ISIN>, co:<register id> or name:<hash>");
