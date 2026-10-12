@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  PARAM_HELPERS, readParams, unscannableReads, functionBody, resolveHelperReads, splitHandlers,
+  PARAM_HELPERS, readParams, unscannableReads, functionBody, resolveHelperReads, splitHandlers, handlerFactory,
 } from "../../../scripts/upstream-pin-lib.mjs";
 
 const PAGINATION_TS = `
@@ -103,5 +103,37 @@ describe("unscannableReads", () => {
   it("keeps the existing refusals", () => {
     expect(unscannableReads("const { a } = c.req.query();")).toEqual(["bare c.req.query() destructuring"]);
     expect(unscannableReads("sp.get(name)")).toEqual(["searchParams.get(<variable>)"]);
+  });
+});
+
+describe("same-file handler factories (ko-api eu.ts listHandler)", () => {
+  const SRC = `
+function listHandler(dataset: string) {
+  return async (c: Context) => {
+    const sp = new URL(c.req.url).searchParams;
+    const issuer = sp.get('issuer');
+    const page = validatePage(sp.get('page') ?? undefined);
+    const size = pageSizeParam(sp);
+    return c.json({ dataset, issuer, page, size, t: \`\${dataset}\` });
+  };
+}
+app.get('/api/v1/eu/:country/insider-dealings', listHandler('pdmr_dealings'));
+app.get('/api/v1/eu/markets', async () => apiSuccess([]));
+app.get('/api/v1/x', cacheFor(60), async (c) => c.json({ q: c.req.query('q') }));
+`;
+  const handlers = splitHandlers(SRC);
+
+  it("recognises only the `app.get(path, factory(args))` shape", () => {
+    expect(handlers.map((h) => handlerFactory(h.body))).toEqual(["listHandler", null, null]);
+  });
+
+  it("resolves the factory's reads (incl. helpers) from its non-exported declaration", () => {
+    const h = handlers[0];
+    const reads = readParams(`${h.body}\n${functionBody(SRC, handlerFactory(h.body), { exported: false })}`, helperReads);
+    expect(reads).toEqual(["issuer", "limit", "page", "per_page"]);
+  });
+
+  it("an exported-only lookup still refuses a non-exported function", () => {
+    expect(() => functionBody(SRC, "listHandler")).toThrow(/not found/);
   });
 });

@@ -25,6 +25,8 @@ import type {
   StockPriceOptions,
   StocksListOptions,
   TreasuryYieldsOptions,
+  EuCountry,
+  EuListOptions,
 } from "./types.js";
 import { VERSION } from "./version.js";
 
@@ -778,4 +780,87 @@ export class KoClient {
         file: options.file,
       }),
   };
+
+  /**
+   * European market disclosures (Sweden, Netherlands, Denmark, UK). A market is
+   * served once ko.io activates it: until then a dataset answers 404
+   * `DATASET_NOT_LIVE` (pending), UK short positions 404 `DATASET_NOT_OFFERED`,
+   * and an uncovered market 404 `COUNTRY_NOT_COVERED` -- all as `NotFoundError`
+   * with that `code`. Every row carries its source credit (`source.attribution`).
+   */
+  readonly eu = {
+    /**
+     * Per market and dataset: `live`, `pending` or `not_offered`, with the latest source date. No key needed.
+     *
+     * @example
+     * ```ts
+     * const { data } = await ko.eu.markets();
+     * ```
+     */
+    markets: <T = unknown>(): Promise<ApiResult<T>> => this.get<T>("/api/v1/eu/markets"),
+
+    /**
+     * Insider dealings: transactions by persons discharging managerial responsibilities (MAR art. 19).
+     *
+     * @example
+     * ```ts
+     * const { rows } = await ko.eu.insiderDealings("se", { perPage: 25 });
+     * ```
+     */
+    insiderDealings: <T = unknown>(country: EuCountry, options: EuListOptions = {}): Promise<ApiResult<T>> =>
+      this.get<T>(`/api/v1/eu/${euSeg(country)}/insider-dealings`, euList(options)),
+
+    /**
+     * Major holdings (voting-rights) notifications.
+     *
+     * @example
+     * ```ts
+     * const { rows } = await ko.eu.majorHoldings("nl", { issuer: "co:kvk:33216172" });
+     * ```
+     */
+    majorHoldings: <T = unknown>(country: EuCountry, options: EuListOptions = {}): Promise<ApiResult<T>> =>
+      this.get<T>(`/api/v1/eu/${euSeg(country)}/major-holdings`, euList(options)),
+
+    /**
+     * Disclosed net short positions (not offered for the UK).
+     *
+     * @example
+     * ```ts
+     * const { rows } = await ko.eu.shortPositions("se");
+     * ```
+     */
+    shortPositions: <T = unknown>(country: EuCountry, options: EuListOptions = {}): Promise<ApiResult<T>> =>
+      this.get<T>(`/api/v1/eu/${euSeg(country)}/short-positions`, euList(options)),
+
+    /**
+     * Annual financial report filings, with links to the original report where the source allows.
+     *
+     * @example
+     * ```ts
+     * const { rows } = await ko.eu.annualReports("dk", { page: 2 });
+     * ```
+     */
+    annualReports: <T = unknown>(country: EuCountry, options: EuListOptions = {}): Promise<ApiResult<T>> =>
+      this.get<T>(`/api/v1/eu/${euSeg(country)}/annual-reports`, euList(options)),
+
+    /**
+     * One issuer in one market: identity plus its newest rows (up to 100) in every live dataset.
+     *
+     * @example
+     * ```ts
+     * const { data } = await ko.eu.issuer("se", "lei:549300UINV5RINHGMG07");
+     * ```
+     */
+    issuer: <T = unknown>(country: EuCountry, issuer: string): Promise<ApiResult<T>> =>
+      this.get<T>(`/api/v1/eu/${euSeg(country)}/issuers/${seg(issuer)}`),
+  };
+}
+
+/** Lower-case + URL-encode an EU market path segment. */
+function euSeg(country: string): string {
+  return encodeURIComponent(country.toLowerCase());
+}
+
+function euList(options: EuListOptions): QueryParams {
+  return { issuer: options.issuer, page: options.page, per_page: options.perPage };
 }

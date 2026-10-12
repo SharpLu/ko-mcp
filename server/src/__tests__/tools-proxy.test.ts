@@ -21,6 +21,7 @@ import { registerFilingTools } from "../tools/filings.js";
 import { registerFinancialTools } from "../tools/financials.js";
 import { registerMacroTools } from "../tools/macro.js";
 import { registerCryptoTools } from "../tools/crypto.js";
+import { registerEuTools } from "../tools/eu.js";
 import { makeFakeServer } from "./helpers.js";
 
 const mock = vi.mocked(koFetch);
@@ -38,6 +39,7 @@ function registerAll() {
   registerFinancialTools(server, config);
   registerMacroTools(server, config);
   registerCryptoTools(server, config);
+  registerEuTools(server, config);
   return tools;
 }
 
@@ -45,6 +47,7 @@ function registerAll() {
 const ARGS = {
   institution: "1067983", ticker: "AAPL", member: "Mike Kelly", query: "apple",
   cik: "320193", accession_no: "0000320193-24-000123", days: 30,
+  country: "se", issuer: "lei:549300UINV5RINHGMG07",
 };
 
 const EXPECTED_TOOLS = [
@@ -57,6 +60,8 @@ const EXPECTED_TOOLS = [
   "get_stock_financials",
   "get_treasury_yields", "get_fed_rates", "get_economic_indicators", "get_ftd_data", "get_financial_stress",
   "get_crypto_exposure", "get_crypto_holders", "get_crypto_holder",
+  "get_eu_markets", "get_eu_insider_dealings", "get_eu_major_holdings", "get_eu_short_positions",
+  "get_eu_annual_reports", "get_eu_issuer",
 ];
 
 describe("tool coverage gate", () => {
@@ -65,8 +70,8 @@ describe("tool coverage gate", () => {
     expect(registered).toEqual([...EXPECTED_TOOLS].sort());
   });
 
-  it("registers 24 tools (21 base + 3 crypto)", () => {
-    expect(registerAll().size).toBe(24);
+  it("registers 30 tools (21 base + 3 crypto + 6 EU)", () => {
+    expect(registerAll().size).toBe(30);
   });
 });
 

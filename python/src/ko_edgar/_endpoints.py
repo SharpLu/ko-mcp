@@ -323,3 +323,29 @@ def filings_index(cik: str, accession: str) -> Endpoint:
 
 def filings_share(cik: str, accession: str, file: str | None) -> Endpoint:
     return f"/api/v1/filings/{_seg(cik)}/{_seg(accession)}/share", {"file": file}
+
+
+# -- European markets (SE / NL / DK / UK) -----------------------------------------------
+
+#: Route segment per European dataset (ko-api /api/v1/eu/{country}/<segment>).
+EU_DATASET_PATHS = {
+    "insider_dealings": "insider-dealings",
+    "major_holdings": "major-holdings",
+    "short_positions": "short-positions",
+    "annual_reports": "annual-reports",
+}
+
+
+def eu_markets() -> Endpoint:
+    return "/api/v1/eu/markets", {}
+
+
+def eu_list(
+    country: str, dataset: str, issuer: str | None, page: int | None, per_page: int | None
+) -> Endpoint:
+    path = f"/api/v1/eu/{_seg(country.lower())}/{EU_DATASET_PATHS[dataset]}"
+    return path, {"issuer": issuer, "page": page, "per_page": per_page}
+
+
+def eu_issuer(country: str, issuer: str) -> Endpoint:
+    return f"/api/v1/eu/{_seg(country.lower())}/issuers/{_seg(issuer)}", {}

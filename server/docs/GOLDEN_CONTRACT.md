@@ -1,6 +1,6 @@
 # The golden contract gate
 
-> Counterpart of ko-api's 488-case gate, for the 24 MCP tools.
+> Counterpart of ko-api's 488-case gate, for the 30 MCP tools.
 > Code: `src/contract/` (harness + manifest + fixtures), `scripts/golden-gate.mjs` (blocking),
 > `scripts/golden-capture.mjs` (re-pin), `src/__tests__/contract/golden.test.ts` (offline half).
 
@@ -13,7 +13,7 @@ these 24 tools read; a renamed field upstream turns every table into a header
 with no body, and nothing in this repo would have noticed. That is the shape of
 two mart freezes this org has already paid for (2026-06, 2026-07).
 
-The gate replays 76 recorded tool calls against the Worker **built from the
+The gate replays 94 recorded tool calls against the Worker **built from the
 commit under test** and compares the **contract**:
 
 | pinned | not pinned |
@@ -102,13 +102,14 @@ skeleton records which lines exist and in what order.
 
 | | |
 |---|---|
-| tools covered | 24 / 24 (`tools/list` returns 24; the deploy check asserts `>= 24`) |
-| fixture files | 24, one per tool, in `src/contract/golden/` |
-| replayed cases | 76 |
+| tools covered | 30 / 30 (`tools/list` returns 30; the deploy check asserts `>= 30`) |
+| fixture files | 30, one per tool, in `src/contract/golden/` |
+| replayed cases | 94 (76 + 18 for the six EU tools, 2026-10-12) |
 | excluded cases | 2, each with a written reason (below) |
 | annotated known defects | 1 case: `list_institutions.empty` (see §4) |
 | offline tests added | 37 (suite total 77 -> 114) |
-| plan-gated tools pinning a 403 rather than data | 4 |
+| plan-gated tools pinning a 403 rather than data | 5 (§6) |
+| activation-gated EU tools pinning the pending state rather than data | 5 (§6b) |
 
 ## 4. Known defects: annotated, never pinned
 
@@ -203,6 +204,28 @@ Closing the gap needs a paid-tier ko.io key. At capture time `.secrets/` was
 empty, `CLOUDFLARE_API_TOKEN` was unset and `wrangler whoami` reported not
 logged in, so the QA Pro key (`qa_mcp_test_f7a2b3e7`, in prod D1) could not be
 read.
+
+## 6b. The 5 activation-gated EU tools pin a STATE, not data
+
+`get_eu_insider_dealings`, `get_eu_major_holdings`, `get_eu_short_positions`,
+`get_eu_annual_reports` and `get_eu_issuer` proxy ko-api `/api/v1/eu/*`, where a
+market is served only once ko-api's `KO_EU_LIVE` lists it (ko-api
+`AGENTS.md#eu-activation`). On 2026-10-12 every market is pending, so each
+`normal` case pins the **pending status answer**: a success envelope that says
+the dataset is not live yet and that this is not an outage and not an empty
+result. That is the contract worth pinning while nothing is live -- a pending
+dataset must never read as `ko.io API error (404)` or as "no rows" -- but it is
+not data coverage. The fixtures carry `activationGated: true`, their `why` says
+`ACTIVATION GATE, NOT DATA`, the gate prints the five names on every run, and
+`npm test` asserts all five pin the pending state.
+
+**Activation turns these `normal` cases red, by design.** Whoever activates SE
+re-captures them in a ko-mcp PR (`npm run golden:capture -- --tool <tool>` for
+each), drops `activationGated` from the manifest, and lets the populated table
+become the contract. The `not_covered` (`fr`), `not_offered` (UK short
+positions) and `error` cases are answered from configuration or zod and stay
+stable across activation. `get_eu_markets` is not gated: its table body
+collapses and its legend line is constant, so its contract survives activation.
 
 ## 7. Refreshing the fixtures
 

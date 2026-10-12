@@ -88,6 +88,17 @@ export interface ToolSpec {
  */
 export const TRANSPORT_PARAMS: readonly string[] = ['demo', 'api_key', 'key'];
 
+/**
+ * The EU routes answer a pending / not-offered dataset and an uncovered market
+ * with a coded 404 from configuration (ko-api AGENTS.md#eu-activation). The tools
+ * render those as an availability state with `rows: null`, never as an error.
+ * The list routes read their params inside a same-file handler factory
+ * (`listHandler`), which the pin scanner resolves (handlerFactory()).
+ */
+const EU_NOTE =
+  'DATASET_NOT_LIVE / DATASET_NOT_OFFERED / COUNTRY_NOT_COVERED (404) are availability states rendered as a ' +
+  'normal answer with rows: null; any other error still surfaces as isError.';
+
 export const TOOL_REGISTRY: readonly ToolSpec[] = [
   // ── institutions ────────────────────────────────────────────────────────
   {
@@ -423,6 +434,95 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
       },
       { path: '/api/v1/crypto/holder/:cik', method: 'GET', params: [], transport: 'koFetch', role: 'primary' },
     ],
+  },
+
+  // ── European markets ────────────────────────────────────────────────────
+  {
+    tool: 'get_eu_markets',
+    file: 'src/tools/eu.ts',
+    inputs: [],
+    paginationInputs: [],
+    plan: 'free',
+    planReason: 'public route (no key needed); no free blockedPrefix',
+    upstreamRoutes: [
+      { path: '/api/v1/eu/markets', method: 'GET', params: [], transport: 'koFetch', role: 'primary' },
+    ],
+  },
+  {
+    tool: 'get_eu_insider_dealings',
+    file: 'src/tools/eu.ts',
+    inputs: ['country', 'issuer', 'page', 'limit'],
+    paginationInputs: ['page', 'limit'],
+    plan: 'free',
+    planReason: 'apiKey; /api/v1/eu is on no free blockedPrefix',
+    upstreamRoutes: [
+      {
+        path: '/api/v1/eu/:country/insider-dealings', method: 'GET', params: ['issuer', 'page', 'per_page'],
+        transport: 'koFetch', role: 'primary',
+        conditional: '`issuer` only when the caller filters to one issuer id',
+      },
+    ],
+    notes: EU_NOTE,
+  },
+  {
+    tool: 'get_eu_major_holdings',
+    file: 'src/tools/eu.ts',
+    inputs: ['country', 'issuer', 'page', 'limit'],
+    paginationInputs: ['page', 'limit'],
+    plan: 'free',
+    planReason: 'apiKey; /api/v1/eu is on no free blockedPrefix',
+    upstreamRoutes: [
+      {
+        path: '/api/v1/eu/:country/major-holdings', method: 'GET', params: ['issuer', 'page', 'per_page'],
+        transport: 'koFetch', role: 'primary',
+        conditional: '`issuer` only when the caller filters to one issuer id',
+      },
+    ],
+    notes: EU_NOTE,
+  },
+  {
+    tool: 'get_eu_short_positions',
+    file: 'src/tools/eu.ts',
+    inputs: ['country', 'issuer', 'page', 'limit'],
+    paginationInputs: ['page', 'limit'],
+    plan: 'free',
+    planReason: 'apiKey; /api/v1/eu is on no free blockedPrefix',
+    upstreamRoutes: [
+      {
+        path: '/api/v1/eu/:country/short-positions', method: 'GET', params: ['issuer', 'page', 'per_page'],
+        transport: 'koFetch', role: 'primary',
+        conditional: '`issuer` only when the caller filters to one issuer id',
+      },
+    ],
+    notes: EU_NOTE,
+  },
+  {
+    tool: 'get_eu_annual_reports',
+    file: 'src/tools/eu.ts',
+    inputs: ['country', 'issuer', 'page', 'limit'],
+    paginationInputs: ['page', 'limit'],
+    plan: 'free',
+    planReason: 'apiKey; /api/v1/eu is on no free blockedPrefix',
+    upstreamRoutes: [
+      {
+        path: '/api/v1/eu/:country/annual-reports', method: 'GET', params: ['issuer', 'page', 'per_page'],
+        transport: 'koFetch', role: 'primary',
+        conditional: '`issuer` only when the caller filters to one issuer id',
+      },
+    ],
+    notes: EU_NOTE,
+  },
+  {
+    tool: 'get_eu_issuer',
+    file: 'src/tools/eu.ts',
+    inputs: ['country', 'issuer'],
+    paginationInputs: [],
+    plan: 'free',
+    planReason: 'apiKey; /api/v1/eu is on no free blockedPrefix',
+    upstreamRoutes: [
+      { path: '/api/v1/eu/:country/issuers/:issuer', method: 'GET', params: [], transport: 'koFetch', role: 'primary' },
+    ],
+    notes: EU_NOTE,
   },
 ];
 

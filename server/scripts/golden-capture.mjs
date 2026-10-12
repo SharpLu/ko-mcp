@@ -161,6 +161,7 @@ function write(spec, cases, provenance) {
   const fixture = {
     tool: spec.tool,
     planGated: Boolean(spec.planGated),
+    activationGated: Boolean(spec.activationGated),
     capturedAt: new Date().toISOString().slice(0, 10),
     provenance,
     cases,

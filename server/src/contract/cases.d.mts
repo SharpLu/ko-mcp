@@ -11,6 +11,7 @@ export interface ManifestCase {
 export interface ManifestTool {
   tool: string;
   planGated?: boolean;
+  activationGated?: boolean;
   cases: ManifestCase[];
 }
 
@@ -22,5 +23,6 @@ export const BREVAN_HOWARD_CIK: string;
 export const EXCLUDED: Record<string, string>;
 export const CASES: ManifestTool[];
 export const PLAN_GATED_TOOLS: string[];
+export const ACTIVATION_GATED_TOOLS: string[];
 export const TOOLS: string[];
 export const CASE_COUNT: number;

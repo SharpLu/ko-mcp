@@ -188,15 +188,15 @@ describe("post-deploy checks", () => {
   const toolsBody = (n) =>
     JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: Array.from({ length: n }, (_, i) => ({ name: `t${i}` })) } });
 
-  it("tools/list needs at least 24 and reports the count it examined", () => {
-    const pass = evaluateTools(200, toolsBody(24));
+  it("tools/list needs at least 30 and reports the count it examined", () => {
+    const pass = evaluateTools(200, toolsBody(30));
     expect(pass.ok).toBe(true);
     expect(pass.count).toBe(MIN_TOOLS);
-    expect(pass.examined).toBe(24);
+    expect(pass.examined).toBe(30);
 
-    const fail = evaluateTools(200, toolsBody(23));
+    const fail = evaluateTools(200, toolsBody(29));
     expect(fail.ok).toBe(false);
-    expect(fail.detail).toContain("23 tools");
+    expect(fail.detail).toContain("29 tools");
   });
 
   it("an empty tool list is a FAIL, not a pass -- a gate that examined nothing is not a pass", () => {
@@ -206,8 +206,8 @@ describe("post-deploy checks", () => {
   });
 
   it("reads SSE-framed Streamable HTTP responses", () => {
-    const sse = `event: message\ndata: ${toolsBody(24)}\n\n`;
-    expect(evaluateTools(200, sse).count).toBe(24);
+    const sse = `event: message\ndata: ${toolsBody(30)}\n\n`;
+    expect(evaluateTools(200, sse).count).toBe(30);
   });
 
   it("fails on a JSON-RPC error body or garbage instead of throwing out of the job", () => {
@@ -287,7 +287,7 @@ describe("Discord message is bounded at 2000 chars and says so", () => {
       outcome: "rolled_back",
       rolledBackTo: V1,
       failedCheck: "tools_list",
-      checkDetail: "FAIL tools_list: 12 tools (need >= 24)",
+      checkDetail: "FAIL tools_list: 12 tools (need >= 30)",
       logExcerpt: "L".repeat(100_000),
       runUrl: "https://github.com/SharpLu/ko-mcp/actions/runs/1",
       sha: "abcdef1234567890",

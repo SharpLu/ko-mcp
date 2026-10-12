@@ -137,3 +137,46 @@ def test_search_query_param(make_client) -> None:
     assert request.url.path == "/api/v1/search"
     assert request.url.params["q"] == "warren"
     assert request.url.params["limit"] == "3"
+
+
+def test_eu_routes(make_client) -> None:
+    r = _request_for(make_client, lambda ko: ko.eu.markets())
+    assert r.url.path == "/api/v1/eu/markets"
+    r = _request_for(
+        make_client,
+        lambda ko: ko.eu.insider_dealings(
+            "SE", issuer="lei:549300UINV5RINHGMG07", page=2, per_page=25
+        ),
+    )
+    assert r.url.path == "/api/v1/eu/se/insider-dealings"
+    assert r.url.params["issuer"] == "lei:549300UINV5RINHGMG07"
+    assert r.url.params["page"] == "2"
+    assert r.url.params["per_page"] == "25"
+    for call, seg in [
+        (lambda ko: ko.eu.major_holdings("nl"), "major-holdings"),
+        (lambda ko: ko.eu.short_positions("dk"), "short-positions"),
+        (lambda ko: ko.eu.annual_reports("uk"), "annual-reports"),
+    ]:
+        r = _request_for(make_client, call)
+        assert r.url.path.endswith(f"/{seg}")
+        assert "issuer" not in r.url.params
+    r = _request_for(make_client, lambda ko: ko.eu.issuer("se", "co:kvk:33216172"))
+    assert r.url.raw_path.decode().startswith("/api/v1/eu/se/issuers/co%3Akvk%3A33216172")
+
+
+def test_eu_async_mirrors_sync() -> None:
+    import inspect
+
+    from ko_edgar.aresources import AsyncEu
+    from ko_edgar.resources import Eu
+
+    sync = {n for n, _ in inspect.getmembers(Eu, inspect.isfunction) if not n.startswith("_")}
+    asyn = {n for n, _ in inspect.getmembers(AsyncEu, inspect.isfunction) if not n.startswith("_")}
+    assert sync == asyn == {
+        "markets",
+        "insider_dealings",
+        "major_holdings",
+        "short_positions",
+        "annual_reports",
+        "issuer",
+    }

@@ -85,6 +85,11 @@ ko.get("/api/v1/exec-compensation", ticker="AAPL", ceo_only=True)
 
 ## Changes (unreleased)
 
+- **Added** `eu` (sync and async): `markets()`, `insider_dealings()`, `major_holdings()`,
+  `short_positions()`, `annual_reports()` and `issuer()` for Sweden, Netherlands, Denmark and
+  the UK (`country` = `se` / `nl` / `dk` / `uk`). Until a market is activated its datasets raise
+  `NotFoundError` with code `DATASET_NOT_LIVE` (pending, not an outage); `eu.markets()` says what
+  is live. Rows carry their source credit in `source.attribution`.
 - **Removed** the `party` argument from `congress.trades()` (sync and async).
   The API has no party filter; the argument was sent and silently ignored,
   returning trades from every party. Filter by `chamber`, `ticker` or member

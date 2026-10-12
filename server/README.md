@@ -32,7 +32,7 @@ Once connected, just ask your assistant:
 
 > Live sample: institutions currently hold **$28B+** in US spot Bitcoin ETFs — BlackRock's IBIT alone is held by 1,400+ filers.
 
-## Tools (24)
+## Tools (30)
 
 **Institutions / 13F** — `get_institution_holdings`, `list_institutions`, `get_stock_holders`, `get_stock_activity`
 **Stocks** — `get_stock_profile`, `get_stock_price`, `get_stock_financials`, `search`
@@ -42,17 +42,21 @@ Once connected, just ask your assistant:
 **Macro** — `get_treasury_yields`, `get_fed_rates`, `get_economic_indicators`, `get_financial_stress`
 **Short data** — `get_ftd_data`
 **SEC filings (EDGAR)** — `sec_list_filings`, `sec_get_filing_index`, `sec_get_filing_document`
+**Europe (SE, NL, DK, UK)** — `get_eu_markets`, `get_eu_insider_dealings`, `get_eu_major_holdings`, `get_eu_short_positions`, `get_eu_annual_reports`, `get_eu_issuer`
 
 ### Output contract
 
 - Every tool advertises `annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }`.
-- All 24 tools declare an `outputSchema` and return `structuredContent` next to the Markdown on every
+- All 30 tools declare an `outputSchema` and return `structuredContent` next to the Markdown on every
   successful answer (empty ones included): exact integers / decimal strings (the Markdown rounds `57,727` to nothing, the
   structured twin never rounds), the grain of every row, paging, and the plan limits applied.
 - Grain is always stated: insider rows are per insider per day (code P/S -- open market or private -- split from all
   other dispositions, partial dollar totals flagged) or, with `executive_cik`, per Form 4 line; holdings state entity grain (filer vs manager
   family, requested vs answered CIK), security grain (share classes merged vs one security) and snapshot
   vs history (a family + ticker answer is one row per quarter, labelled as history).
+- European markets: a pending (not yet activated) or not-offered dataset, or an uncovered market, is a normal
+  answer naming the state with `rows: null` -- not an error, not an outage, not "no rows". Every EU row carries its
+  source credit (`source.attribution`); UK rows credit the filer and the National Storage Mechanism and have no record link.
 - A plan limit is an `isError` result naming the plan -- never "no data". Keyless answers never advertise
   a `page=2` they cannot open.
 

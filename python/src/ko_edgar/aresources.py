@@ -249,3 +249,47 @@ class AsyncFilings(_AsyncResource):
 
     async def share(self, cik: str, accession: str, file: str | None = None) -> ApiResult:
         return await self._get(*ep.filings_share(cik, accession, file))
+
+
+class AsyncEu(_AsyncResource):
+    async def markets(self) -> ApiResult:
+        return await self._get(*ep.eu_markets())
+
+    async def insider_dealings(
+        self,
+        country: str,
+        issuer: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        return await self._get(*ep.eu_list(country, "insider_dealings", issuer, page, per_page))
+
+    async def major_holdings(
+        self,
+        country: str,
+        issuer: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        return await self._get(*ep.eu_list(country, "major_holdings", issuer, page, per_page))
+
+    async def short_positions(
+        self,
+        country: str,
+        issuer: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        return await self._get(*ep.eu_list(country, "short_positions", issuer, page, per_page))
+
+    async def annual_reports(
+        self,
+        country: str,
+        issuer: str | None = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> ApiResult:
+        return await self._get(*ep.eu_list(country, "annual_reports", issuer, page, per_page))
+
+    async def issuer(self, country: str, issuer: str) -> ApiResult:
+        return await self._get(*ep.eu_issuer(country, issuer))

@@ -462,6 +462,43 @@ describe("URL building and query serialization", () => {
     expect(url.searchParams.get("per_page")).toBe("200");
   });
 
+  it("eu.* builds the /api/v1/eu paths (lower-cased market, encoded issuer id) and maps perPage/issuer", async () => {
+    const { fn, calls } = mockFetch(
+      jsonResponse(OK), jsonResponse(OK), jsonResponse(OK), jsonResponse(OK), jsonResponse(OK), jsonResponse(OK),
+    );
+    const ko = new KoClient({ fetch: fn });
+    await ko.eu.markets();
+    await ko.eu.insiderDealings("SE", { issuer: "lei:549300UINV5RINHGMG07", page: 2, perPage: 25 });
+    await ko.eu.majorHoldings("nl");
+    await ko.eu.shortPositions("dk");
+    await ko.eu.annualReports("uk", { page: 3 });
+    await ko.eu.issuer("se", "co:kvk:33216172");
+    const urls = calls.map((c) => new URL(c.url));
+    expect(urls.map((u) => u.pathname)).toEqual([
+      "/api/v1/eu/markets",
+      "/api/v1/eu/se/insider-dealings",
+      "/api/v1/eu/nl/major-holdings",
+      "/api/v1/eu/dk/short-positions",
+      "/api/v1/eu/uk/annual-reports",
+      "/api/v1/eu/se/issuers/co%3Akvk%3A33216172",
+    ]);
+    expect(urls[1]!.searchParams.get("issuer")).toBe("lei:549300UINV5RINHGMG07");
+    expect(urls[1]!.searchParams.get("page")).toBe("2");
+    expect(urls[1]!.searchParams.get("per_page")).toBe("25");
+    expect(urls[2]!.searchParams.has("issuer")).toBe(false);
+  });
+
+  it("eu: a pending market surfaces as NotFoundError carrying DATASET_NOT_LIVE", async () => {
+    const { fn } = mockFetch(jsonResponse(
+      { error: { code: "DATASET_NOT_LIVE", message: "insider-dealings for SE is not live yet", details: { status: "pending" } } },
+      { status: 404 },
+    ));
+    const ko = new KoClient({ fetch: fn });
+    const e = await ko.eu.insiderDealings("se").catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(NotFoundError);
+    expect((e as KoError).code).toBe("DATASET_NOT_LIVE");
+  });
+
   it("exposes get() as a raw escape hatch", async () => {
     const { fn, calls } = mockFetch(jsonResponse(OK));
     const ko = new KoClient({ fetch: fn });

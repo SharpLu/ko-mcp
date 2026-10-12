@@ -74,10 +74,15 @@ try {
 | `ko.short` | `ftd`, `regSho` |
 | `ko.macro` | `treasuryYields`, `fedRates`, `economicIndicators`, `financialStress` (Pro+) |
 | `ko.filings` | `list`, `index`, `share` (EDGAR gateway) |
+| `ko.eu` | `markets`, `insiderDealings`, `majorHoldings`, `shortPositions`, `annualReports`, `issuer` (SE / NL / DK / UK; pending until activated -- see below) |
 | `ko.get(path, params)` | raw escape hatch for any endpoint |
 
 ## Changes (unreleased)
 
+- **Added** `ko.eu` for the European market routes (`/api/v1/eu/*`). Until a market is
+  activated its datasets throw `NotFoundError` with `code: "DATASET_NOT_LIVE"` (pending, not an
+  outage); UK short positions throw `DATASET_NOT_OFFERED`; `ko.eu.markets()` (no key needed) says
+  what is live. Rows carry their source credit in `source.attribution`.
 - **Removed** `party` from `congress.trades()` options. The API has no party
   filter; the option was sent and silently ignored, returning trades from every
   party. Filter by `chamber`, `ticker` or member name (`search`) instead.

@@ -1,0 +1,154 @@
+{
+  "tool": "get_eu_insider_dealings",
+  "planGated": false,
+  "activationGated": true,
+  "capturedAt": "2026-10-12",
+  "provenance": {
+    "source": "in-process Worker fetch handler (src/index.ts), keyless, upstream https://api.ko.io",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree by calling its fetch handler in process (the same JSON-RPC bodies wrangler dev serves). Each case was probed twice and written only because the two probes agreed. Every EU market was pending at capture (2026-10-12)."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "country": "se",
+        "limit": 5
+      },
+      "why": "ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "country": "string",
+              "covered_countries": "null",
+              "dataset": "string",
+              "issuer_filter": "null",
+              "latest_retrieved_at": "null",
+              "latest_source_date": "null",
+              "paging": "null",
+              "plan_limit": "null",
+              "rows": "null",
+              "status": "string"
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Sweden — Insider dealings (PDMR)",
+              "BLANK",
+              "TEXT **Status: pending** -- Insider dealings (PDMR) for Sweden (SE): offered, not live on ko.io yet. This is not an outage and not an empty result: no rows are served until ko.io activates it. `get_eu_markets` shows what is live."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "not_covered",
+      "arguments": {
+        "country": "fr"
+      },
+      "why": "A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing the covered markets. Configuration-only upstream, so stable across activation.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "country": "string",
+              "covered_countries": {
+                "_array": "string"
+              },
+              "dataset": "string",
+              "issuer_filter": "null",
+              "latest_retrieved_at": "null",
+              "latest_source_date": "null",
+              "paging": "null",
+              "plan_limit": "null",
+              "rows": "null",
+              "status": "string"
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 FR — Insider dealings (PDMR)",
+              "BLANK",
+              "TEXT **Status: not covered** -- ko.io covers no European market `fr`. Covered markets: se, nl, dk, uk."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "country": "sweden"
+      },
+      "why": "Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "ZOD MCP error -32602: Input validation error: Invalid arguments for tool get_eu_insider_dealings: [",
+              "ZOD   {",
+              "ZOD     \"validation\": \"regex\",",
+              "ZOD     \"code\": \"invalid_string\",",
+              "ZOD     \"message\": \"a two-letter market code\",",
+              "ZOD     \"path\": [",
+              "ZOD       \"country\"",
+              "ZOD     ]",
+              "ZOD   }",
+              "ZOD ]"
+            ],
+            "tables": [],
+            "verbatim": true
+          }
+        ]
+      }
+    }
+  ]
+}
