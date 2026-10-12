@@ -198,6 +198,14 @@ describe("EU lists: proxy contract", () => {
     expect((mock.mock.calls[0][2] as Record<string, unknown>).issuer).toBe("lei:984500F33AB40805EE63");
   });
 
+  it("get_eu_issuer trims once: path, heading and `requested` name the same id", async () => {
+    mock.mockRejectedValue(err(404, "DATASET_NOT_LIVE", { country: "SE", status: "pending" }) as never);
+    const r = await call("get_eu_issuer", { country: "se", issuer: "  lei:549300UINV5RINHGMG07 " });
+    expect(mock.mock.calls[0][1]).toBe("/api/v1/eu/se/issuers/lei%3A549300UINV5RINHGMG07");
+    expect(textOf(r)).toContain("## Sweden — issuer `lei:549300UINV5RINHGMG07`\n");
+    expect(r.structuredContent).toMatchObject({ requested: "lei:549300UINV5RINHGMG07", status: "pending" });
+  });
+
   it("annual reports surface the issuer copyright note once", async () => {
     const row = {
       record_id: "1", country: "NL", source_system: "AFM", publication_date: "2019-06-04", published_at: null, period_end: null,

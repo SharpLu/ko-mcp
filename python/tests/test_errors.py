@@ -76,3 +76,57 @@ def test_missing_data_key_raises_ko_error(make_client) -> None:
     with pytest.raises(KoError) as info:
         client.search("x")
     assert info.value.code == "INVALID_RESPONSE"
+
+
+def test_error_details_object_is_exposed(make_client) -> None:
+    body = {
+        "error": {
+            "code": "COUNTRY_NOT_COVERED",
+            "message": "fr is not covered",
+            "details": {"covered": ["se", "nl", "dk", "uk"]},
+        }
+    }
+    client, _ = make_client([json_response(body, status=404)])
+    with pytest.raises(NotFoundError) as info:
+        client.eu.insider_dealings("fr")
+    assert info.value.code == "COUNTRY_NOT_COVERED"
+    assert info.value.details == {"covered": ["se", "nl", "dk", "uk"]}
+
+
+def test_error_details_on_rate_limit(make_client) -> None:
+    body = {"error": {"code": "RATE_LIMIT_EXCEEDED", "message": "q", "details": {"limit": 200}}}
+    client, _ = make_client([json_response(body, status=429, headers={"Retry-After": "5"})])
+    with pytest.raises(RateLimitError) as info:
+        client.search("x")
+    assert info.value.details == {"limit": 200}
+    assert info.value.retry_after == 5
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"error": {"code": "NOT_FOUND", "message": "nope"}},
+        {"error": {"code": "NOT_FOUND", "message": "nope", "details": ["x"]}},
+        {"error": {"code": "NOT_FOUND", "message": "nope", "details": "x"}},
+        {"error": "NOT_FOUND", "message": "flat shape"},
+    ],
+)
+def test_error_details_none_when_absent_or_not_an_object(make_client, body) -> None:
+    client, _ = make_client([json_response(body, status=404)])
+    with pytest.raises(NotFoundError) as info:
+        client.search("x")
+    assert info.value.details is None
+
+
+async def test_async_error_details_object_is_exposed(make_async_client) -> None:
+    body = {
+        "error": {
+            "code": "DATASET_NOT_LIVE",
+            "message": "pending",
+            "details": {"status": "pending"},
+        }
+    }
+    client, _ = make_async_client([json_response(body, status=404)])
+    with pytest.raises(NotFoundError) as info:
+        await client.eu.insider_dealings("se")
+    assert info.value.details == {"status": "pending"}

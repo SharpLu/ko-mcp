@@ -77,8 +77,11 @@ try {
 | `ko.eu` | `markets`, `insiderDealings`, `majorHoldings`, `shortPositions`, `annualReports`, `issuer` (SE / NL / DK / UK; pending until activated -- see below) |
 | `ko.get(path, params)` | raw escape hatch for any endpoint |
 
-## Changes (unreleased)
+## Changes in 0.2.0 (source version; not published yet)
 
+- **Added** `details` on every `KoError`: the API's structured `error.details` object when the
+  error body carries one (e.g. `{ covered: ["se", "nl", "dk", "uk"] }` with an EU
+  `COUNTRY_NOT_COVERED`), otherwise `undefined`.
 - **Added** `ko.eu` for the European market routes (`/api/v1/eu/*`). Until a market is
   activated its datasets throw `NotFoundError` with `code: "DATASET_NOT_LIVE"` (pending, not an
   outage); UK short positions throw `DATASET_NOT_OFFERED`; `ko.eu.markets()` (no key needed) says

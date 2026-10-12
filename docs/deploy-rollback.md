@@ -7,7 +7,7 @@ This page is what you do when the automation is the thing that broke.
 
 | Step | Command | Why |
 |------|---------|-----|
-| golden gate (pre-deploy, blocking) | `npm run golden:gate` | Replays the golden contract against the **local build** before anything is uploaded; a red gate stops the deploy. |
+| golden gate (pre-deploy, blocking) | `npm run golden:gate` | Replays the golden contract against the **local build** before anything is uploaded; a red gate stops the deploy. The same gate already ran on the PR (`golden-pr.yml`, non-required). |
 | capture | `node scripts/deploy-guard.mjs capture` | Reads `wrangler deployments status --json` **before the upload** and prints the full rollback command to the log. `versions list` answers "what was uploaded", not "what is serving" — and after the upload the new version is in the list, so any positional "previous" assumption inverts. |
 | upload | `... upload` | `wrangler versions upload`, version id parsed in JS (not `grep -oP`, which is GNU-only and dies on a BSD/macOS self-hosted runner). |
 | deploy | `... deploy --version-id <id>` | `wrangler versions deploy <id>@100% -y`. |

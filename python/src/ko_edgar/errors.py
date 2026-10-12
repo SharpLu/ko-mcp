@@ -2,20 +2,32 @@
 
 All API failures raise a subclass of :class:`KoError` carrying the HTTP
 status, the stable machine-readable ``code`` returned by the API
-(e.g. ``PLAN_REQUIRED``), and the human-readable message.
+(e.g. ``PLAN_REQUIRED``), the human-readable message, and ``details``: the
+structured ``error.details`` object the API sent with it, or ``None``
+(e.g. ``{"covered": ["se", "nl", "dk", "uk"]}`` on an EU ``COUNTRY_NOT_COVERED``).
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 
 class KoError(Exception):
     """Base class for all ko.io API errors."""
 
-    def __init__(self, message: str, *, status: int = 0, code: str = "") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        status: int = 0,
+        code: str = "",
+        details: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(message)
         self.message = message
         self.status = status
         self.code = code
+        self.details = details
 
     def __str__(self) -> str:
         if self.status:
@@ -59,8 +71,9 @@ class RateLimitError(KoError):
         status: int = 429,
         code: str = "RATE_LIMIT_EXCEEDED",
         retry_after: int | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
-        super().__init__(message, status=status, code=code)
+        super().__init__(message, status=status, code=code, details=details)
         self.retry_after = retry_after
 
 
@@ -82,13 +95,16 @@ def error_for_status(
     code: str,
     message: str,
     retry_after: int | None = None,
+    details: dict[str, Any] | None = None,
 ) -> KoError:
     """Build the appropriate :class:`KoError` subclass for an HTTP status."""
     if status == 429:
-        return RateLimitError(message, code=code or "RATE_LIMIT_EXCEEDED", retry_after=retry_after)
+        return RateLimitError(
+            message, code=code or "RATE_LIMIT_EXCEEDED", retry_after=retry_after, details=details
+        )
     cls = _STATUS_MAP.get(status)
     if cls is not None:
-        return cls(message, status=status, code=code)
+        return cls(message, status=status, code=code, details=details)
     if status >= 500:
-        return ServerError(message, status=status, code=code)
-    return KoError(message, status=status, code=code)
+        return ServerError(message, status=status, code=code, details=details)
+    return KoError(message, status=status, code=code, details=details)

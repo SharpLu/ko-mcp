@@ -59,6 +59,7 @@ def parse_response(response: httpx.Response) -> ApiResult:
     """Parse a `{data, meta}` envelope or raise the mapped KoError."""
     if response.status_code >= 400:
         code, message = "", f"HTTP {response.status_code}"
+        details: dict[str, Any] | None = None
         try:
             body = response.json()
             if isinstance(body, dict):
@@ -66,6 +67,9 @@ def parse_response(response: httpx.Response) -> ApiResult:
                 if isinstance(error, dict):
                     code = str(error.get("code", ""))
                     message = str(error.get("message", message))
+                    raw_details = error.get("details")
+                    if isinstance(raw_details, dict):
+                        details = raw_details
                 elif isinstance(error, str):  # docs-style flat error shape
                     code = error
                     message = str(body.get("message", message))
@@ -75,7 +79,7 @@ def parse_response(response: httpx.Response) -> ApiResult:
         raw_retry = response.headers.get("Retry-After")
         if raw_retry and raw_retry.isdigit():
             retry_after = int(raw_retry)
-        raise error_for_status(response.status_code, code, message, retry_after)
+        raise error_for_status(response.status_code, code, message, retry_after, details)
 
     try:
         body = response.json()
