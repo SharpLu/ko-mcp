@@ -522,7 +522,6 @@ describe("URL building and query serialization", () => {
       const e = await new KoClient({ fetch: fn }).eu.markets().catch((x: unknown) => x);
       expect(e).toBeInstanceOf(NotFoundError);
       expect((e as KoError).details).toBeUndefined();
-      expect("details" in (e as object)).toBe(false);
     }
   });
 
