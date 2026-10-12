@@ -1,0 +1,57 @@
+name: Golden contract gate (PR)
+
+# The same blocking golden gate deploy-server.yml runs before every upload,
+# moved forward to the pull request (review of PR #35, nit g). Before this, the
+# workerd replay of the 94 pinned tool calls happened only at deploy time, after
+# the merge: a contract break was found by the main deploy, not by review.
+#
+# No secret of any kind is needed or read. `npm run golden:gate` boots
+# `wrangler dev` on a loopback port (no Cloudflare credentials) and the Worker
+# under test calls api.ko.io keyless (`demo=true`), exactly as in the deploy
+# job. So the job runs identically for same-repo and fork PRs: `pull_request`
+# (never `pull_request_target`) gives fork runs a read-only token and no secrets,
+# and there is nothing here that would want one.
+#
+# Path-filtered to server/** (the only package the gate grades), so this is not
+# a required status check: a required check that never starts would block every
+# docs/SDK-only PR. deploy-server.yml still runs the same gate before upload and
+# stays the hard stop; this job is the early, reviewable signal.
+#
+# Activation note: when ko-api's KO_EU_LIVE starts including SE, the five
+# activation-gated EU fixtures go red here too, on every server/** PR, until the
+# re-capture in server/docs/GOLDEN_CONTRACT.md §6b lands. That is by design.
+
+on:
+  pull_request:
+    paths:
+      - "server/**"
+      - ".github/workflows/golden-pr.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: golden-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  golden:
+    name: Golden contract gate (PR, local build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      # Same backstop as deploy-server.yml: the gate does ~70 s of work; a
+      # process that never exits becomes a loud 6-minute failure.
+      - name: Golden contract gate (local build, keyless)
+        timeout-minutes: 6
+        run: npm run golden:gate

@@ -3,18 +3,23 @@ export interface KoErrorOptions {
   status: number;
   code: string;
   requestId?: string;
+  /** The API's `error.details` object, when the error body carries one. */
+  details?: Record<string, unknown>;
 }
 
 /**
  * Base error for every failure raised by the ko.io SDK.
  *
  * `status` is the HTTP status (0 for timeouts / network failures),
- * `code` is the machine-readable API error code (e.g. `INVALID_API_KEY`).
+ * `code` is the machine-readable API error code (e.g. `INVALID_API_KEY`),
+ * `details` is the structured `error.details` object the API sent with it, if any
+ * (e.g. `{ covered: ["se", "nl", "dk", "uk"] }` on an EU `COUNTRY_NOT_COVERED`).
  */
 export class KoError extends Error {
   readonly status: number;
   readonly code: string;
   readonly requestId?: string;
+  readonly details?: Record<string, unknown>;
 
   constructor(message: string, options: KoErrorOptions) {
     super(message);
@@ -22,6 +27,7 @@ export class KoError extends Error {
     this.status = options.status;
     this.code = options.code;
     if (options.requestId !== undefined) this.requestId = options.requestId;
+    if (options.details !== undefined) this.details = options.details;
   }
 }
 
@@ -67,10 +73,11 @@ export async function errorFromResponse(response: Response): Promise<KoError> {
   const status = response.status;
   let code = FALLBACK_CODES[status] ?? "HTTP_ERROR";
   let message = `HTTP ${status} from ko.io API`;
+  let details: Record<string, unknown> | undefined;
 
   try {
     const body = (await response.json()) as {
-      error?: { code?: string; message?: string } | string;
+      error?: { code?: string; message?: string; details?: unknown } | string;
       message?: string;
     };
     if (typeof body?.error === "string") {
@@ -80,6 +87,8 @@ export async function errorFromResponse(response: Response): Promise<KoError> {
     } else if (body?.error && typeof body.error === "object") {
       if (typeof body.error.code === "string" && body.error.code) code = body.error.code;
       if (typeof body.error.message === "string" && body.error.message) message = body.error.message;
+      const d = body.error.details;
+      if (d && typeof d === "object" && !Array.isArray(d)) details = d as Record<string, unknown>;
     }
   } catch {
     // Non-JSON body (e.g. proxy HTML error page): keep fallbacks.
@@ -88,6 +97,7 @@ export async function errorFromResponse(response: Response): Promise<KoError> {
   const requestId = response.headers.get("x-request-id") ?? undefined;
   const options: KoErrorOptions = { status, code };
   if (requestId !== undefined) options.requestId = requestId;
+  if (details !== undefined) options.details = details;
 
   switch (status) {
     case 400:

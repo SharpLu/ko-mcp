@@ -1,6 +1,6 @@
 {
   "name": "@ko-io/mcp-sec-data",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local stdio MCP server that proxies to the hosted ko.io MCP server (SEC 13F, insider trades, congress trading, crypto ETF exposure, macro data).",
   "license": "MIT",
   "type": "module",

@@ -136,4 +136,30 @@ app.get('/api/v1/x', cacheFor(60), async (c) => c.json({ q: c.req.query('q') }))
   it("an exported-only lookup still refuses a non-exported function", () => {
     expect(() => functionBody(SRC, "listHandler")).toThrow(/not found/);
   });
+
+  // Review of #35, nit h: the first declaration is not necessarily the implementation.
+  it("refuses an overloaded function instead of reading the first signature", () => {
+    const OVER = [
+      "export function pick(kind: 'a'): Handler;",
+      "export function pick(kind: 'b'): Handler;",
+      "export function pick(kind: string): Handler {",
+      "  return async (c) => c.json({ q: c.req.query('q') });",
+      "}",
+    ].join("\n");
+    expect(() => functionBody(OVER, "pick")).toThrow(/declared 3 times/);
+    expect(() => functionBody(OVER, "pick", { exported: false })).toThrow(/declared 3 times/);
+  });
+
+  it("refuses a bodiless signature rather than matching the next block", () => {
+    const SIG = "function sig(a: string): Handler;\nconst other = () => { c.req.query('leak'); };\n";
+    expect(() => functionBody(SIG, "sig", { exported: false })).toThrow(/no body/);
+  });
+
+  it("balances the parameter list (a callback default does not end it early)", () => {
+    // The old first-`)` / first-`{` scan returned `function withCb(n = 1, cb = () => {}` here.
+    const CB = "function withCb(n = 1, cb = () => {}) {\n  return c.req.query('page');\n}\nfunction after() { c.req.query('leak'); }\n";
+    const body = functionBody(CB, "withCb", { exported: false });
+    expect(body).toContain("c.req.query('page')");
+    expect(body).not.toContain("leak");
+  });
 });

@@ -203,12 +203,33 @@ export function readParams(body, helperReads = {}) {
  * The body of `export function <name>(...) { ... }` in a ko-api source file
  * (any `function <name>` with `exported: false`), brace-matched. Throws when the declaration is not found -- a helper that
  * moved or was renamed must not silently resolve to "reads nothing".
+ *
+ * Fails closed on every shape where "the first declaration" might not be the
+ * implementation (review of ko-mcp #35, nit h):
+ *   - more than one declaration of `name` (TS overload signatures, or a
+ *     redeclaration): refuses rather than guessing which one has the body;
+ *   - a bodiless signature (`function f(a: string): T;`): refuses rather than
+ *     brace-matching whatever block happens to come next.
+ * The parameter list is paren-balanced, so a callback-typed parameter
+ * (`cb: () => void`) cannot end it early.
  */
 export function functionBody(source, name, { exported = true } = {}) {
   const decl = exported ? `export\\s+function\\s+${name}\\s*\\(` : `(?:^|\\n)(?:export\\s+)?function\\s+${name}\\s*\\(`;
-  const m = new RegExp(decl).exec(source);
-  if (!m) throw new Error(`helper ${name}() not found`);
-  const open = source.indexOf('{', source.indexOf(')', m.index));
+  const hits = [...source.matchAll(new RegExp(decl, 'g'))];
+  if (!hits.length) throw new Error(`helper ${name}() not found`);
+  if (hits.length > 1) {
+    throw new Error(`helper ${name}() is declared ${hits.length} times (overloads?); refusing to guess which body is the implementation`);
+  }
+  const m = hits[0];
+  // The pattern ends at the parameter list's opening paren; balance it.
+  let close = -1;
+  for (let i = m.index + m[0].length - 1, depth = 0; i < source.length; i++) {
+    if (source[i] === '(') depth++;
+    else if (source[i] === ')' && --depth === 0) { close = i; break; }
+  }
+  if (close < 0) throw new Error(`helper ${name}() has an unterminated parameter list`);
+  const open = source.indexOf('{', close);
+  if (open < 0 || source.slice(close + 1, open).includes(';')) throw new Error(`helper ${name}() has no body`);
   let depth = 0;
   for (let i = open; i < source.length; i++) {
     if (source[i] === '{') depth++;

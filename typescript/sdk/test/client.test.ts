@@ -497,6 +497,32 @@ describe("URL building and query serialization", () => {
     const e = await ko.eu.insiderDealings("se").catch((x: unknown) => x);
     expect(e).toBeInstanceOf(NotFoundError);
     expect((e as KoError).code).toBe("DATASET_NOT_LIVE");
+    expect((e as KoError).details).toEqual({ status: "pending" });
+  });
+
+  it("errors expose the API's error.details object (e.g. the covered markets list)", async () => {
+    const { fn } = mockFetch(jsonResponse(
+      { error: { code: "COUNTRY_NOT_COVERED", message: "fr is not covered", details: { covered: ["se", "nl", "dk", "uk"] } } },
+      { status: 404 },
+    ));
+    const ko = new KoClient({ fetch: fn });
+    const e = await ko.eu.markets().catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(NotFoundError);
+    expect((e as KoError).details).toEqual({ covered: ["se", "nl", "dk", "uk"] });
+  });
+
+  it("errors leave details undefined when the body has none or it is not an object", async () => {
+    for (const body of [
+      { error: { code: "NOT_FOUND", message: "nope" } },
+      { error: { code: "NOT_FOUND", message: "nope", details: ["x"] } },
+      { error: { code: "NOT_FOUND", message: "nope", details: "x" } },
+      { error: "NOT_FOUND", message: "flat shape" },
+    ]) {
+      const { fn } = mockFetch(jsonResponse(body, { status: 404 }));
+      const e = await new KoClient({ fetch: fn }).eu.markets().catch((x: unknown) => x);
+      expect(e).toBeInstanceOf(NotFoundError);
+      expect((e as KoError).details).toBeUndefined();
+    }
   });
 
   it("exposes get() as a raw escape hatch", async () => {

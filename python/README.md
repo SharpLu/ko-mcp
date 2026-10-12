@@ -83,8 +83,11 @@ Any `/api/v1` endpoint not covered by a typed method:
 ko.get("/api/v1/exec-compensation", ticker="AAPL", ceo_only=True)
 ```
 
-## Changes (unreleased)
+## Changes in 0.2.0 (source version; not published yet)
 
+- **Added** `details` on every `KoError`: the API's structured `error.details` dict when the
+  error body carries one (e.g. `{"covered": ["se", "nl", "dk", "uk"]}` with an EU
+  `COUNTRY_NOT_COVERED`), otherwise `None`.
 - **Added** `eu` (sync and async): `markets()`, `insider_dealings()`, `major_holdings()`,
   `short_positions()`, `annual_reports()` and `issuer()` for Sweden, Netherlands, Denmark and
   the UK (`country` = `se` / `nl` / `dk` / `uk`). Until a market is activated its datasets raise

@@ -501,8 +501,11 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
       country: COUNTRY,
       issuer: ISSUER_ID,
     },
-    async ({ country, issuer }) => {
+    async ({ country, issuer: rawIssuer }) => {
       const cc = country.toUpperCase();
+      // Trimmed once, like the list tools' issuer filter: the path, the heading and
+      // `requested` all name the same id.
+      const issuer = rawIssuer.trim();
       const base = {
         country: cc, requested: issuer, covered_countries: null, issuer: null, match_basis: null, live_datasets: null,
         insider_dealings: null, major_holdings: null, short_positions: null, annual_reports: null, plan_limit: null,
@@ -512,7 +515,7 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
         env = asEnvelope<Row>(
           await koFetch<unknown>(
             config,
-            `/api/v1/eu/${segment(country)}/issuers/${encodeURIComponent(issuer.trim())}`,
+            `/api/v1/eu/${segment(country)}/issuers/${encodeURIComponent(issuer)}`,
             {},
             { envelope: true, timeoutMs: EU_FETCH_TIMEOUT_MS },
           ),

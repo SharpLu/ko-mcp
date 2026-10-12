@@ -233,7 +233,8 @@ activation.
 DK alone leaves them green; then call the activated tools on live mcp.ko.io by
 hand (step 5) instead of re-capturing. That flip is not a ko-mcp change, so nothing here
 notices it: after it, **every** ko-mcp `server/**` deploy fails its golden gate
-until the steps below land. Do them in the same authorized sitting as the flip:
+-- and so does the same gate on every `server/**` pull request
+(`.github/workflows/golden-pr.yml`) -- until the steps below land. Do them in the same authorized sitting as the flip:
 
 1. **Purge everything** on the ko.io zone (ko-api's activation step already
    does). The pending 404s carry `s-maxage=3600`; without the purge a re-capture
@@ -256,6 +257,8 @@ until the steps below land. Do them in the same authorized sitting as the flip:
 ```bash
 cd server
 npm run golden:gate       # blocking gate: boots the local Worker and replays
+                          # (CI runs it on server/** PRs via golden-pr.yml and
+                          # again in deploy-server.yml before every upload)
 npm run golden:capture    # re-pin every fixture from the local Worker
 ```
 
