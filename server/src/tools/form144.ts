@@ -15,23 +15,25 @@ export function registerForm144Tools(server: McpServer, config: KoConfig) {
     "Get SEC Form 144 filings — notices of proposed sale of restricted/controlled securities by insiders. Filed before selling, these signal upcoming insider sales. Complements Form 4 (post-trade) with pre-trade intent.",
     {
       ticker: z.string().max(200).optional().describe("Filter by stock ticker (e.g. 'AAPL')"),
-      insider_cik: z.string().max(200).optional().describe("Filter by insider's CIK number"),
+      insider_cik: z.string().max(200).optional().describe("Filter by the CIK that FILED the notice (usually the selling insider, sometimes a filing agent such as the issuer itself) -- not the issuer whose stock is sold. Leading zeros ignored; combines with ticker."),
       limit: z.number().int().min(1).max(200).optional().default(50).describe("Max notices to return"),
     },
     async ({ ticker, insider_cik, limit }) => {
-      // koFetch returns the array directly
+      // ko-api `cik` is the ISSUER; the filer is `filer_cik` (ko-mcp#39). One
+      // CIK can be both, so sending insider_cik as `cik` answered for the wrong
+      // entity (49071: 82 notices about Humana vs the 65 Humana filed).
       const env = asEnvelope<Form144Row[]>(
         await koFetch<unknown>(
           config,
           "/api/v1/form144-notices",
-          { ticker: ticker?.toUpperCase(), cik: insider_cik, per_page: limit },
+          { ticker: ticker?.toUpperCase(), filer_cik: insider_cik, per_page: limit },
           { envelope: true },
         ),
       );
       const notices = Array.isArray(env.data) ? env.data : [];
 
       const lines: string[] = [
-        `## Form 144 Notices${ticker ? ` — ${ticker.toUpperCase()}` : ""}`,
+        `## Form 144 Notices${ticker ? ` — ${ticker.toUpperCase()}` : ""}${insider_cik ? ` — filed by CIK ${insider_cik}` : ""}`,
         `*${notices.length} filings returned*\n`,
       ];
       const w = windowLine(env.meta);

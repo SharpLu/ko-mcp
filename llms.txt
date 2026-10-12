@@ -75,7 +75,7 @@ an isError result that names the plan, never an empty "no data" answer.
 - /api/v1/congress-trades?ticker=&chamber=&search=&sort=
 - /api/v1/congress-trades/{member-slug} · /stock/{ticker}
 - /api/v1/crypto/exposure-summary · /institutional-holders?product= · /holder/{cik}
-- /api/v1/form144-notices?ticker=&cik=
+- /api/v1/form144-notices?ticker=&cik=&filer_cik=
 - /api/v1/sec/ftd?ticker=&days= · /api/v1/reg-sho-threshold?symbol=
 - /api/v1/treasury/yields [Pro] · /api/v1/fed/rates [Pro]
 - /api/v1/economic/indicators [Pro] · /api/v1/stress/ofr [Pro]
