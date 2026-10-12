@@ -491,6 +491,9 @@ export function isRateLimited(rpc) {
   return content.some((b) => b && typeof b.text === 'string' && RATE_LIMITED_RE.test(b.text));
 }
 
+/** Hard cap on 429 backoff retries per runGoldenGate() run (review of #37, nit 3). */
+export const MAX_RATE_LIMIT_RETRIES = 3;
+
 /**
  * Replay every pinned case against `base` and report what moved.
  *
@@ -503,7 +506,10 @@ export function isRateLimited(rpc) {
  * contract and must not be reported as "CONTRACT MOVED" (review of #36, nit 7).
  * A case that hits it is retried ONCE after `rateLimitBackoffMs` (default 5 s);
  * the first retry that is itself limited switches retries off for the rest of
- * the run, so a sustained limit costs one wait, never a retry storm.
+ * the run, so a sustained limit costs one wait, never a retry storm. Retries
+ * are also hard-capped at MAX_RATE_LIMIT_RETRIES per run, so a limit that hits
+ * every first call but clears on every retry costs at most 3 waits (15 s), not
+ * one per case (94 x 5 s would pass the 6-minute step backstop; review of #37, nit 3).
  */
 export async function runGoldenGate(fixtures, opts) {
   const o = opts || {};
@@ -532,7 +538,7 @@ export async function runGoldenGate(fixtures, opts) {
       let r = await callTool(base, fx.tool, c.arguments, { fetchImpl });
       // A pinned 429 would be a contract in its own right; only an UNEXPECTED one is a limit.
       const pins429 = RATE_LIMITED_RE.test(JSON.stringify(c.contract));
-      if (r.ok && !pins429 && isRateLimited(r.body) && retryAllowed) {
+      if (r.ok && !pins429 && isRateLimited(r.body) && retryAllowed && retries < MAX_RATE_LIMIT_RETRIES) {
         retries += 1;
         await sleep(backoffMs);
         r = await callTool(base, fx.tool, c.arguments, { fetchImpl });

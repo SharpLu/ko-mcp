@@ -292,6 +292,17 @@ this gate exists to catch. Re-recording them makes the bug the contract. The
 gate's own failure message says this; read it before reaching for
 `golden:capture`.
 
+### When the gate says RATE LIMITED
+
+ko-api answered 429 (the keyless demo limit) for the listed cases, so they carry
+no contract evidence either way. The gate is **red**, but this is **not** a
+contract move: rerun the gate once the per-IP limit window has passed, and never
+re-pin. The gate retries a limited case once after a 5 s backoff, at most 3 times
+per run. If a limited case is the sibling of an `identicalToCase` defect probe,
+the gate also lists that defect as appearing fixed ("sibling case ... was not
+replayed, cannot compare"); that line is a side effect of the same limit, not a
+fix, and is red either way.
+
 ### Who re-pins
 
 **Whoever is shipping the change that moved the contract, in the same PR**, with

@@ -212,6 +212,9 @@ describe("EU lists: proxy contract", () => {
       const schema = z.object(tools().get(name)!.schema as z.ZodRawShape);
       expect(schema.safeParse({ country: "se", issuer: "   " }).success, `${name}: blank id`).toBe(false);
       expect(schema.safeParse({ country: "se", issuer: "  ab " }).success, `${name}: 2 chars after trim`).toBe(false);
+      // Review of #37, nit 4: a 6-space id must not be told "at least 3 character(s)".
+      const blank = schema.safeParse({ country: "se", issuer: "      " });
+      expect(blank.success ? "" : blank.error.issues[0].message).toBe("issuer id must have at least 3 non-blank characters");
       const ok = schema.safeParse({ country: "se", issuer: "  lei:549300UINV5RINHGMG07 " });
       expect(ok.success && (ok.data as { issuer: string }).issuer).toBe("lei:549300UINV5RINHGMG07");
     }

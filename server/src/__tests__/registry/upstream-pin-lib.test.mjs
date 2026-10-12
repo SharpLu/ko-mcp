@@ -192,4 +192,51 @@ app.get('/api/v1/x', cacheFor(60), async (c) => c.json({ q: c.req.query('q') }))
     const SIG = "function sig(a: string): { x: number };\nconst other = () => { c.req.query('leak'); };\n";
     expect(() => functionBody(SIG, "sig", { exported: false })).toThrow(/no body/);
   });
+
+  // Review of #37, nit 1: a bodiless signature WITHOUT `;` used to return the
+  // next declaration's body (`function g(a): Foo\nfunction h() {...}` -> h's).
+  it.each([
+    ["function", "function h() { c.req.query('leak'); }"],
+    ["async function", "async function h() { c.req.query('leak'); }"],
+    ["const", "const h = () => { c.req.query('leak'); };"],
+    ["export", "export function h() { c.req.query('leak'); }"],
+    ["interface", "interface I { leak: string }\nfunction h() { c.req.query('leak'); }"],
+    ["class", "class K { m() { c.req.query('leak'); } }"],
+  ])("refuses a semicolon-less bodiless signature followed by %s", (_label, next) => {
+    for (const type of ["Foo", "Promise<Foo>", "{ a: 1 }", "'x'", "() => void"]) {
+      const SRC = `function g(a): ${type}\n${next}\n`;
+      expect(() => functionBody(SRC, "g", { exported: false }), SRC).toThrow(/no body/);
+    }
+  });
+
+  it("a keyword-named member in a return type is not mistaken for a statement", () => {
+    const SRC = "function g(a): typeof cfg.type {\n  return c.req.query('q');\n}\nfunction after() { c.req.query('leak'); }\n";
+    expect(readParams(functionBody(SRC, "g", { exported: false }))).toEqual(["q"]);
+  });
+
+  // Review of #37, nit 2: the body's brace-match used to count braces inside
+  // strings, comments and regex literals, so `const s = '}'` ended the body
+  // early and the factory was pinned as reading [].
+  it.each([
+    ["single-quoted string", "const s = '}';"],
+    ["double-quoted string", 'const s = "{ }}";'],
+    ["escaped quote", "const s = '\\'}';"],
+    ["template literal", "const s = `}${'}'}`;"],
+    ["nested template", "const s = `a ${`}`} b`;"],
+    ["line comment", "// }"],
+    ["block comment", "/* } } */"],
+    ["regex literal", "const re = /\\}+/g;"],
+    ["regex char class", "const ok = s.match(/[}/]/) !== null;"],
+    ["regex after return", "if (!s) return /}/.test(t);"],
+    ["division (not a regex)", "const h = { a: n / 2 }; const k = (n) / 4; if (k) { void (h.a / k); }"],
+  ])("brace-matches the body past a %s", (_label, stmt) => {
+    const SRC = `function g(a) {\n  ${stmt}\n  return c.req.query('q');\n}\nfunction after() { c.req.query('leak'); }\n`;
+    const body = functionBody(SRC, "g", { exported: false });
+    expect(body.endsWith("return c.req.query('q');\n}")).toBe(true);
+    expect(readParams(body)).toEqual(["q"]);
+  });
+
+  it("still reports an unterminated body", () => {
+    expect(() => functionBody("function g(a) {\n  const s = '}';\n", "g", { exported: false })).toThrow(/no closing brace/);
+  });
 });

@@ -216,6 +216,9 @@ export function readParams(body, helperReads = {}) {
  * return type (`function f(a): { x: number } {`) cannot pose as the body
  * (review of ko-mcp #36, nit 2). Generic (`function f<T>(`) and `async`
  * declarations are not matched at all and throw "not found" (fail-closed).
+ * The body itself is brace-matched by closingBrace(), which skips strings,
+ * template literals, comments and regex literals, so `const s = '}'` cannot
+ * end the body early (review of ko-mcp #37, nit 2).
  */
 export function functionBody(source, name, { exported = true } = {}) {
   const decl = exported ? `export\\s+function\\s+${name}\\s*\\(` : `(?:^|\\n)(?:export\\s+)?function\\s+${name}\\s*\\(`;
@@ -233,16 +236,102 @@ export function functionBody(source, name, { exported = true } = {}) {
   }
   if (close < 0) throw new Error(`helper ${name}() has an unterminated parameter list`);
   const open = bodyOpen(source, close, name);
-  let depth = 0;
-  for (let i = open; i < source.length; i++) {
-    if (source[i] === '{') depth++;
-    else if (source[i] === '}' && --depth === 0) return source.slice(m.index, i + 1);
+  const end = closingBrace(source, open);
+  if (end >= source.length) throw new Error(`helper ${name}() has no closing brace`);
+  return source.slice(m.index, end + 1);
+}
+
+const WORD = /[A-Za-z_$][\w$]*/y;
+/** The identifier starting at `i` (sticky regex: no slice of the whole tail per word). */
+function wordAt(source, i) {
+  WORD.lastIndex = i;
+  return WORD.exec(source)[0];
+}
+
+// Words after which a `/` starts a regex literal, not a division.
+const REGEX_PREFIX_WORDS = new Set(['return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete', 'void', 'throw', 'yield', 'await', 'instanceof']);
+
+/**
+ * When a comment, string, template literal or (if `regexOk`, i.e. a `/` here
+ * cannot be a division) regex literal starts at `i`: the index of its last
+ * character, `>= source.length` when it is unterminated. Otherwise -1.
+ * A template literal's `${ ... }` holes are brace-matched with closingBrace(),
+ * so nested templates and braces inside them do not end it early.
+ */
+function skipLiteral(source, i, regexOk = false) {
+  const ch = source[i], next = source[i + 1];
+  if (ch === '/' && next === '/') { const nl = source.indexOf('\n', i); return nl < 0 ? source.length : nl; }
+  if (ch === '/' && next === '*') { const end = source.indexOf('*/', i + 2); return end < 0 ? source.length : end + 1; }
+  if (ch === "'" || ch === '"') {
+    let j = i + 1;
+    while (j < source.length && source[j] !== ch) j += source[j] === '\\' ? 2 : 1;
+    return j;
   }
-  throw new Error(`helper ${name}() has no closing brace`);
+  if (ch === '`') {
+    let j = i + 1;
+    while (j < source.length && source[j] !== '`') {
+      if (source[j] === '\\') j += 2;
+      else if (source[j] === '$' && source[j + 1] === '{') j = closingBrace(source, j + 1) + 1;
+      else j++;
+    }
+    return j;
+  }
+  if (ch === '/' && regexOk) {
+    let inClass = false;
+    for (let j = i + 1; j < source.length && source[j] !== '\n'; j++) {
+      const c = source[j];
+      if (c === '\\') j++;
+      else if (c === '[') inClass = true;
+      else if (c === ']') inClass = false;
+      else if (c === '/' && !inClass) {
+        while (/[A-Za-z]/.test(source[j + 1] ?? '')) j++; // flags
+        return j;
+      }
+    }
+    return -1; // no closing `/` on the line: a division after all
+  }
+  return -1;
+}
+
+/**
+ * Index of the `}` matching the `{` at `open` (`>= source.length` when there
+ * is none), skipping comments, strings, template literals and regex literals
+ * (skipLiteral()). Whether a `/` starts a regex is decided by the previous
+ * token: after an operator, `(`, `,`, `{`, `}`, `;` or a word such as
+ * `return` it does; after an identifier, number, `)` or `]` it is a division.
+ */
+function closingBrace(source, open) {
+  let depth = 0;
+  let regexOk = true;
+  for (let i = open; i < source.length; i++) {
+    const ch = source[i];
+    if (/\s/.test(ch)) continue;
+    const end = skipLiteral(source, i, regexOk);
+    if (end >= 0) {
+      const comment = ch === '/' && (source[i + 1] === '/' || source[i + 1] === '*');
+      if (!comment) regexOk = false;
+      i = end;
+      continue;
+    }
+    if (/[A-Za-z_$]/.test(ch)) {
+      const word = wordAt(source, i);
+      regexOk = REGEX_PREFIX_WORDS.has(word);
+      i += word.length - 1;
+      continue;
+    }
+    if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return i;
+    regexOk = !/[\w)\].]/.test(ch);
+  }
+  return source.length;
 }
 
 // Words after which a TS type position is still open (`A extends {`, `keyof {`).
 const TYPE_CONTINUATION_WORDS = new Set(['extends', 'keyof', 'typeof', 'infer', 'readonly', 'unique', 'asserts', 'is', 'new']);
+// Words that start a statement or declaration. After a complete return type
+// (depth 0) one means the signature had no body and no `;` -- the next
+// declaration has begun (review of ko-mcp #37, nit 1).
+const STATEMENT_KEYWORDS = new Set(['function', 'const', 'let', 'var', 'class', 'interface', 'type', 'enum', 'declare', 'export', 'import', 'return', 'if']);
 
 /**
  * Index of the body's `{` for a declaration whose parameter list closes at
@@ -251,8 +340,9 @@ const TYPE_CONTINUATION_WORDS = new Set(['extends', 'keyof', 'typeof', 'infer', 
  * {}, <> (skipping strings and comments), and a depth-0 `{` opens the body
  * only where a complete type has just ended -- a `{` where a type is still
  * expected (right after `:`, `|`, `&`, `=>`, `extends` ...) is an object
- * type literal and is skipped like any other bracket. A depth-0 `;`, or
- * anything else before the body, means a bodiless signature.
+ * type literal and is skipped like any other bracket. A depth-0 `;`, a
+ * statement keyword (`function`, `const`, ...) right after a complete type,
+ * or anything else before the body, means a bodiless signature.
  */
 function bodyOpen(source, close, name) {
   const noBody = () => new Error(`helper ${name}() has no body`);
@@ -265,13 +355,10 @@ function bodyOpen(source, close, name) {
   for (i += 1; i < source.length; i++) {
     const ch = source[i];
     if (/\s/.test(ch)) continue;
-    if (ch === '/' && source[i + 1] === '/') { const nl = source.indexOf('\n', i); i = nl < 0 ? source.length : nl; continue; }
-    if (ch === '/' && source[i + 1] === '*') { const end = source.indexOf('*/', i + 2); if (end < 0) break; i = end + 1; continue; }
-    if (ch === "'" || ch === '"' || ch === '`') {
-      let j = i + 1;
-      while (j < source.length && source[j] !== ch) j += source[j] === '\\' ? 2 : 1;
-      i = j;
-      expectType = false;
+    const end = skipLiteral(source, i); // comments and string/template literal types; no regex in a type
+    if (end >= 0) {
+      if (ch !== '/') expectType = false;
+      i = end;
       continue;
     }
     if (depth === 0 && ch === '{' && !expectType) return i;
@@ -285,7 +372,8 @@ function bodyOpen(source, close, name) {
     }
     if ('|&:?,='.includes(ch)) { expectType = true; continue; }
     if (/[A-Za-z_$]/.test(ch)) {
-      const word = /^[A-Za-z_$][\w$]*/.exec(source.slice(i))[0];
+      const word = wordAt(source, i);
+      if (depth === 0 && !expectType && STATEMENT_KEYWORDS.has(word) && !afterDot(source, i)) throw noBody();
       expectType = TYPE_CONTINUATION_WORDS.has(word);
       i += word.length - 1;
       continue;
@@ -293,6 +381,13 @@ function bodyOpen(source, close, name) {
     expectType = false; // digits, `.`, `-`, ...
   }
   throw noBody();
+}
+
+/** The previous non-blank character before `i` is a `.` (`ns.type` is a name, not a keyword). */
+function afterDot(source, i) {
+  let k = i - 1;
+  while (k >= 0 && /\s/.test(source[k])) k--;
+  return source[k] === '.';
 }
 
 /**

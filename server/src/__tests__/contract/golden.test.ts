@@ -11,6 +11,7 @@ import {
   assertLoopback,
   runGoldenGate,
   isRateLimited,
+  MAX_RATE_LIMIT_RETRIES,
   goldenDir,
   loadFixtures,
 } from "../../contract/skeleton.mjs";
@@ -491,6 +492,21 @@ describe("gate runner (offline, injected fetch)", () => {
     expect(r.rateLimited).toEqual([{ tool: "probe", case: "normal" }, { tool: "probe2", case: "normal" }]);
     expect(r.retries).toBe(1);
     expect(f.mock.calls).toHaveLength(3); // probe x2 (one retry), probe2 x1 (retries now off)
+  });
+
+  // Review of #37, nit 3: a limit that clears on every retry must not cost one wait per case.
+  it("caps backoff retries per run even when every retry clears", async () => {
+    const five = [1, 2, 3, 4, 5].map((n) => ({ ...fx[0], tool: `probe${n}` }));
+    const f = sequence(limited, good, limited, good, limited, good, limited, limited);
+    const sleep = vi.fn(noWait);
+    const r = await runGoldenGate(five as never, { base: "http://127.0.0.1:1", fetchImpl: f, sleep });
+    expect(MAX_RATE_LIMIT_RETRIES).toBe(3);
+    expect(r.retries).toBe(MAX_RATE_LIMIT_RETRIES);
+    expect(sleep).toHaveBeenCalledTimes(MAX_RATE_LIMIT_RETRIES);
+    expect(r.checked).toBe(3);
+    expect(r.failures).toEqual([]);
+    expect(r.rateLimited).toEqual([{ tool: "probe4", case: "normal" }, { tool: "probe5", case: "normal" }]);
+    expect(f.mock.calls).toHaveLength(8); // probe1-3 x2 (one retry each), probe4-5 x1 (cap reached)
   });
 
   it("isRateLimited matches the 429 class only (a 500 stays a contract failure)", async () => {
