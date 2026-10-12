@@ -63,7 +63,7 @@ const COUNTRY = z
 const ISSUER_ID = z
   .string()
   .trim()
-  .min(3)
+  .min(3, "issuer id must have at least 3 non-blank characters")
   .max(200)
   .describe("ko.io issuer id as returned in a row's issuer.id: lei:<LEI>, isin:<ISIN>, co:<register id> or name:<hash>");
 

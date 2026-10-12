@@ -87,6 +87,8 @@ export function callTool(
 ): Promise<{ ok: true; status: number; body: unknown } | { ok: false; err: string }>;
 export function firstText(rpc: unknown): string;
 export function isRateLimited(rpc: unknown): boolean;
+/** Hard cap on 429 backoff retries per gate run. */
+export const MAX_RATE_LIMIT_RETRIES: 3;
 export function runGoldenGate(
   fixtures: GoldenFixture[],
   opts: { base: string; fetchImpl?: typeof fetch; rateLimitBackoffMs?: number; sleep?: (ms: number) => Promise<void> },
