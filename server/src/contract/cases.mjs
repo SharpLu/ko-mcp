@@ -506,8 +506,9 @@ export const PLAN_GATED_TOOLS = CASES.filter((t) => t.planGated).map((t) => t.to
  * is the contract worth pinning today (a pending dataset must never read as an
  * error or as "no rows"), but it is NOT data coverage.
  *
- * TRIGGER: ko-api `KO_EU_LIVE` on the ko-api origins lists a market (ko-api
- * AGENTS.md#eu-activation). From then on these `normal` cases are red BY DESIGN
+ * TRIGGER: ko-api `KO_EU_LIVE` on the ko-api origins includes SE (ko-api
+ * AGENTS.md#eu-activation) -- these cases call `se` only; NL or DK alone leaves
+ * them green and needs a manual live tool call instead. From then on these `normal` cases are red BY DESIGN
  * and every ko-mcp server deploy is blocked until, in the same sitting: purge
  * everything (pending 404s carry s-maxage=3600) -> `npm run golden:capture --
  * --tool <tool>` for each activated tool -> drop `activationGated` for those

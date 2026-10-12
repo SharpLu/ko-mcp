@@ -126,7 +126,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function arg(name, fallback = "") {
   const i = process.argv.indexOf(`--${name}`);
-  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
+  // An empty workflow output leaves `--previous --previous-tools 30`: the next
+  // token is a flag, never this flag's value.
+  const v = i >= 0 ? process.argv[i + 1] : undefined;
+  return v && !v.startsWith("--") ? v : fallback;
 }
 
 // --- post-deploy checks ----------------------------------------------------

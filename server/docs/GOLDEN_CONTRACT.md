@@ -227,9 +227,11 @@ activation.
 
 ### Activation runbook (ko-mcp half)
 
-**Trigger:** ko-api's `KO_EU_LIVE` on the ko-api origins starts listing a market
-(`SE`) or a pair (`SE:pdmr_dealings`) -- the env flip in ko-api
-`AGENTS.md#eu-activation`. That flip is not a ko-mcp change, so nothing here
+**Trigger:** ko-api's `KO_EU_LIVE` on the ko-api origins starts **including SE**
+(`SE`, or a pair such as `SE:pdmr_dealings`) -- the env flip in ko-api
+`AGENTS.md#eu-activation`. The gated fixtures call `se` only, so activating NL or
+DK alone leaves them green; then call the activated tools on live mcp.ko.io by
+hand (step 5) instead of re-capturing. That flip is not a ko-mcp change, so nothing here
 notices it: after it, **every** ko-mcp `server/**` deploy fails its golden gate
 until the steps below land. Do them in the same authorized sitting as the flip:
 

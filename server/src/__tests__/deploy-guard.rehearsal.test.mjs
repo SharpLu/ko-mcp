@@ -227,6 +227,15 @@ describe("deploy guard rehearsal", () => {
     expect(res.out).toContain("ROLLBACK DID NOT RESTORE A HEALTHY SERVICE");
   });
 
+  it("an empty --previous followed by another flag is no target, not the flag", async () => {
+    setToolCount(1);
+    writeFileSync(rollbackLog, "");
+    const res = await runGuard(["verify", "--deployed", NEW, "--previous", "--previous-tools", "30"]);
+    expect(rollbackCalls()).toHaveLength(0);
+    expect(res.code).toBe(22);
+    expect(res.outputs).toContain("outcome=no_rollback_target");
+  });
+
   it("refuses to invent a rollback target when none was captured", async () => {
     setToolCount(1);
     writeFileSync(rollbackLog, "");
