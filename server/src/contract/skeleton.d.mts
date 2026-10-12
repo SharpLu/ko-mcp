@@ -54,6 +54,10 @@ export interface GateResult {
   checked: number;
   failures: Array<{ tool: string; case: string; problems: string[] }>;
   unreachable: Array<{ tool: string; case: string; err: string }>;
+  /** Cases ko-api answered with an unexpected 429 even after the one retry: no contract evidence. */
+  rateLimited: Array<{ tool: string; case: string }>;
+  /** Backoff retries spent on 429s (bounded: the first limited retry stops further retries). */
+  retries: number;
   defectsFixed: Array<{ tool: string; case: string; issue: string; why: string }>;
   defectsPresent: Array<{ tool: string; case: string; issue: string }>;
 }
@@ -82,7 +86,8 @@ export function callTool(
   opts?: { fetchImpl?: typeof fetch; timeoutMs?: number },
 ): Promise<{ ok: true; status: number; body: unknown } | { ok: false; err: string }>;
 export function firstText(rpc: unknown): string;
+export function isRateLimited(rpc: unknown): boolean;
 export function runGoldenGate(
   fixtures: GoldenFixture[],
-  opts: { base: string; fetchImpl?: typeof fetch },
+  opts: { base: string; fetchImpl?: typeof fetch; rateLimitBackoffMs?: number; sleep?: (ms: number) => Promise<void> },
 ): Promise<GateResult>;

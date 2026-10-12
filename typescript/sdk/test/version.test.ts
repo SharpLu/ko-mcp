@@ -19,6 +19,9 @@ describe("SDK version lockstep", () => {
 
   it("@ko-io/mcp-sec-data and ko-edgar carry the same version", () => {
     expect(npmVersion("../../mcp-proxy/package.json")).toBe(VERSION);
+    const proxyLock = JSON.parse(read("../../mcp-proxy/package-lock.json")) as { version: string; packages: Record<string, { version?: string }> };
+    expect(proxyLock.version).toBe(VERSION);
+    expect(proxyLock.packages[""]?.version).toBe(VERSION);
     expect(read("../../mcp-proxy/src/version.ts")).toContain(`export const VERSION = "${VERSION}";`);
     expect(read("../../../python/pyproject.toml")).toMatch(new RegExp(`^version = "${VERSION.replace(/\./g, "\\.")}"$`, "m"));
     expect(read("../../../python/src/ko_edgar/_version.py")).toContain(`__version__ = "${VERSION}"`);

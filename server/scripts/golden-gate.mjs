@@ -38,7 +38,8 @@
  * a response from the same contract, and the gate compares contract, never
  * values. See "the second property" in docs/GOLDEN_CONTRACT.md.
  *
- * Exit codes: 0 intact, 1 contract moved / defect fixed / worker unreachable.
+ * Exit codes: 0 intact, 1 contract moved / defect fixed / worker unreachable /
+ * rate-limited by ko-api (429, reported as such and never as a contract move).
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -78,9 +79,9 @@ try {
   worker.stop();
 }
 
-const { checked, failures, unreachable, defectsFixed, defectsPresent } = result;
+const { checked, failures, unreachable, rateLimited, retries, defectsFixed, defectsPresent } = result;
 
-console.log(`\nchecked ${checked}/${pinnedCases} cases`);
+console.log(`\nchecked ${checked}/${pinnedCases} cases` + (retries ? ` (${retries} retried once after a ko-api 429)` : ''));
 
 if (defectsPresent.length) {
   console.log(`\n${defectsPresent.length} annotated known defects still present (expected):`);
@@ -94,6 +95,17 @@ if (unreachable.length) {
   console.error(`\n${unreachable.length} case(s) the local worker did not answer:`);
   for (const u of unreachable) console.error(`  - ${u.tool} [${u.case}]: ${u.err}`);
   console.error('  The build under test did not serve these. That is a failure, not an excuse.');
+}
+
+if (rateLimited.length) {
+  bad = true;
+  console.error(`\nRATE LIMITED: ko-api answered 429 (keyless demo limit) for ${rateLimited.length} case(s):`);
+  for (const r of rateLimited) console.error(`  - ${r.tool} [${r.case}]`);
+  console.error(
+    '  These cases carry no contract evidence either way -- this is NOT "contract moved". ' +
+    (failures.length ? 'The CONTRACT MOVED list below is separate and real. ' : 'Nothing else failed. ') +
+    'Rerun the gate once the per-IP limit window has passed; do not re-pin.',
+  );
 }
 
 if (failures.length) {

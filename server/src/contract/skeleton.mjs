@@ -479,25 +479,49 @@ export function firstText(rpc) {
   return typeof t === 'string' ? t : '';
 }
 
+const RATE_LIMITED_RE = /ko\.io API error \(429\)/;
+
+/**
+ * True when a tools/call answer is ko-api's 429 (the keyless demo limit is per
+ * IP, so a busy CI egress can hit it) rather than a rendered result. The Worker
+ * surfaces it as `ko.io API error (429): Rate limit exceeded`.
+ */
+export function isRateLimited(rpc) {
+  const content = rpc && rpc.result && Array.isArray(rpc.result.content) ? rpc.result.content : [];
+  return content.some((b) => b && typeof b.text === 'string' && RATE_LIMITED_RE.test(b.text));
+}
+
 /**
  * Replay every pinned case against `base` and report what moved.
  *
  * `unreachable` is reported separately and is a HARD failure for the caller --
  * unlike ko-api's remote gate, "the host was unreachable" here means the build
  * under test did not come up, which is not an excuse for anything.
+ *
+ * `rateLimited` is the same kind of hard failure with a different cause: ko-api
+ * answered 429 (keyless demo limit), so the case says nothing about the
+ * contract and must not be reported as "CONTRACT MOVED" (review of #36, nit 7).
+ * A case that hits it is retried ONCE after `rateLimitBackoffMs` (default 5 s);
+ * the first retry that is itself limited switches retries off for the rest of
+ * the run, so a sustained limit costs one wait, never a retry storm.
  */
 export async function runGoldenGate(fixtures, opts) {
   const o = opts || {};
   const base = o.base;
   assertLoopback(base);
   const fetchImpl = o.fetchImpl || globalThis.fetch;
+  const backoffMs = o.rateLimitBackoffMs ?? 5000;
+  const sleep = o.sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
 
   const failures = [];
   const unreachable = [];
+  const rateLimited = [];
   const defectsFixed = [];
   const defectsPresent = [];
   let checked = 0;
   let tools = 0;
+  let retryAllowed = true;
+  let retries = 0;
 
   for (const fx of fixtures) {
     tools += 1;
@@ -505,8 +529,17 @@ export async function runGoldenGate(fixtures, opts) {
     const lives = {};
 
     for (const c of fx.cases) {
-      const r = await callTool(base, fx.tool, c.arguments, { fetchImpl });
+      let r = await callTool(base, fx.tool, c.arguments, { fetchImpl });
+      // A pinned 429 would be a contract in its own right; only an UNEXPECTED one is a limit.
+      const pins429 = RATE_LIMITED_RE.test(JSON.stringify(c.contract));
+      if (r.ok && !pins429 && isRateLimited(r.body) && retryAllowed) {
+        retries += 1;
+        await sleep(backoffMs);
+        r = await callTool(base, fx.tool, c.arguments, { fetchImpl });
+        if (r.ok && isRateLimited(r.body)) retryAllowed = false;
+      }
       if (!r.ok) { unreachable.push({ tool: fx.tool, case: c.name, err: r.err }); continue; }
+      if (!pins429 && isRateLimited(r.body)) { rateLimited.push({ tool: fx.tool, case: c.name }); continue; }
       texts[c.name] = firstText(r.body);
       lives[c.name] = contractOf(r.body);
       checked += 1;
@@ -527,5 +560,5 @@ export async function runGoldenGate(fixtures, opts) {
     }
   }
 
-  return { tools, checked, failures, unreachable, defectsFixed, defectsPresent };
+  return { tools, checked, failures, unreachable, rateLimited, retries, defectsFixed, defectsPresent };
 }

@@ -490,7 +490,7 @@ export const CASES = [
  * stops returning 403 for an unauthenticated caller, a paid dataset is being
  * given away and this gate says so -- but it is NOT data coverage, and nobody
  * reading these fixtures later should mistake it for any. The data path of
- * these four tools is UNTESTED by this gate.
+ * these five tools is UNTESTED by this gate.
  *
  * Closing that needs a paid-tier ko.io key: at capture time `.secrets/` was
  * empty, `CLOUDFLARE_API_TOKEN` was unset and `wrangler whoami` reported not

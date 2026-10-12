@@ -511,6 +511,19 @@ describe("URL building and query serialization", () => {
     expect((e as KoError).details).toEqual({ covered: ["se", "nl", "dk", "uk"] });
   });
 
+  // Mirror of python test_error_details_on_rate_limit: details reach the RateLimitError subclass too.
+  it("a 429 carries error.details alongside retryAfter", async () => {
+    const { fn } = mockFetch(jsonResponse(
+      { error: { code: "RATE_LIMIT_EXCEEDED", message: "q", details: { limit: 200 } } },
+      { status: 429, headers: { "content-type": "application/json", "retry-after": "5" } },
+    ));
+    const e = await new KoClient({ fetch: fn }).search("x").catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(RateLimitError);
+    expect((e as RateLimitError).details).toEqual({ limit: 200 });
+    expect((e as RateLimitError).retryAfter).toBe(5);
+    expect((e as RateLimitError).code).toBe("RATE_LIMIT_EXCEEDED");
+  });
+
   it("errors leave details undefined when the body has none or it is not an object", async () => {
     for (const body of [
       { error: { code: "NOT_FOUND", message: "nope" } },

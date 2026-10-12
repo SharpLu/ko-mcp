@@ -185,19 +185,21 @@ property of the input. With `koFetch` bounded (internal#127) the call either
 answers 404 or raises this proxy's own named timeout, so the case is pinned
 again.
 
-## 6. The 4 plan-gated tools pin a GATE, not data
+## 6. The 5 plan-gated tools pin a GATE, not data
 
 `get_treasury_yields`, `get_fed_rates`, `get_economic_indicators` and
 `get_financial_stress` are blocked for free/demo callers by ko-api's
-`blockedPrefixes`. Their `normal` and `empty` fixtures therefore pin a **403 plan
-gate** and contain no data whatsoever.
+`blockedPrefixes`, and `sec_get_filing_document` has both of its upstream legs
+on paid routes (flagged since 2026-09-26, when its plan refusal stopped hiding
+inside a success envelope). Their `normal` and `empty` fixtures therefore pin a
+**403 plan gate** and contain no data whatsoever.
 
 That is a real contract and worth pinning -- the day an unauthenticated caller
 stops getting a 403 there, a paid dataset is being given away and this gate says
 so -- but **it is not data coverage**, and their rendering path is completely
 untested here. The fixtures carry `planGated: true`, their `why` strings say
-`PLAN GATE, NOT DATA`, the gate prints the four names on every run, and
-`npm test` asserts all four are flagged and all four actually pin a 403. Nobody
+`PLAN GATE, NOT DATA`, the gate prints the five names on every run, and
+`npm test` asserts all five are flagged and all five actually pin a 403. Nobody
 should be able to read these fixtures later and count them as tool coverage.
 
 Closing the gap needs a paid-tier ko.io key. At capture time `.secrets/` was
@@ -371,7 +373,7 @@ committed.
 
 ## 9. What this gate does not prove
 
-- **The data path of the 4 plan-gated tools** (§6). Needs a paid key.
+- **The data path of the 5 plan-gated tools** (§6). Needs a paid key.
 - **`resolveInstitution` by name** (§8).
 - **Latency, retries and circuit breaking.** `koFetch` is bounded at 20 s since
   internal#127, and the gate has a 90 s per-call ceiling so a hang cannot wedge
