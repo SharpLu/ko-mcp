@@ -29,6 +29,7 @@ from .aresources import (
     AsyncEu,
     AsyncFilings,
     AsyncForm144,
+    AsyncGovContracts,
     AsyncInsiders,
     AsyncInstitutions,
     AsyncMacro,
@@ -41,6 +42,7 @@ from .resources import (
     Eu,
     Filings,
     Form144,
+    GovContracts,
     Insiders,
     Institutions,
     Macro,
@@ -90,6 +92,7 @@ class KoClient:
         self.form144: Form144 = Form144(self.get)
         self.short: Short = Short(self.get)
         self.macro: Macro = Macro(self.get)
+        self.gov_contracts: GovContracts = GovContracts(self.get)
         self.filings: Filings = Filings(self.get)
         self.eu: Eu = Eu(self.get)
 
@@ -159,6 +162,7 @@ class AsyncKoClient:
         self.form144: AsyncForm144 = AsyncForm144(self.get)
         self.short: AsyncShort = AsyncShort(self.get)
         self.macro: AsyncMacro = AsyncMacro(self.get)
+        self.gov_contracts: AsyncGovContracts = AsyncGovContracts(self.get)
         self.filings: AsyncFilings = AsyncFilings(self.get)
         self.eu: AsyncEu = AsyncEu(self.get)
 

@@ -116,14 +116,14 @@ export function pagingLines(p: Paging): string[] {
  * One line naming the plan's time window, when ko-api applied one. Without it a
  * Free caller's 92-day Form 4 feed reads as the insider's whole history.
  */
-export function windowLine(meta: KoMeta): string | null {
+export function windowLine(meta: KoMeta, historyKnown = true): string | null {
   const sw = meta.softwall;
   if (!sw?.window_start) return null;
   const basis = sw.date_basis ? `${sw.date_basis} ` : "";
   const period = sw.effective_period ? ` (period ${sw.effective_period})` : "";
   return (
     `*ko.io Free-plan window: ${basis}${sw.window_start} to ${sw.window_end ?? "today"}${period}. ` +
-    `Earlier data exists and requires Pro -- it is not absent.*`
+    (historyKnown ? `Earlier data exists and requires Pro -- it is not absent.*` : `History outside this Free window requires Pro.*`)
   );
 }
 

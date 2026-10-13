@@ -86,6 +86,9 @@ try {
   activated its datasets throw `NotFoundError` with `code: "DATASET_NOT_LIVE"` (pending, not an
   outage); UK short positions throw `DATASET_NOT_OFFERED`; `ko.eu.markets()` (no key needed) says
   what is live. Rows carry their source credit in `source.attribution`.
+- **Added** `ko.govContracts` (`company`, `transactions`, `search`, `companies`, `coverage`) for
+  U.S. federal prime-contract obligations (USAspending, FY2015+). Amounts stay exact decimal
+  strings (`GovMoney`); Free covers the trailing 92 days, history is Pro.
 - **Removed** `party` from `congress.trades()` options. The API has no party
   filter; the option was sent and silently ignored, returning trades from every
   party. Filter by `chamber`, `ticker` or member name (`search`) instead.
@@ -106,3 +109,27 @@ try {
 Prefer MCP? ko.io also ships a hosted MCP server at `https://mcp.ko.io/mcp` and a stdio bridge: [`@ko-io/mcp-sec-data`](https://www.npmjs.com/package/@ko-io/mcp-sec-data).
 
 MIT License.
+
+## Government contracts (0.2.0)
+
+Added: U.S. federal prime-contract obligations (FY2015+) by public company.
+Five methods cover company summaries, attributed transactions, action search, company rankings, and coverage.
+
+```typescript
+const result = await ko.govContracts.company("BA");
+const actions = await ko.govContracts.transactions("BA", { perPage: 50 });
+const feed = await ko.govContracts.search({ agency: "097", subAgency: "2100" });
+const ranking = await ko.govContracts.companies({ agency: "097", sort: "gross" });
+const coverage = await ko.govContracts.coverage();
+```
+
+Options use `fiscalYear`, `subAgency`, `awardId`, `minAmount`, and `perPage`. Returned fields retain REST spelling.
+
+Use one window form: period, fiscal year, or from/to. Omitting it uses the API default.
+Free access covers the trailing 92 days. History requires Pro.
+Amounts stay exact two-decimal strings, including negative obligations and large values.
+For arithmetic, use a decimal library. Do not cast amounts to binary floating point.
+Award queries retain `meta.identity`, `meta.scope`, `meta.refreshed_at`, and `meta.caveats` even when `data` is empty.
+Award context is issuer-scoped: metadata from this company's latest attributed action; attributed totals are plan-gated.
+Automatic links cover companies listed today, plus reviewed links. No link is not proof of no contracts.
+[Methodology](https://ko.io/datasets/gov-contracts/).

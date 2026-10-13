@@ -1,0 +1,323 @@
+{
+  "tool": "get_gov_contracts",
+  "planGated": false,
+  "capturedAt": "2026-10-10",
+  "provenance": {
+    "source": "src/__tests__/contract/gov-golden.test.mjs",
+    "mode": "recordings",
+    "note": "Machine-captured real MCP Server/Client responses with synthetic USAspending API fixtures. Two independent probes agree. Offline contract evidence only; recapture against live API before merge."
+  },
+  "cases": [
+    {
+      "name": "normal",
+      "arguments": {
+        "ticker": "BA"
+      },
+      "why": "Company summary with exact decimal obligations and issuer identity; fixture-backed until API deployment.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "agencies": {
+                "_array": {
+                  "actions": "number",
+                  "code": "string",
+                  "gross_obligated": "string",
+                  "gross_share": "number",
+                  "name": "string",
+                  "net_obligated": "string"
+                }
+              },
+              "caveats": {
+                "_array": "string"
+              },
+              "cik": "string",
+              "company_name": "string",
+              "issuer_tickers": {
+                "_array": "string"
+              },
+              "link_tiers": {
+                "_array": {
+                  "actions": "number",
+                  "link_tier": "string"
+                }
+              },
+              "match_status": "string",
+              "monthly": {
+                "_array": {
+                  "actions": "number",
+                  "awards": "number",
+                  "deobligated": "string",
+                  "gross_obligated": "string",
+                  "month": "string",
+                  "net_obligated": "string",
+                  "provisional": "boolean",
+                  "window_clipped": "boolean"
+                }
+              },
+              "plan_limit": "null",
+              "provisional_from": "string",
+              "refreshed_at": "string",
+              "scope": "string",
+              "ticker": "string",
+              "totals": {
+                "actions": "number",
+                "agencies": "number",
+                "awards": "number",
+                "deobligated": "string",
+                "gross_obligated": "string",
+                "net_obligated": "string"
+              },
+              "window": {
+                "clamped": "boolean",
+                "date_basis": "string",
+                "end": "string",
+                "period": "string",
+                "start": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Government contracts — BOEING CO (BA)",
+              "TEXT Window: <DATE> to <DATE> (action date).",
+              "TEXT Amounts are signed obligations, not payments. Recent months are provisional (*); partial months are marked ~. Defense reports about <VAL> days late.",
+              "TEXT Automatic exact matches cover companies listed today, plus reviewed links with recorded evidence. Current parents are not historical ownership. [Methodology](<URL>)",
+              "BLANK",
+              "THEAD Gross obligations (USD) | Deobligations (USD) | Net obligations (USD) | Actions | Awards | Agencies",
+              "TBODY",
+              "BLANK",
+              "THEAD Month | Gross (USD) | Deobligations (USD) | Net (USD) | Actions | Awards",
+              "TBODY",
+              "BLANK",
+              "THEAD Agency | Gross (USD) | Net (USD) | Actions | Gross share",
+              "TBODY",
+              "BLANK",
+              "THEAD Link tier | Actions",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Gross obligations (USD)",
+                  "Deobligations (USD)",
+                  "Net obligations (USD)",
+                  "Actions",
+                  "Awards",
+                  "Agencies"
+                ],
+                "dataRows": 1
+              },
+              {
+                "columns": [
+                  "Month",
+                  "Gross (USD)",
+                  "Deobligations (USD)",
+                  "Net (USD)",
+                  "Actions",
+                  "Awards"
+                ],
+                "dataRows": 1
+              },
+              {
+                "columns": [
+                  "Agency",
+                  "Gross (USD)",
+                  "Net (USD)",
+                  "Actions",
+                  "Gross share"
+                ],
+                "dataRows": 1
+              },
+              {
+                "columns": [
+                  "Link tier",
+                  "Actions"
+                ],
+                "dataRows": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "arguments": {
+        "ticker": "BA",
+        "agency": "9999"
+      },
+      "why": "Successful no-linked-actions response retains identity and zero totals; a non-matching agency filter.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "agencies": {
+                "_array": null
+              },
+              "caveats": {
+                "_array": "string"
+              },
+              "cik": "string",
+              "company_name": "string",
+              "issuer_tickers": {
+                "_array": "string"
+              },
+              "link_tiers": {
+                "_array": null
+              },
+              "match_status": "string",
+              "monthly": {
+                "_array": null
+              },
+              "plan_limit": "null",
+              "provisional_from": "string",
+              "refreshed_at": "string",
+              "scope": "string",
+              "ticker": "string",
+              "totals": {
+                "actions": "number",
+                "agencies": "number",
+                "awards": "number",
+                "deobligated": "string",
+                "gross_obligated": "string",
+                "net_obligated": "string"
+              },
+              "window": {
+                "clamped": "boolean",
+                "date_basis": "string",
+                "end": "string",
+                "period": "string",
+                "start": "string"
+              }
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Government contracts — BOEING CO (BA)",
+              "TEXT Window: <DATE> to <DATE> (action date).",
+              "TEXT Amounts are signed obligations, not payments. Recent months are provisional (*); partial months are marked ~. Defense reports about <VAL> days late.",
+              "TEXT Automatic exact matches cover companies listed today, plus reviewed links with recorded evidence. Current parents are not historical ownership. [Methodology](<URL>)",
+              "TEXT No contract actions linked to BA in this window for the selected agency filters; this is not evidence of zero federal contracts.",
+              "BLANK",
+              "THEAD Gross obligations (USD) | Deobligations (USD) | Net obligations (USD) | Actions | Awards | Agencies",
+              "TBODY"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Gross obligations (USD)",
+                  "Deobligations (USD)",
+                  "Net obligations (USD)",
+                  "Actions",
+                  "Awards",
+                  "Agencies"
+                ],
+                "dataRows": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "error",
+      "arguments": {
+        "ticker": "BA",
+        "period": "1Q",
+        "fiscal_year": 2026
+      },
+      "why": "Mutually exclusive window forms are rejected before any upstream request.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT Choose one window: period, fiscal_year, or from/to."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "history_denied",
+      "arguments": {
+        "ticker": "BA",
+        "period": "ALL"
+      },
+      "why": "Keyless history is a PLAN_REQUIRED 403, not an absence of contracts.",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "isError": "boolean"
+          }
+        },
+        "isError": true,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "TEXT ko.io API error (403): Access forbidden (check your plan): History requires Pro. This is a plan limit, not missing data."
+            ],
+            "tables": []
+          }
+        ]
+      }
+    }
+  ]
+}

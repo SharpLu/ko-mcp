@@ -32,10 +32,11 @@ import type { GoldenFixture } from "../../contract/skeleton.d.mts";
 const fixtures: GoldenFixture[] = await loadFixtures(goldenDir());
 const allCases = fixtures.flatMap((f) => f.cases.map((c) => ({ fixture: f, c })));
 
-// The 30 tools the deploy health check counts, asserted independently of the
+// The 32 tools the deploy health check counts, asserted independently of the
 // manifest so the two cannot drift into agreeing with each other while both
 // being wrong.
 const EXPECTED_TOOLS = [
+  "get_gov_contracts", "search_gov_contracts",
   "get_institution_holdings", "list_institutions",
   "get_stock_profile", "get_stock_holders", "get_stock_activity", "get_stock_price",
   "get_insider_trades", "list_insider_traders",
@@ -164,7 +165,7 @@ describe("envelope shape", () => {
 // ---------------------------------------------------------------------------
 
 describe("fixtures", () => {
-  it("one fixture per tool, and exactly the 30 tools the deploy check counts", () => {
+  it("one fixture per tool, and exactly the 32 tools the deploy check counts", () => {
     expect(fixtures.map((f) => f.tool).sort()).toEqual([...EXPECTED_TOOLS].sort());
     expect(TOOLS.sort()).toEqual([...EXPECTED_TOOLS].sort());
   });
