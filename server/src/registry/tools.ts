@@ -290,7 +290,7 @@ export const TOOL_REGISTRY: readonly ToolSpec[] = [
     plan: 'free',
     planReason: 'apiKey; no free blockedPrefix',
     upstreamRoutes: [
-      { path: '/api/v1/form144-notices', method: 'GET', params: ['ticker', 'cik', 'per_page'], transport: 'koFetch', role: 'primary' },
+      { path: '/api/v1/form144-notices', method: 'GET', params: ['ticker', 'filer_cik', 'per_page'], transport: 'koFetch', role: 'primary' },
     ],
     notes: 'upstream `page` exists but the tool does not expose it',
   },
