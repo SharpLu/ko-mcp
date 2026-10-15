@@ -68,13 +68,13 @@ const T = {
   get_crypto_exposure: {},
   get_crypto_holders: {},
   get_crypto_holder: { institution: "1512857" },
-  // European markets (pending until ko-api KO_EU_LIVE lists a market)
+  // European markets (SE live in ko-api KO_EU_LIVE; issuer = BONESUPPORT, as in the golden manifest)
   get_eu_markets: {},
   get_eu_insider_dealings: { country: "se", limit: 5 },
   get_eu_major_holdings: { country: "se", limit: 5 },
   get_eu_short_positions: { country: "se", limit: 5 },
   get_eu_annual_reports: { country: "se", limit: 5 },
-  get_eu_issuer: { country: "se", issuer: "lei:549300UINV5RINHGMG07" },
+  get_eu_issuer: { country: "se", issuer: "lei:549300COLY053IGTLD63" },
   // filing detail tools need a real accession; covered shallowly
   sec_get_filing_index: { cik: "320193", accession_no: "0000320193-24-000123" },
   sec_get_filing_document: { cik: "320193", accession_no: "0000320193-24-000123" },
