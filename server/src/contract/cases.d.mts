@@ -24,5 +24,7 @@ export const EXCLUDED: Record<string, string>;
 export const CASES: ManifestTool[];
 export const PLAN_GATED_TOOLS: string[];
 export const ACTIVATION_GATED_TOOLS: string[];
+/** EU tools that carry a `pending` case: those whose dataset EU_PENDING offers (docs/GOLDEN_CONTRACT.md section 6b). */
+export const EU_PENDING_TOOLS: string[];
 export const TOOLS: string[];
 export const CASE_COUNT: number;

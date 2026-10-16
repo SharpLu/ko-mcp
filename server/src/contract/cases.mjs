@@ -92,13 +92,21 @@ const DEFECT_EMPTY_TABLE = {
 /**
  * The EU markets the five EU dataset tools pin (docs/GOLDEN_CONTRACT.md section 6b).
  * EU_LIVE must be listed in ko-api's KO_EU_LIVE (its `normal` cases pin rows);
- * EU_PENDING must be pending and offer all four datasets, so not UK (its
- * `pending` cases pin the status answer). Changing either market in KO_EU_LIVE
- * turns those cases red until they are moved and re-captured in the same sitting.
+ * EU_PENDING must be pending (its `pending` cases pin the status answer). It
+ * pins only the tools whose dataset it offers (EU_PENDING_TOOLS): a not-offered
+ * dataset (UK short positions) answers a different status, which is the
+ * `not_offered` case. Changing either market in KO_EU_LIVE turns those cases red
+ * until they are moved and re-captured in the same sitting.
  * History: every market pending (2026-10-12); SE live, DK pending (KO_EU_LIVE=NL,SE).
  */
 const EU_LIVE = 'se';
 const EU_PENDING = 'dk';
+/** Per ko-api src/lib/eu/markets.ts: the tools a market does NOT offer (UK has no short positions). */
+const EU_NOT_OFFERED_TOOLS = { uk: ['get_eu_short_positions'] };
+const EU_DATASET_TOOLS = ['get_eu_insider_dealings', 'get_eu_major_holdings', 'get_eu_short_positions', 'get_eu_annual_reports', 'get_eu_issuer'];
+/** The EU tools that carry a `pending` case: those whose dataset EU_PENDING offers (the issuer view spans all). */
+export const EU_PENDING_TOOLS = EU_DATASET_TOOLS.filter((t) => !(EU_NOT_OFFERED_TOOLS[EU_PENDING] ?? []).includes(t));
+const pendingCase = (tool, c) => (EU_PENDING_TOOLS.includes(tool) ? [c] : []);
 /** Tele2 AB (SE): rows in all four sections of the live issuer view, see get_eu_issuer.normal. */
 const EU_LIVE_ISSUER = 'lei:213800EKD193RVI9HL76';
 
@@ -442,10 +450,10 @@ export const CASES = [
       { name: 'normal', arguments: { country: EU_LIVE, limit: 5 },
         why: `A LIVE market (${EU_LIVE.toUpperCase()}): pins the populated rendering -- heading, window line, the table's ` +
              'column list and the source credit. Turns red if this market is removed from ko-api KO_EU_LIVE (section 6b).' },
-      { name: 'pending', arguments: { country: EU_PENDING, limit: 5 },
+      ...pendingCase(tool, { name: 'pending', arguments: { country: EU_PENDING, limit: 5 },
         why: `PENDING STATE, NOT DATA (${EU_PENDING.toUpperCase()} is pending). The honest pending answer: a success ` +
              'envelope naming the state, never an isError that reads as an outage. Turns red when ' +
-             `${EU_PENDING.toUpperCase()} is activated -- move EU_PENDING to a still-pending market then (section 6b).` },
+             `${EU_PENDING.toUpperCase()} is activated -- move EU_PENDING to a still-pending market then (section 6b).` }),
       ...(tool === 'get_eu_short_positions'
         ? [{ name: 'not_offered', arguments: { country: 'uk' },
              why: 'UK short positions are not offered (a fixed licensing/source fact): 404 DATASET_NOT_OFFERED rendered ' +
@@ -467,10 +475,10 @@ export const CASES = [
              'reports 1), so every section pins a table rather than a "No rows" line. BONESUPPORT HOLDING AB, ' +
              'the first pick, answered only its insider dealings through the issuer view. Turns red if SE is ' +
              'removed from KO_EU_LIVE, or if one of its sections empties (re-pick the issuer then, section 6b).' },
-      { name: 'pending', arguments: { country: EU_PENDING, issuer: EU_LIVE_ISSUER },
+      ...pendingCase('get_eu_issuer', { name: 'pending', arguments: { country: EU_PENDING, issuer: EU_LIVE_ISSUER },
         why: `PENDING STATE, NOT DATA (${EU_PENDING.toUpperCase()} is pending): the pending status answer, which ko-api ` +
              'gives from configuration before looking the issuer up. Turns red when ' +
-             `${EU_PENDING.toUpperCase()} is activated -- move EU_PENDING then (section 6b).` },
+             `${EU_PENDING.toUpperCase()} is activated -- move EU_PENDING then (section 6b).` }),
       { name: 'not_covered', arguments: { country: 'fr', issuer: 'lei:549300UINV5RINHGMG07' },
         why: 'Uncovered market: COUNTRY_NOT_COVERED as a status answer, stable across activation.' },
       { name: 'error', arguments: { country: 'se', issuer: 'notanid' },

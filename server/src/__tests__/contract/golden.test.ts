@@ -15,7 +15,7 @@ import {
   goldenDir,
   loadFixtures,
 } from "../../contract/skeleton.mjs";
-import { ACTIVATION_GATED_TOOLS, CASES, CASE_COUNT, EXCLUDED, PLAN_GATED_TOOLS, TOOLS } from "../../contract/cases.mjs";
+import { ACTIVATION_GATED_TOOLS, CASES, CASE_COUNT, EU_PENDING_TOOLS, EXCLUDED, PLAN_GATED_TOOLS, TOOLS } from "../../contract/cases.mjs";
 import type { GoldenFixture } from "../../contract/skeleton.d.mts";
 
 /**
@@ -308,8 +308,16 @@ describe("EU dataset tools pin a live market's rows AND a pending market's statu
     expect(lines(normal)).not.toMatch(/No rows for this issuer|Not live on ko\.io for this market yet/);
   });
 
-  it("each pending case is a pending STATUS answer in a success envelope, never an outage-shaped error", () => {
+  it("a pending case sits on exactly the tools the pending market offers (UK: no short positions)", () => {
     for (const tool of EU_DATASET_TOOLS) {
+      const has = fixtures.find((x) => x.tool === tool)?.cases.some((x) => x.name === "pending");
+      expect(has, `${tool}: pending case ${EU_PENDING_TOOLS.includes(tool) ? "missing" : "on a not-offered tool"}`)
+        .toBe(EU_PENDING_TOOLS.includes(tool));
+    }
+  });
+
+  it("each pending case is a pending STATUS answer in a success envelope, never an outage-shaped error", () => {
+    for (const tool of EU_PENDING_TOOLS) {
       const pending = caseOf(tool, "pending");
       expect(pending.contract.isError, `${tool}.pending must not be isError`).toBeFalsy();
       const text = lines(pending);
