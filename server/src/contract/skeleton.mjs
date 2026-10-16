@@ -161,6 +161,15 @@ export function normalizeLine(line) {
     });
   }
 
+  // Row-derived optional segments of the EU issuer identity line
+  // (`**Id:** ... · **LEI:** ... · **ISIN:** ... · **Venue:** ... · **Ticker:** ...`).
+  // ko-api takes venue and ticker from the issuer's NEWEST observation, so they
+  // follow the latest notice (an off-exchange PDMR trade flips the venue) and
+  // appear or vanish with the data. Neither is an issuer attribute or part of
+  // the contract: drop the whole segment, label included, up to the next ` · `
+  // or the end of the line. Id/LEI/ISIN labels stay pinned.
+  s = s.replace(/ · \*\*(?:Venue|Ticker):\*\* .*?(?= · |$)/g, '');
+
   s = s.replace(/\b\d{10}-\d{2}-\d{6}\b/g, '<ACCESSION>');
   s = s.replace(/https?:\/\/[^\s)*]+/g, '<URL>');
   s = s.replace(/\b\d{4}-\d{2}-\d{2}\b/g, '<DATE>');

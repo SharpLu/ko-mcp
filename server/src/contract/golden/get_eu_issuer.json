@@ -4,7 +4,7 @@
   "activationGated": false,
   "capturedAt": "2026-10-16",
   "provenance": {
-    "source": "http://127.0.0.1:46629",
+    "source": "http://127.0.0.1:36161",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -219,7 +219,7 @@
           {
             "lines": [
               "H2 <VAL> AB — Sweden issuer",
-              "TEXT **Id:** <VAL> (matched by lei) · **LEI:** <VAL> · **ISIN:** <VAL> · **Venue:** Utanför handelsplats",
+              "TEXT **Id:** <VAL> (matched by lei) · **LEI:** <VAL> · **ISIN:** <VAL>",
               "TEXT *Newest rows per dataset (up to <VAL> each), matched through the id's LEI/ISIN/name closure in this market.*",
               "TEXT *ko.io Free-plan window: source_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "TEXT *Keyless access caps each list at <VAL> rows; more rows may exist. Send a free ko.io API key (Authorization: Bearer ko_...) for the full list.*",

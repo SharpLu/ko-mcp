@@ -77,6 +77,18 @@ describe("value normalisation", () => {
       .toBe("ko.io API error (404): Not found: SEC did not publish: <URL>");
   });
 
+  it("drops the EU issuer line's row-derived Venue/Ticker segments, keeping Id/LEI/ISIN", () => {
+    const base = "**Id:** `lei:213800EKD193RVI9HL76` (matched by lei) · **LEI:** 213800EKD193RVI9HL76 · **ISIN:** SE0005190220";
+    const want = "**Id:** <VAL> (matched by lei) · **LEI:** <VAL> · **ISIN:** <VAL>";
+    expect(normalizeLine(base)).toBe(want);
+    expect(normalizeLine(base + " · **Venue:** Utanför handelsplats")).toBe(want);
+    expect(normalizeLine(base + " · **Venue:** NASDAQ STOCKHOLM AB")).toBe(want);
+    expect(normalizeLine(base + " · **Venue:** XSTO 2 · **Ticker:** TEL2 B")).toBe(want);
+    expect(normalizeLine(base + " · **Ticker:** TEL2 B")).toBe(want);
+    // The pinned labels still break when they move.
+    expect(normalizeLine(base.replace("**ISIN:**", "**Isin:**"))).not.toBe(want);
+  });
+
   it("rawValuesIn finds a value that escaped normalisation", () => {
     expect(rawValuesIn("TEXT **Total holders:** <VAL>")).toEqual([]);
     expect(rawValuesIn("TEXT **Total holders:** 1481")).toEqual(["1481"]);
@@ -289,6 +301,8 @@ describe("EU dataset tools pin a live market's rows AND a pending market's statu
 
   it("the issuer view pins a table in every one of its four dataset sections", () => {
     const normal = caseOf("get_eu_issuer", "normal");
+    // Venue/Ticker follow the newest observation, so they must not be pinned (see normalizeLine).
+    expect(lines(normal)).not.toMatch(/\*\*(?:Venue|Ticker):\*\*/);
     expect(normal.contract.blocks.flatMap((b) => b.tables)).toHaveLength(4);
     expect(lines(normal)).not.toMatch(/No rows for this issuer|Not live on ko\.io for this market yet/);
   });
@@ -475,6 +489,29 @@ describe("gate runner (offline, injected fetch)", () => {
     });
     expect(r.failures).toEqual([]);
     expect(r.checked).toBe(1);
+  });
+
+  it("passes when the EU issuer's newest-observation venue changes or a ticker appears (review of #41)", async () => {
+    const issuer = (idLine: string) => ({ jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text:
+      `## Tele2 AB — Sweden issuer\n${idLine}\n\n### Insider dealings (PDMR)\n\n| Published | Person |\n|---|---|\n| 2026-09-18 | X |` }] } });
+    const id = "**Id:** `lei:213800EKD193RVI9HL76` (matched by lei) · **LEI:** 213800EKD193RVI9HL76 · **ISIN:** SE0005190220";
+    const pinned = [{ ...fx[0], tool: "get_eu_issuer", cases: [{ ...fx[0].cases[0],
+      contract: contractOf(issuer(id + " · **Venue:** Utanför handelsplats")) }] }];
+    for (const live of [
+      id + " · **Venue:** NASDAQ STOCKHOLM AB",
+      id + " · **Venue:** NASDAQ STOCKHOLM AB · **Ticker:** TEL2 B",
+      id,
+    ]) {
+      const r = await runGoldenGate(pinned as never, { base: "http://127.0.0.1:1", fetchImpl: reply(issuer(live)) });
+      expect(r.failures, live).toEqual([]);
+      expect(r.checked).toBe(1);
+    }
+    // ...while losing the pinned ISIN label is still a contract move.
+    const r = await runGoldenGate(pinned as never, {
+      base: "http://127.0.0.1:1",
+      fetchImpl: reply(issuer(id.replace(" · **ISIN:** SE0005190220", ""))),
+    });
+    expect(r.failures).toHaveLength(1);
   });
 
   it("fails when a column is renamed", async () => {

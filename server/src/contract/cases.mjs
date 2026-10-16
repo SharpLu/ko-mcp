@@ -90,12 +90,6 @@ const DEFECT_EMPTY_TABLE = {
 };
 
 /**
- * Every replayed case.
- *
- * `why` is not decoration: it is what a reader needs in order to judge whether
- * a red gate means the contract moved or the world did.
- */
-/**
  * The EU markets the five EU dataset tools pin (docs/GOLDEN_CONTRACT.md section 6b).
  * EU_LIVE must be listed in ko-api's KO_EU_LIVE (its `normal` cases pin rows);
  * EU_PENDING must be pending and offer all four datasets, so not UK (its
@@ -108,6 +102,12 @@ const EU_PENDING = 'dk';
 /** Tele2 AB (SE): rows in all four sections of the live issuer view, see get_eu_issuer.normal. */
 const EU_LIVE_ISSUER = 'lei:213800EKD193RVI9HL76';
 
+/**
+ * Every replayed case.
+ *
+ * `why` is not decoration: it is what a reader needs in order to judge whether
+ * a red gate means the contract moved or the world did.
+ */
 export const CASES = [
   {
     tool: 'get_institution_holdings',
