@@ -15,7 +15,7 @@ import {
   goldenDir,
   loadFixtures,
 } from "../../contract/skeleton.mjs";
-import { ACTIVATION_GATED_TOOLS, CASES, CASE_COUNT, EU_PENDING_TOOLS, EXCLUDED, PLAN_GATED_TOOLS, TOOLS } from "../../contract/cases.mjs";
+import { ACTIVATION_GATED_TOOLS, CASES, CASE_COUNT, EXCLUDED, PLAN_GATED_TOOLS, TOOLS } from "../../contract/cases.mjs";
 import type { GoldenFixture } from "../../contract/skeleton.d.mts";
 
 /**
@@ -271,10 +271,10 @@ describe("plan-gated tools are labelled, so nobody mistakes a 403 for coverage",
   });
 });
 
-describe("EU dataset tools pin a live market's rows AND a pending market's status answer", () => {
+describe("EU dataset tools pin a live market's rows", () => {
   // docs/GOLDEN_CONTRACT.md section 6b. Since SE went live (KO_EU_LIVE=NL,SE) the
-  // five tools are real data coverage in `normal` and keep the pending contract
-  // in a separate `pending` case (DK), so neither can regress silently.
+  // five tools are real data coverage in `normal`. The `pending` case (DK, then UK)
+  // went when the last pending market went live (KO_EU_LIVE=NL,SE,UK,DK).
   const EU_DATASET_TOOLS = [
     "get_eu_annual_reports", "get_eu_insider_dealings", "get_eu_issuer", "get_eu_major_holdings", "get_eu_short_positions",
   ];
@@ -308,23 +308,10 @@ describe("EU dataset tools pin a live market's rows AND a pending market's statu
     expect(lines(normal)).not.toMatch(/No rows for this issuer|Not live on ko\.io for this market yet/);
   });
 
-  it("a pending case sits on exactly the tools the pending market offers (UK: no short positions)", () => {
+  it("no EU tool pins a pending case: every market is live (KO_EU_LIVE=NL,SE,UK,DK)", () => {
+    // The pending rendering stays covered offline (src/__tests__/eu.test.ts).
     for (const tool of EU_DATASET_TOOLS) {
-      const has = fixtures.find((x) => x.tool === tool)?.cases.some((x) => x.name === "pending");
-      expect(has, `${tool}: pending case ${EU_PENDING_TOOLS.includes(tool) ? "missing" : "on a not-offered tool"}`)
-        .toBe(EU_PENDING_TOOLS.includes(tool));
-    }
-  });
-
-  it("each pending case is a pending STATUS answer in a success envelope, never an outage-shaped error", () => {
-    for (const tool of EU_PENDING_TOOLS) {
-      const pending = caseOf(tool, "pending");
-      expect(pending.contract.isError, `${tool}.pending must not be isError`).toBeFalsy();
-      const text = lines(pending);
-      expect(text, tool).toContain("**Status: pending**");
-      expect(text, tool).toContain("not an outage");
-      expect(text, tool).not.toMatch(/ko\.io API error/);
-      expect(pending.why).toContain("PENDING STATE");
+      expect(fixtures.find((x) => x.tool === tool)?.cases.map((x) => x.name), tool).not.toContain("pending");
     }
   });
 

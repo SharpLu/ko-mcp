@@ -90,23 +90,15 @@ const DEFECT_EMPTY_TABLE = {
 };
 
 /**
- * The EU markets the five EU dataset tools pin (docs/GOLDEN_CONTRACT.md section 6b).
- * EU_LIVE must be listed in ko-api's KO_EU_LIVE (its `normal` cases pin rows);
- * EU_PENDING must be pending (its `pending` cases pin the status answer). It
- * pins only the tools whose dataset it offers (EU_PENDING_TOOLS): a not-offered
- * dataset (UK short positions) answers a different status, which is the
- * `not_offered` case. Changing either market in KO_EU_LIVE turns those cases red
- * until they are moved and re-captured in the same sitting.
- * History: every market pending (2026-10-12); SE live, DK pending (KO_EU_LIVE=NL,SE).
+ * The EU market the five EU dataset tools pin (docs/GOLDEN_CONTRACT.md section 6b).
+ * EU_LIVE must be listed in ko-api's KO_EU_LIVE (its `normal` cases pin rows).
+ * Removing it from KO_EU_LIVE turns those cases red until they are moved and
+ * re-captured in the same sitting. No market is pending since KO_EU_LIVE=NL,SE,UK,DK,
+ * so no case pins the pending answer any more (src/__tests__/eu.test.ts covers it offline).
+ * History: every market pending (2026-10-12); SE live, DK pending (KO_EU_LIVE=NL,SE);
+ * then UK and DK live.
  */
 const EU_LIVE = 'se';
-const EU_PENDING = 'dk';
-/** Per ko-api src/lib/eu/markets.ts: the tools a market does NOT offer (UK has no short positions). */
-const EU_NOT_OFFERED_TOOLS = { uk: ['get_eu_short_positions'] };
-const EU_DATASET_TOOLS = ['get_eu_insider_dealings', 'get_eu_major_holdings', 'get_eu_short_positions', 'get_eu_annual_reports', 'get_eu_issuer'];
-/** The EU tools that carry a `pending` case: those whose dataset EU_PENDING offers (the issuer view spans all). */
-export const EU_PENDING_TOOLS = EU_DATASET_TOOLS.filter((t) => !(EU_NOT_OFFERED_TOOLS[EU_PENDING] ?? []).includes(t));
-const pendingCase = (tool, c) => (EU_PENDING_TOOLS.includes(tool) ? [c] : []);
 /** Tele2 AB (SE): rows in all four sections of the live issuer view, see get_eu_issuer.normal. */
 const EU_LIVE_ISSUER = 'lei:213800EKD193RVI9HL76';
 
@@ -432,7 +424,7 @@ export const CASES = [
       { name: 'error', arguments: {}, why: 'Required `institution` missing.' },
     ],
   },
-  // ── European markets (SE live since KO_EU_LIVE=NL,SE; DK pending -- see EU_LIVE / EU_PENDING) ──
+  // ── European markets (all live since KO_EU_LIVE=NL,SE,UK,DK; SE pinned -- see EU_LIVE) ──
   {
     tool: 'get_eu_markets',
     cases: [
@@ -450,10 +442,6 @@ export const CASES = [
       { name: 'normal', arguments: { country: EU_LIVE, limit: 5 },
         why: `A LIVE market (${EU_LIVE.toUpperCase()}): pins the populated rendering -- heading, window line, the table's ` +
              'column list and the source credit. Turns red if this market is removed from ko-api KO_EU_LIVE (section 6b).' },
-      ...pendingCase(tool, { name: 'pending', arguments: { country: EU_PENDING, limit: 5 },
-        why: `PENDING STATE, NOT DATA (${EU_PENDING.toUpperCase()} is pending). The honest pending answer: a success ` +
-             'envelope naming the state, never an isError that reads as an outage. Turns red when ' +
-             `${EU_PENDING.toUpperCase()} is activated -- move EU_PENDING to a still-pending market then (section 6b).` }),
       ...(tool === 'get_eu_short_positions'
         ? [{ name: 'not_offered', arguments: { country: 'uk' },
              why: 'UK short positions are not offered (a fixed licensing/source fact): 404 DATASET_NOT_OFFERED rendered ' +
@@ -475,10 +463,6 @@ export const CASES = [
              'reports 1), so every section pins a table rather than a "No rows" line. BONESUPPORT HOLDING AB, ' +
              'the first pick, answered only its insider dealings through the issuer view. Turns red if SE is ' +
              'removed from KO_EU_LIVE, or if one of its sections empties (re-pick the issuer then, section 6b).' },
-      ...pendingCase('get_eu_issuer', { name: 'pending', arguments: { country: EU_PENDING, issuer: EU_LIVE_ISSUER },
-        why: `PENDING STATE, NOT DATA (${EU_PENDING.toUpperCase()} is pending): the pending status answer, which ko-api ` +
-             'gives from configuration before looking the issuer up. Turns red when ' +
-             `${EU_PENDING.toUpperCase()} is activated -- move EU_PENDING then (section 6b).` }),
       { name: 'not_covered', arguments: { country: 'fr', issuer: 'lei:549300UINV5RINHGMG07' },
         why: 'Uncovered market: COUNTRY_NOT_COVERED as a status answer, stable across activation.' },
       { name: 'error', arguments: { country: 'se', issuer: 'notanid' },
@@ -513,8 +497,8 @@ export const PLAN_GATED_TOOLS = CASES.filter((t) => t.planGated).map((t) => t.to
  * dataset tools). Such a fixture is NOT data coverage, so it is flagged
  * `activationGated: true`, its `normal.why` says ACTIVATION GATE, and it is
  * exempt from the "populated answer" test. Empty since SE went live: the EU
- * dataset tools now pin SE's rows in `normal` and DK's pending answer in their
- * `pending` case. A new market-gated tool with no live market would be listed
+ * dataset tools now pin SE's rows in `normal` (their `pending` case went when the
+ * last pending market went live, KO_EU_LIVE=NL,SE,UK,DK). A new market-gated tool with no live market would be listed
  * here again. Runbook: docs/GOLDEN_CONTRACT.md section 6b.
  */
 export const ACTIVATION_GATED_TOOLS = CASES.filter((t) => t.activationGated).map((t) => t.tool);
