@@ -51,3 +51,13 @@ Set `KO_API_KEY=ko_live_...` in the environment to use your quota.
   are Pro+; core SEC tools (13F, insiders, Congress, stocks, crypto, FTD, and
   the filings list/index) work on Free.
 - Quota resets at 00:00 UTC. Check usage at <https://ko.io/console>.
+
+## Government contracts
+
+Ask: "Show Boeing's federal contract obligations and recent actions."
+The client can use `get_gov_contracts` with `ticker: "BA", include: "actions"`.
+For the Army in a fiscal year, add `fiscal_year: 2026, agency: "097", sub_agency: "2100"` (history requires Pro).
+`search_gov_contracts` supports `view: "actions"` or `view: "companies"`.
+Choose one window form. Free access covers the trailing 92 days.
+Amounts are exact decimal strings. Links cover companies listed today plus reviewed links.
+See [methodology](https://ko.io/datasets/gov-contracts/).

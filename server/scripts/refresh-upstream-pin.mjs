@@ -30,6 +30,7 @@
  * would record a SHA that exists nowhere.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { sharedQueryReads } from './shared-query-reads.mjs';
 import { createHash } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -89,6 +90,17 @@ const reads = {};
 let handlerCount = 0;
 for (const src of SCANNED_ROUTE_FILES) {
   const body = fileAt(repo, REV, src);
+  if (src === 'src/routes/v1/gov-contracts.ts') {
+    // Shared view handlers need literal argument binding and transitive helper reads.
+    // Record every traversed helper's blob: none of these reads is a hardcoded allowlist.
+    const resolved = sharedQueryReads(src, (file) => fileAt(repo, REV, file));
+    for (const file of resolved.files) files[file] = blobSha(repo, REV, file);
+    for (const h of resolved.handlers) {
+      handlerCount++;
+      reads[`${h.method} ${h.path}`] = h.readParams;
+    }
+    continue;
+  }
   const unscannable = unscannableReads(body);
   if (unscannable.length) {
     console.error(

@@ -40,3 +40,5 @@ export type {
   EuListOptions,
 } from "./types.js";
 export { VERSION } from "./version.js";
+
+export type { GovWindowOptions, GovTransactionsOptions, GovSearchOptions, GovCompaniesOptions, GovSummary, GovAction, GovFeedAction, GovCompany, GovCoverage, GovTransactionsMeta, GovMoney, GovIdentity, GovTotals, GovMonth, GovAward, GovMeta } from "./types.js";

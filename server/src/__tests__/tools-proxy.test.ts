@@ -20,6 +20,7 @@ import { registerForm144Tools } from "../tools/form144.js";
 import { registerFilingTools } from "../tools/filings.js";
 import { registerFinancialTools } from "../tools/financials.js";
 import { registerMacroTools } from "../tools/macro.js";
+import { registerGovTools } from "../tools/gov.js";
 import { registerCryptoTools } from "../tools/crypto.js";
 import { registerEuTools } from "../tools/eu.js";
 import { makeFakeServer } from "./helpers.js";
@@ -40,6 +41,7 @@ function registerAll() {
   registerMacroTools(server, config);
   registerCryptoTools(server, config);
   registerEuTools(server, config);
+  registerGovTools(server, config);
   return tools;
 }
 
@@ -51,6 +53,7 @@ const ARGS = {
 };
 
 const EXPECTED_TOOLS = [
+  "get_gov_contracts", "search_gov_contracts",
   "get_institution_holdings", "list_institutions",
   "get_stock_profile", "get_stock_holders", "get_stock_activity", "get_stock_price",
   "get_insider_trades", "list_insider_traders",
@@ -70,8 +73,8 @@ describe("tool coverage gate", () => {
     expect(registered).toEqual([...EXPECTED_TOOLS].sort());
   });
 
-  it("registers 30 tools (21 base + 3 crypto + 6 EU)", () => {
-    expect(registerAll().size).toBe(30);
+  it("registers 32 tools (21 base + 3 crypto + 6 EU + 2 government contracts)", () => {
+    expect(registerAll().size).toBe(32);
   });
 });
 

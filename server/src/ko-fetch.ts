@@ -4,7 +4,7 @@ export interface KoConfig {
 }
 
 export interface KoFetchOptions {
-  /** Override the default budget. Only for a call that legitimately needs longer. */
+  /** Override the default budget; keep it strictly below the upstream route timeout. */
   timeoutMs?: number;
 }
 

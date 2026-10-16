@@ -30,7 +30,7 @@
  */
 
 export const WORKER_NAME = "ko-mcp-server";
-export const MIN_TOOLS = 30;
+export const MIN_TOOLS = 32;
 
 /** Discord's hard cap for a message `content` field. */
 export const DISCORD_CONTENT_LIMIT = 2000;

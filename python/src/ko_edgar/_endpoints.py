@@ -349,3 +349,23 @@ def eu_list(
 
 def eu_issuer(country: str, issuer: str) -> Endpoint:
     return f"/api/v1/eu/{_seg(country.lower())}/issuers/{_seg(issuer)}", {}
+
+
+def gov_contracts_company(ticker: str, **params: Any) -> Endpoint:
+    return f"/api/v1/gov-contracts/{_seg(ticker.upper())}", params
+
+
+def gov_contracts_transactions(ticker: str, **params: Any) -> Endpoint:
+    return f"/api/v1/gov-contracts/{_seg(ticker.upper())}/transactions", params
+
+
+def gov_contracts_search(**params: Any) -> Endpoint:
+    return "/api/v1/gov-contracts", params
+
+
+def gov_contracts_companies(**params: Any) -> Endpoint:
+    return "/api/v1/gov-contracts/companies", params
+
+
+def gov_contracts_coverage(**params: Any) -> Endpoint:
+    return "/api/v1/gov-contracts/coverage", params
