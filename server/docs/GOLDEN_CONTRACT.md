@@ -226,8 +226,10 @@ EU block in `src/contract/cases.mjs`:
 - `EU_PENDING` (`dk`): each `pending` case pins the **pending status answer** --
   a success envelope that says the dataset is not live yet and that this is not
   an outage and not an empty result. A pending dataset must never read as
-  `ko.io API error (404)` or as "no rows". It must be a market that offers all
-  four datasets, so not UK (no short positions).
+  `ko.io API error (404)` or as "no rows". Only the tools whose dataset the
+  market offers carry the case (`EU_PENDING_TOOLS`): with UK pending,
+  `get_eu_short_positions` has no `pending` case, because UK short positions
+  answer `not_offered` (pinned separately), not pending.
 
 The `not_covered` (`fr`), `not_offered` (UK short positions) and `error` cases
 are answered from configuration or zod and stay stable. `get_eu_markets` is not
@@ -254,8 +256,8 @@ the same gate on every `server/**` pull request (`.github/workflows/golden-pr.ym
    does). Pending 404s carry `s-maxage=3600`; without the purge a re-capture
    can re-pin the old state.
 2. Branch ko-mcp from `origin/main`. In `src/contract/cases.mjs` move the
-   market that changed: `EU_PENDING` to a still-pending market that offers all
-   four datasets (when none is left, delete the `pending` cases and their test),
+   market that changed: `EU_PENDING` to a still-pending market (UK pins four
+   tools, `EU_NOT_OFFERED_TOOLS`; when none is left, delete the `pending` cases and their tests),
    or `EU_LIVE` (with `EU_LIVE_ISSUER`) to a live market. Check first that the
    issuer has rows in all four sections:
    `curl -s 'https://api.ko.io/api/v1/eu/<cc>/issuers/<id>?demo=true'`.
