@@ -1,7 +1,7 @@
 {
   "_comment": "DERIVED from ko-api at the commit in pin.json -- do not hand-edit; src/__tests__/registry/upstream-pin.test.ts hashes this file and compares it with pin.json.contractSha256. Regenerate with: npm run registry:refresh-pin.",
   "koApiRepo": "SharpLu/ko-api",
-  "koApiCommit": "e1ed002def2c62007949b8dcec6b6ed447e4e37f",
+  "koApiCommit": "e0dcd08b9c4c18361379ac083a3d65dc5b4c6c16",
   "sourceRouteCount": 191,
   "freeBlockedPrefixes": [
     "/api/v1/treasury",

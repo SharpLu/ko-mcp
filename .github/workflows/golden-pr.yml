@@ -17,9 +17,10 @@ name: Golden contract gate (PR)
 # docs/SDK-only PR. deploy-server.yml still runs the same gate before upload and
 # stays the hard stop; this job is the early, reviewable signal.
 #
-# Activation note: when ko-api's KO_EU_LIVE starts including SE, the five
-# activation-gated EU fixtures go red here too, on every server/** PR, until the
-# re-capture in server/docs/GOLDEN_CONTRACT.md §6b lands. That is by design.
+# Activation note: the five EU dataset tools pin SE's live rows and DK's
+# pending answer. When ko-api's KO_EU_LIVE removes SE or adds DK, those fixtures
+# go red here too, on every server/** PR, until the re-capture in
+# server/docs/GOLDEN_CONTRACT.md §6b lands. That is by design.
 
 on:
   pull_request:

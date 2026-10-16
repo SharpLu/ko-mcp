@@ -90,6 +90,19 @@ const DEFECT_EMPTY_TABLE = {
 };
 
 /**
+ * The EU markets the five EU dataset tools pin (docs/GOLDEN_CONTRACT.md section 6b).
+ * EU_LIVE must be listed in ko-api's KO_EU_LIVE (its `normal` cases pin rows);
+ * EU_PENDING must be pending and offer all four datasets, so not UK (its
+ * `pending` cases pin the status answer). Changing either market in KO_EU_LIVE
+ * turns those cases red until they are moved and re-captured in the same sitting.
+ * History: every market pending (2026-10-12); SE live, DK pending (KO_EU_LIVE=NL,SE).
+ */
+const EU_LIVE = 'se';
+const EU_PENDING = 'dk';
+/** Tele2 AB (SE): rows in all four sections of the live issuer view, see get_eu_issuer.normal. */
+const EU_LIVE_ISSUER = 'lei:213800EKD193RVI9HL76';
+
+/**
  * Every replayed case.
  *
  * `why` is not decoration: it is what a reader needs in order to judge whether
@@ -393,7 +406,7 @@ export const CASES = [
       { name: 'error', arguments: {}, why: 'Required `institution` missing.' },
     ],
   },
-  // ── European markets (2026-10-12: every market pending, see ACTIVATION_GATED_TOOLS) ──
+  // ── European markets (SE live since KO_EU_LIVE=NL,SE; DK pending -- see EU_LIVE / EU_PENDING) ──
   {
     tool: 'get_eu_markets',
     cases: [
@@ -405,72 +418,41 @@ export const CASES = [
              'for the same reason as get_crypto_exposure.error.' },
     ],
   },
-  {
-    tool: 'get_eu_insider_dealings',
-    activationGated: true,
+  ...['get_eu_insider_dealings', 'get_eu_major_holdings', 'get_eu_short_positions', 'get_eu_annual_reports'].map((tool) => ({
+    tool,
     cases: [
-      { name: 'normal', arguments: { country: 'se', limit: 5 },
-        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope ' +
-             'naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.' },
+      { name: 'normal', arguments: { country: EU_LIVE, limit: 5 },
+        why: `A LIVE market (${EU_LIVE.toUpperCase()}): pins the populated rendering -- heading, window line, the table's ` +
+             'column list and the source credit. Turns red if this market is removed from ko-api KO_EU_LIVE (section 6b).' },
+      { name: 'pending', arguments: { country: EU_PENDING, limit: 5 },
+        why: `PENDING STATE, NOT DATA (${EU_PENDING.toUpperCase()} is pending). The honest pending answer: a success ` +
+             'envelope naming the state, never an isError that reads as an outage. Turns red when ' +
+             `${EU_PENDING.toUpperCase()} is activated -- move EU_PENDING to a still-pending market then (section 6b).` },
+      ...(tool === 'get_eu_short_positions'
+        ? [{ name: 'not_offered', arguments: { country: 'uk' },
+             why: 'UK short positions are not offered (a fixed licensing/source fact): 404 DATASET_NOT_OFFERED rendered ' +
+                  'as a status answer. Configuration-only upstream, so stable across activation.' }]
+        : []),
       { name: 'not_covered', arguments: { country: 'fr' },
         why: 'A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing ' +
              'the covered markets. Configuration-only upstream, so stable across activation.' },
       { name: 'error', arguments: { country: 'sweden' },
         why: 'Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.' },
     ],
-  },
-  {
-    tool: 'get_eu_major_holdings',
-    activationGated: true,
-    cases: [
-      { name: 'normal', arguments: { country: 'se', limit: 5 },
-        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope ' +
-             'naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.' },
-      { name: 'not_covered', arguments: { country: 'fr' },
-        why: 'A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing ' +
-             'the covered markets. Configuration-only upstream, so stable across activation.' },
-      { name: 'error', arguments: { country: 'sweden' },
-        why: 'Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.' },
-    ],
-  },
-  {
-    tool: 'get_eu_short_positions',
-    activationGated: true,
-    cases: [
-      { name: 'normal', arguments: { country: 'se', limit: 5 },
-        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope ' +
-             'naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.' },
-      { name: 'not_offered', arguments: { country: 'uk' },
-        why: 'UK short positions are not offered (a fixed licensing/source fact): 404 DATASET_NOT_OFFERED rendered ' +
-             'as a status answer. Configuration-only upstream, so stable across activation.' },
-      { name: 'not_covered', arguments: { country: 'fr' },
-        why: 'A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing ' +
-             'the covered markets. Configuration-only upstream, so stable across activation.' },
-      { name: 'error', arguments: { country: 'sweden' },
-        why: 'Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.' },
-    ],
-  },
-  {
-    tool: 'get_eu_annual_reports',
-    activationGated: true,
-    cases: [
-      { name: 'normal', arguments: { country: 'se', limit: 5 },
-        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope ' +
-             'naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.' },
-      { name: 'not_covered', arguments: { country: 'fr' },
-        why: 'A two-letter market ko.io does not cover: 404 COUNTRY_NOT_COVERED rendered as a status answer listing ' +
-             'the covered markets. Configuration-only upstream, so stable across activation.' },
-      { name: 'error', arguments: { country: 'sweden' },
-        why: 'Not a two-letter code -- zod -32602 carrying the market-code rule, never touches the network.' },
-    ],
-  },
+  })),
   {
     tool: 'get_eu_issuer',
-    activationGated: true,
     cases: [
-      { name: 'normal', arguments: { country: 'se', issuer: 'lei:549300UINV5RINHGMG07' },
-        why: 'ACTIVATION GATE, NOT DATA (while SE is pending). Skanska AB\'s LEI; pins the pending status answer. ' +
-             'Turns red when SE is activated -- re-capture then.' },
+      { name: 'normal', arguments: { country: EU_LIVE, issuer: EU_LIVE_ISSUER },
+        why: 'A LIVE market: Tele2 AB, an SE issuer whose live issuer view (edge, A1 and A4, 2026-10-16) has rows ' +
+             'in all four keyless sections (insider dealings 25, major holdings 9, short positions 8, annual ' +
+             'reports 1), so every section pins a table rather than a "No rows" line. BONESUPPORT HOLDING AB, ' +
+             'the first pick, answered only its insider dealings through the issuer view. Turns red if SE is ' +
+             'removed from KO_EU_LIVE, or if one of its sections empties (re-pick the issuer then, section 6b).' },
+      { name: 'pending', arguments: { country: EU_PENDING, issuer: EU_LIVE_ISSUER },
+        why: `PENDING STATE, NOT DATA (${EU_PENDING.toUpperCase()} is pending): the pending status answer, which ko-api ` +
+             'gives from configuration before looking the issuer up. Turns red when ' +
+             `${EU_PENDING.toUpperCase()} is activated -- move EU_PENDING then (section 6b).` },
       { name: 'not_covered', arguments: { country: 'fr', issuer: 'lei:549300UINV5RINHGMG07' },
         why: 'Uncovered market: COUNTRY_NOT_COVERED as a status answer, stable across activation.' },
       { name: 'error', arguments: { country: 'se', issuer: 'notanid' },
@@ -500,22 +482,14 @@ export const CASES = [
 export const PLAN_GATED_TOOLS = CASES.filter((t) => t.planGated).map((t) => t.tool);
 
 /**
- * The EU dataset tools while their markets are PENDING (ko-api KO_EU_LIVE unset,
- * 2026-10-12). Their `normal` case pins the pending STATUS answer -- a success
- * envelope that says "not live yet, not an outage" -- and contains no data. That
- * is the contract worth pinning today (a pending dataset must never read as an
- * error or as "no rows"), but it is NOT data coverage.
- *
- * TRIGGER: ko-api `KO_EU_LIVE` on the ko-api origins includes SE (ko-api
- * AGENTS.md#eu-activation) -- these cases call `se` only; NL or DK alone leaves
- * them green and needs a manual live tool call instead. From then on these `normal` cases are red BY DESIGN
- * and every ko-mcp server deploy is blocked until, in the same sitting: purge
- * everything (pending 404s carry s-maxage=3600) -> `npm run golden:capture --
- * --tool <tool>` for each activated tool -> drop `activationGated` for those
- * tools only -> update the two hard-coded lists in golden.test.ts -> merge,
- * deploy, call each tool on live mcp.ko.io. Undo = the same, back to pending.
- * Full runbook: docs/GOLDEN_CONTRACT.md section 6b. `not_covered` /
- * `not_offered` / `error` are configuration-only and stay stable.
+ * Tools whose `normal` case can only pin a PENDING status answer, because no
+ * market they read is live yet (2026-10-12 to the SE sitting: the five EU
+ * dataset tools). Such a fixture is NOT data coverage, so it is flagged
+ * `activationGated: true`, its `normal.why` says ACTIVATION GATE, and it is
+ * exempt from the "populated answer" test. Empty since SE went live: the EU
+ * dataset tools now pin SE's rows in `normal` and DK's pending answer in their
+ * `pending` case. A new market-gated tool with no live market would be listed
+ * here again. Runbook: docs/GOLDEN_CONTRACT.md section 6b.
  */
 export const ACTIVATION_GATED_TOOLS = CASES.filter((t) => t.activationGated).map((t) => t.tool);
 

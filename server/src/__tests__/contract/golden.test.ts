@@ -77,6 +77,18 @@ describe("value normalisation", () => {
       .toBe("ko.io API error (404): Not found: SEC did not publish: <URL>");
   });
 
+  it("drops the EU issuer line's row-derived Venue/Ticker segments, keeping Id/LEI/ISIN", () => {
+    const base = "**Id:** `lei:213800EKD193RVI9HL76` (matched by lei) · **LEI:** 213800EKD193RVI9HL76 · **ISIN:** SE0005190220";
+    const want = "**Id:** <VAL> (matched by lei) · **LEI:** <VAL> · **ISIN:** <VAL>";
+    expect(normalizeLine(base)).toBe(want);
+    expect(normalizeLine(base + " · **Venue:** Utanför handelsplats")).toBe(want);
+    expect(normalizeLine(base + " · **Venue:** NASDAQ STOCKHOLM AB")).toBe(want);
+    expect(normalizeLine(base + " · **Venue:** XSTO 2 · **Ticker:** TEL2 B")).toBe(want);
+    expect(normalizeLine(base + " · **Ticker:** TEL2 B")).toBe(want);
+    // The pinned labels still break when they move.
+    expect(normalizeLine(base.replace("**ISIN:**", "**Isin:**"))).not.toBe(want);
+  });
+
   it("rawValuesIn finds a value that escaped normalisation", () => {
     expect(rawValuesIn("TEXT **Total holders:** <VAL>")).toEqual([]);
     expect(rawValuesIn("TEXT **Total holders:** 1481")).toEqual(["1481"]);
@@ -231,7 +243,7 @@ describe("fixtures", () => {
         !c.contract.isError && c.contract.blocks.some((b) => b.tables.length > 0 || b.lines.length >= 4)))
       .map((f) => f.tool);
     // The 5 plan-gated tools cannot reach data from the free tier, by design;
-    // the activation-gated EU tools serve no rows until their market goes live.
+    // an activation-gated tool (none since SE went live) serves no rows yet.
     expect(hollow.sort(), `no populated contract pinned for:\n${hollow.join("\n")}`)
       .toEqual([...PLAN_GATED_TOOLS, ...ACTIVATION_GATED_TOOLS].sort());
   });
@@ -258,31 +270,60 @@ describe("plan-gated tools are labelled, so nobody mistakes a 403 for coverage",
   });
 });
 
-describe("activation-gated EU tools pin the PENDING state, labelled so nobody mistakes it for coverage", () => {
-  it("the five EU dataset tools are flagged, and only they", () => {
-    expect([...ACTIVATION_GATED_TOOLS].sort()).toEqual([
-      "get_eu_annual_reports", "get_eu_insider_dealings", "get_eu_issuer", "get_eu_major_holdings", "get_eu_short_positions",
-    ]);
-    expect(fixtures.filter((f) => f.activationGated).map((f) => f.tool).sort()).toEqual([...ACTIVATION_GATED_TOOLS].sort());
+describe("EU dataset tools pin a live market's rows AND a pending market's status answer", () => {
+  // docs/GOLDEN_CONTRACT.md section 6b. Since SE went live (KO_EU_LIVE=NL,SE) the
+  // five tools are real data coverage in `normal` and keep the pending contract
+  // in a separate `pending` case (DK), so neither can regress silently.
+  const EU_DATASET_TOOLS = [
+    "get_eu_annual_reports", "get_eu_insider_dealings", "get_eu_issuer", "get_eu_major_holdings", "get_eu_short_positions",
+  ];
+  const lines = (c: { contract: { blocks: { lines: string[] }[] } }) => c.contract.blocks.flatMap((b) => b.lines).join(" ");
+  const caseOf = (tool: string, name: string) => {
+    const c = fixtures.find((x) => x.tool === tool)?.cases.find((x) => x.name === name);
+    expect(c, `${tool}.${name} is not pinned`).toBeDefined();
+    return c!;
+  };
+
+  it("no tool is activation-gated any more, and no fixture says it is", () => {
+    expect(ACTIVATION_GATED_TOOLS).toEqual([]);
+    expect(fixtures.filter((f) => f.activationGated).map((f) => f.tool)).toEqual([]);
   });
 
-  it("each normal case is a pending STATUS answer in a success envelope, never an outage-shaped error", () => {
-    for (const tool of ACTIVATION_GATED_TOOLS) {
-      const normal = fixtures.find((x) => x.tool === tool)!.cases.find((c) => c.name === "normal")!;
+  it("each normal case is a populated live answer: no pending status, no error, at least one table", () => {
+    for (const tool of EU_DATASET_TOOLS) {
+      const normal = caseOf(tool, "normal");
       expect(normal.contract.isError, `${tool}.normal must not be isError`).toBeFalsy();
-      const text = normal.contract.blocks.flatMap((b) => b.lines).join(" ");
+      expect(lines(normal), tool).not.toContain("**Status: pending**");
+      expect(normal.contract.blocks.some((b) => b.tables.length > 0), `${tool}.normal pins no table`).toBe(true);
+      expect(normal.why).not.toContain("ACTIVATION GATE");
+    }
+  });
+
+  it("the issuer view pins a table in every one of its four dataset sections", () => {
+    const normal = caseOf("get_eu_issuer", "normal");
+    // Venue/Ticker follow the newest observation, so they must not be pinned (see normalizeLine).
+    expect(lines(normal)).not.toMatch(/\*\*(?:Venue|Ticker):\*\*/);
+    expect(normal.contract.blocks.flatMap((b) => b.tables)).toHaveLength(4);
+    expect(lines(normal)).not.toMatch(/No rows for this issuer|Not live on ko\.io for this market yet/);
+  });
+
+  it("each pending case is a pending STATUS answer in a success envelope, never an outage-shaped error", () => {
+    for (const tool of EU_DATASET_TOOLS) {
+      const pending = caseOf(tool, "pending");
+      expect(pending.contract.isError, `${tool}.pending must not be isError`).toBeFalsy();
+      const text = lines(pending);
       expect(text, tool).toContain("**Status: pending**");
       expect(text, tool).toContain("not an outage");
       expect(text, tool).not.toMatch(/ko\.io API error/);
-      expect(normal.why).toContain("ACTIVATION GATE");
+      expect(pending.why).toContain("PENDING STATE");
     }
   });
 
   it("an uncovered market is a status answer too, naming the covered markets", () => {
-    for (const tool of ACTIVATION_GATED_TOOLS) {
-      const c = fixtures.find((x) => x.tool === tool)!.cases.find((x) => x.name === "not_covered")!;
+    for (const tool of EU_DATASET_TOOLS) {
+      const c = caseOf(tool, "not_covered");
       expect(c.contract.isError, tool).toBeFalsy();
-      expect(c.contract.blocks.flatMap((b) => b.lines).join(" "), tool).toContain("Covered markets: se, nl, dk, uk");
+      expect(lines(c), tool).toContain("Covered markets: se, nl, dk, uk");
     }
   });
 });
@@ -448,6 +489,29 @@ describe("gate runner (offline, injected fetch)", () => {
     });
     expect(r.failures).toEqual([]);
     expect(r.checked).toBe(1);
+  });
+
+  it("passes when the EU issuer's newest-observation venue changes or a ticker appears (review of #41)", async () => {
+    const issuer = (idLine: string) => ({ jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text:
+      `## Tele2 AB — Sweden issuer\n${idLine}\n\n### Insider dealings (PDMR)\n\n| Published | Person |\n|---|---|\n| 2026-09-18 | X |` }] } });
+    const id = "**Id:** `lei:213800EKD193RVI9HL76` (matched by lei) · **LEI:** 213800EKD193RVI9HL76 · **ISIN:** SE0005190220";
+    const pinned = [{ ...fx[0], tool: "get_eu_issuer", cases: [{ ...fx[0].cases[0],
+      contract: contractOf(issuer(id + " · **Venue:** Utanför handelsplats")) }] }];
+    for (const live of [
+      id + " · **Venue:** NASDAQ STOCKHOLM AB",
+      id + " · **Venue:** NASDAQ STOCKHOLM AB · **Ticker:** TEL2 B",
+      id,
+    ]) {
+      const r = await runGoldenGate(pinned as never, { base: "http://127.0.0.1:1", fetchImpl: reply(issuer(live)) });
+      expect(r.failures, live).toEqual([]);
+      expect(r.checked).toBe(1);
+    }
+    // ...while losing the pinned ISIN label is still a contract move.
+    const r = await runGoldenGate(pinned as never, {
+      base: "http://127.0.0.1:1",
+      fetchImpl: reply(issuer(id.replace(" · **ISIN:** SE0005190220", ""))),
+    });
+    expect(r.failures).toHaveLength(1);
   });
 
   it("fails when a column is renamed", async () => {
