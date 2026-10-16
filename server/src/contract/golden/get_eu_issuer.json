@@ -1,21 +1,311 @@
 {
   "tool": "get_eu_issuer",
   "planGated": false,
-  "activationGated": true,
-  "capturedAt": "2026-10-12",
+  "activationGated": false,
+  "capturedAt": "2026-10-16",
   "provenance": {
-    "source": "in-process Worker fetch handler (src/index.ts), keyless, upstream https://api.ko.io",
+    "source": "http://127.0.0.1:46629",
     "mode": "build",
-    "note": "Captured from the Worker built from this working tree by calling its fetch handler in process (the same JSON-RPC bodies wrangler dev serves). Each case was probed twice and written only because the two probes agreed. Every EU market was pending at capture (2026-10-12)."
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
       "name": "normal",
       "arguments": {
         "country": "se",
-        "issuer": "lei:549300UINV5RINHGMG07"
+        "issuer": "lei:213800EKD193RVI9HL76"
       },
-      "why": "ACTIVATION GATE, NOT DATA (while SE is pending). Skanska AB's LEI; pins the pending status answer. Turns red when SE is activated -- re-capture then.",
+      "why": "A LIVE market: Tele2 AB, an SE issuer whose live issuer view (edge, A1 and A4, 2026-10-16) has rows in all four keyless sections (insider dealings 25, major holdings 9, short positions 8, annual reports 1), so every section pins a table rather than a \"No rows\" line. BONESUPPORT HOLDING AB, the first pick, answered only its insider dealings through the issuer view. Turns red if SE is removed from KO_EU_LIVE, or if one of its sections empties (re-pick the issuer then, section 6b).",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "annual_reports": {
+                "_array": {
+                  "issuer": {
+                    "id": "string",
+                    "isin": "null",
+                    "lei": "null",
+                    "name": "string"
+                  },
+                  "package_sha256": "null",
+                  "package_url": "string",
+                  "period_end": "null",
+                  "publication_date": "string",
+                  "published_at": "string",
+                  "record_id": "string",
+                  "report_url": "string",
+                  "source": {
+                    "attribution": "string",
+                    "copyright_note": "string",
+                    "link_policy": "string",
+                    "retrieved_at": "string",
+                    "source_date": "string",
+                    "url": "string"
+                  },
+                  "source_system": "string"
+                }
+              },
+              "country": "string",
+              "covered_countries": "null",
+              "insider_dealings": {
+                "_array": {
+                  "issuer": {
+                    "id": "string",
+                    "isin": "string",
+                    "lei": "string",
+                    "name": "string"
+                  },
+                  "latest_version": "number",
+                  "notice_id": "string",
+                  "notice_status_label": "string",
+                  "notice_version": "number",
+                  "person": {
+                    "closely_associated": "boolean",
+                    "name": "string",
+                    "reporting_person": "string",
+                    "role": "string"
+                  },
+                  "publication_date": "string",
+                  "published_at": "string",
+                  "record_id": "string",
+                  "source": {
+                    "attribution": "string",
+                    "copyright_note": "null",
+                    "link_policy": "string",
+                    "retrieved_at": "string",
+                    "source_date": "string",
+                    "url": "string"
+                  },
+                  "transaction": {
+                    "currency": "string",
+                    "date": "string",
+                    "instrument_name": "string",
+                    "instrument_type_label": "string",
+                    "nature_label": "string",
+                    "price": "string",
+                    "price_unit": "string",
+                    "quantity": "string",
+                    "quantity_unit": "string",
+                    "venue": "string"
+                  }
+                }
+              },
+              "issuer": {
+                "id": "string",
+                "isin": "string",
+                "isin_valid": "boolean",
+                "lei": "string",
+                "lei_entity_verified": "boolean",
+                "lei_valid": "boolean",
+                "name": "string",
+                "ticker": "null",
+                "venue": "string"
+              },
+              "live_datasets": {
+                "_array": "string"
+              },
+              "major_holdings": {
+                "_array": {
+                  "after": {
+                    "direct_votes": "string",
+                    "direct_votes_pct": "string",
+                    "indirect_votes": "string",
+                    "indirect_votes_pct": "string",
+                    "potential_shares_pct": "null",
+                    "shares": "string",
+                    "shares_pct": "string",
+                    "total_votes_pct": "string"
+                  },
+                  "before": {
+                    "shares": "string",
+                    "votes": "string"
+                  },
+                  "comment": "string",
+                  "event_date": "string",
+                  "event_date_kind": "string",
+                  "holders": {
+                    "_array": "string"
+                  },
+                  "instrument": "string",
+                  "instruments": {
+                    "cash_votes": "string",
+                    "cash_votes_pct": "string",
+                    "physical_votes": "null",
+                    "physical_votes_pct": "null",
+                    "votes": "string",
+                    "votes_pct": "string"
+                  },
+                  "issuer": {
+                    "id": "string",
+                    "isin": "null",
+                    "lei": "null",
+                    "name": "string"
+                  },
+                  "missing_fields": {
+                    "_array": null
+                  },
+                  "notice_status_label": "string",
+                  "publication_date": "string",
+                  "published_at": "string",
+                  "reason_label": "string",
+                  "record_id": "string",
+                  "source": {
+                    "attribution": "string",
+                    "copyright_note": "null",
+                    "link_policy": "string",
+                    "retrieved_at": "string",
+                    "source_date": "string",
+                    "url": "string"
+                  },
+                  "transaction_date": "string"
+                }
+              },
+              "match_basis": "string",
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "requested": "string",
+              "short_positions": {
+                "_array": {
+                  "comment": "null",
+                  "holder": "string",
+                  "is_below_threshold": "boolean",
+                  "is_position_missing": "boolean",
+                  "issuer": {
+                    "id": "string",
+                    "isin": "string",
+                    "lei": "null",
+                    "name": "string"
+                  },
+                  "position_date": "string",
+                  "position_pct": "string",
+                  "position_upper_bound_pct": "null",
+                  "record_id": "string",
+                  "source": {
+                    "attribution": "string",
+                    "copyright_note": "null",
+                    "link_policy": "string",
+                    "retrieved_at": "string",
+                    "source_date": "string",
+                    "url": "string"
+                  }
+                }
+              },
+              "status": "string"
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 <VAL> AB — Sweden issuer",
+              "TEXT **Id:** <VAL> (matched by lei) · **LEI:** <VAL> · **ISIN:** <VAL> · **Venue:** Utanför handelsplats",
+              "TEXT *Newest rows per dataset (up to <VAL> each), matched through the id's LEI/ISIN/name closure in this market.*",
+              "TEXT *ko.io Free-plan window: source_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
+              "TEXT *Keyless access caps each list at <VAL> rows; more rows may exist. Send a free ko.io API key (Authorization: Bearer ko_...) for the full list.*",
+              "BLANK",
+              "H3 Insider dealings (PDMR)",
+              "THEAD Published | Issuer | Person | Role | Nature | Instrument | Quantity | Price | Trade date | Source",
+              "TBODY",
+              "BLANK",
+              "H3 Major holdings",
+              "THEAD Event date | Issuer | Holder(s) | Votes % after | Shares % after | Instruments % | Reason | Source",
+              "TBODY",
+              "BLANK",
+              "H3 Net short positions",
+              "THEAD Position date | Holder | Issuer | ISIN | Net short | Source",
+              "TBODY",
+              "BLANK",
+              "H3 Annual financial reports",
+              "THEAD Published | Issuer | LEI | Period end | Report | Source",
+              "TBODY",
+              "BLANK",
+              "TEXT *Each row credits its source register verbatim (Source column; `source.attribution`). Quote the credit with the data.*",
+              "TEXT *Copyright: Issuer-authored annual reports remain the issuer's copyright; FI's licence covers FI's data.*"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Published",
+                  "Issuer",
+                  "Person",
+                  "Role",
+                  "Nature",
+                  "Instrument",
+                  "Quantity",
+                  "Price",
+                  "Trade date",
+                  "Source"
+                ],
+                "dataRows": 25
+              },
+              {
+                "columns": [
+                  "Event date",
+                  "Issuer",
+                  "Holder(s)",
+                  "Votes % after",
+                  "Shares % after",
+                  "Instruments %",
+                  "Reason",
+                  "Source"
+                ],
+                "dataRows": 9
+              },
+              {
+                "columns": [
+                  "Position date",
+                  "Holder",
+                  "Issuer",
+                  "ISIN",
+                  "Net short",
+                  "Source"
+                ],
+                "dataRows": 8
+              },
+              {
+                "columns": [
+                  "Published",
+                  "Issuer",
+                  "LEI",
+                  "Period end",
+                  "Report",
+                  "Source"
+                ],
+                "dataRows": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "pending",
+      "arguments": {
+        "country": "dk",
+        "issuer": "lei:213800EKD193RVI9HL76"
+      },
+      "why": "PENDING STATE, NOT DATA (DK is pending): the pending status answer, which ko-api gives from configuration before looking the issuer up. Turns red when DK is activated -- move EU_PENDING then (section 6b).",
       "contract": {
         "envelope": {
           "id": "number",
@@ -50,9 +340,9 @@
         "blocks": [
           {
             "lines": [
-              "H2 Sweden — issuer <VAL>",
+              "H2 Denmark — issuer <VAL>",
               "BLANK",
-              "TEXT **Status: pending** -- no dataset for Sweden (SE) is live on ko.io yet. This is not an outage and not an empty result: no rows are served until ko.io activates it. `get_eu_markets` shows what is live."
+              "TEXT **Status: pending** -- no dataset for Denmark (DK) is live on ko.io yet. This is not an outage and not an empty result: no rows are served until ko.io activates it. `get_eu_markets` shows what is live."
             ],
             "tables": []
           }

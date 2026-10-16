@@ -105,8 +105,8 @@ const DEFECT_EMPTY_TABLE = {
  */
 const EU_LIVE = 'se';
 const EU_PENDING = 'dk';
-/** BONESUPPORT HOLDING AB (SE): rows in all four keyless windows, see get_eu_issuer.normal. */
-const EU_LIVE_ISSUER = 'lei:549300COLY053IGTLD63';
+/** Tele2 AB (SE): rows in all four sections of the live issuer view, see get_eu_issuer.normal. */
+const EU_LIVE_ISSUER = 'lei:213800EKD193RVI9HL76';
 
 export const CASES = [
   {
@@ -444,9 +444,10 @@ export const CASES = [
     tool: 'get_eu_issuer',
     cases: [
       { name: 'normal', arguments: { country: EU_LIVE, issuer: EU_LIVE_ISSUER },
-        why: 'A LIVE market: BONESUPPORT HOLDING AB, the SE issuer with the steadiest rows in all four keyless ' +
-             'windows on 2026-10-15 (insider dealings 92 d, major holdings 92 d, short positions 92 d, annual ' +
-             'reports 365 d), so every section pins a table rather than a "No rows" line. Turns red if SE is ' +
+        why: 'A LIVE market: Tele2 AB, an SE issuer whose live issuer view (edge, A1 and A4, 2026-10-16) has rows ' +
+             'in all four keyless sections (insider dealings 25, major holdings 9, short positions 8, annual ' +
+             'reports 1), so every section pins a table rather than a "No rows" line. BONESUPPORT HOLDING AB, ' +
+             'the first pick, answered only its insider dealings through the issuer view. Turns red if SE is ' +
              'removed from KO_EU_LIVE, or if one of its sections empties (re-pick the issuer then, section 6b).' },
       { name: 'pending', arguments: { country: EU_PENDING, issuer: EU_LIVE_ISSUER },
         why: `PENDING STATE, NOT DATA (${EU_PENDING.toUpperCase()} is pending): the pending status answer, which ko-api ` +

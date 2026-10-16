@@ -1,12 +1,12 @@
 {
   "tool": "get_eu_insider_dealings",
   "planGated": false,
-  "activationGated": true,
-  "capturedAt": "2026-10-12",
+  "activationGated": false,
+  "capturedAt": "2026-10-16",
   "provenance": {
-    "source": "in-process Worker fetch handler (src/index.ts), keyless, upstream https://api.ko.io",
+    "source": "http://127.0.0.1:46629",
     "mode": "build",
-    "note": "Captured from the Worker built from this working tree by calling its fetch handler in process (the same JSON-RPC bodies wrangler dev serves). Each case was probed twice and written only because the two probes agreed. Every EU market was pending at capture (2026-10-12)."
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -15,7 +15,140 @@
         "country": "se",
         "limit": 5
       },
-      "why": "ACTIVATION GATE, NOT DATA (while SE is pending). Pins the honest pending answer: a success envelope naming the state, never an isError that reads as an outage. Turns red when SE is activated -- re-capture then.",
+      "why": "A LIVE market (SE): pins the populated rendering -- heading, window line, the table's column list and the source credit. Turns red if this market is removed from ko-api KO_EU_LIVE (section 6b).",
+      "contract": {
+        "envelope": {
+          "id": "number",
+          "jsonrpc": "string",
+          "result": {
+            "content": {
+              "_array": {
+                "text": "string",
+                "type": "string"
+              }
+            },
+            "structuredContent": {
+              "country": "string",
+              "covered_countries": "null",
+              "dataset": "string",
+              "issuer_filter": "null",
+              "latest_retrieved_at": "string",
+              "latest_source_date": "string",
+              "paging": {
+                "continuation": "string",
+                "has_more": "boolean",
+                "next_page": "null",
+                "page": "number",
+                "per_page": "number",
+                "plan_row_cap": "number",
+                "returned": "number",
+                "total_count": "number",
+                "truncated_by_plan": "boolean"
+              },
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
+              "rows": {
+                "_array": {
+                  "issuer": {
+                    "id": "string",
+                    "isin": "null",
+                    "lei": "string",
+                    "name": "string"
+                  },
+                  "latest_version": "number",
+                  "notice_id": "string",
+                  "notice_status_label": "string",
+                  "notice_version": "number",
+                  "person": {
+                    "closely_associated": "boolean",
+                    "name": "string",
+                    "reporting_person": "string",
+                    "role": "string"
+                  },
+                  "publication_date": "string",
+                  "published_at": "string",
+                  "record_id": "string",
+                  "source": {
+                    "attribution": "string",
+                    "copyright_note": "null",
+                    "link_policy": "string",
+                    "retrieved_at": "string",
+                    "source_date": "string",
+                    "url": "string"
+                  },
+                  "transaction": {
+                    "currency": "string",
+                    "date": "string",
+                    "instrument_name": "string",
+                    "instrument_type_label": "string",
+                    "nature_label": "string",
+                    "price": "string",
+                    "price_unit": "string",
+                    "quantity": "string",
+                    "quantity_unit": "string",
+                    "venue": "string"
+                  }
+                }
+              },
+              "status": "string"
+            }
+          }
+        },
+        "isError": false,
+        "contentTypes": [
+          "text"
+        ],
+        "blocks": [
+          {
+            "lines": [
+              "H2 Sweden — Insider dealings (PDMR)",
+              "TEXT *Grain: one row per transaction line of a manager's (PDMR, MAR art. <VAL> notice, newest disclosure first.*",
+              "TEXT *Latest source date in ko.io: <DATE>.*",
+              "TEXT *ko.io Free-plan window: source_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
+              "BLANK",
+              "THEAD Published | Issuer | Person | Role | Nature | Instrument | Quantity | Price | Trade date | Source",
+              "TBODY",
+              "BLANK",
+              "TEXT *Showing rows <VAL> of <VAL> (keyless page cap: <VAL> rows). More rows exist, but keyless access ends at page <VAL> <VAL> returns SIGNIN_REQUIRED without an API key. Send a free ko.io API key (Authorization: Bearer ko_...) to page further.*",
+              "BLANK",
+              "TEXT *Each row credits its source register verbatim (Source column; `source.attribution`). Quote the credit with the data.*"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "Published",
+                  "Issuer",
+                  "Person",
+                  "Role",
+                  "Nature",
+                  "Instrument",
+                  "Quantity",
+                  "Price",
+                  "Trade date",
+                  "Source"
+                ],
+                "dataRows": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "pending",
+      "arguments": {
+        "country": "dk",
+        "limit": 5
+      },
+      "why": "PENDING STATE, NOT DATA (DK is pending). The honest pending answer: a success envelope naming the state, never an isError that reads as an outage. Turns red when DK is activated -- move EU_PENDING to a still-pending market then (section 6b).",
       "contract": {
         "envelope": {
           "id": "number",
@@ -48,9 +181,9 @@
         "blocks": [
           {
             "lines": [
-              "H2 Sweden — Insider dealings (PDMR)",
+              "H2 Denmark — Insider dealings (PDMR)",
               "BLANK",
-              "TEXT **Status: pending** -- Insider dealings (PDMR) for Sweden (SE): offered, not live on ko.io yet. This is not an outage and not an empty result: no rows are served until ko.io activates it. `get_eu_markets` shows what is live."
+              "TEXT **Status: pending** -- Insider dealings (PDMR) for Denmark (DK): offered, not live on ko.io yet. This is not an outage and not an empty result: no rows are served until ko.io activates it. `get_eu_markets` shows what is live."
             ],
             "tables": []
           }

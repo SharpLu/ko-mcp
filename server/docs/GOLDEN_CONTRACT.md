@@ -217,9 +217,12 @@ EU block in `src/contract/cases.mjs`:
 
 - `EU_LIVE` (`se`): each `normal` case pins the **populated rendering** -- the
   heading, window line, table column list and source credit. `get_eu_issuer.normal`
-  uses `EU_LIVE_ISSUER` (BONESUPPORT HOLDING AB), chosen because it had rows in
-  all four keyless windows (92 days; 365 for annual reports), so every section
-  pins a table, not a "No rows" line.
+  uses `EU_LIVE_ISSUER` (Tele2 AB), chosen because its live issuer view has rows
+  in all four keyless windows (92 days; 365 for annual reports), so every section
+  pins a table, not a "No rows" line. Pick the issuer from the live
+  `/eu/<cc>/issuers/<id>` answer, not from mart counts: BONESUPPORT HOLDING AB
+  had mart rows in all four tables but the issuer view returned only its insider
+  dealings.
 - `EU_PENDING` (`dk`): each `pending` case pins the **pending status answer** --
   a success envelope that says the dataset is not live yet and that this is not
   an outage and not an empty result. A pending dataset must never read as
