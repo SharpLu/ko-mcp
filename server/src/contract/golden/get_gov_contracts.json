@@ -1,11 +1,12 @@
 {
   "tool": "get_gov_contracts",
   "planGated": false,
-  "capturedAt": "2026-10-10",
+  "activationGated": false,
+  "capturedAt": "2026-10-16",
   "provenance": {
-    "source": "src/__tests__/contract/gov-golden.test.mjs",
-    "mode": "recordings",
-    "note": "Machine-captured real MCP Server/Client responses with synthetic USAspending API fixtures. Two independent probes agree. Offline contract evidence only; recapture against live API before merge."
+    "source": "http://127.0.0.1:33231",
+    "mode": "build",
+    "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
   "cases": [
     {
@@ -63,7 +64,16 @@
                   "window_clipped": "boolean"
                 }
               },
-              "plan_limit": "null",
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
               "provisional_from": "string",
               "refreshed_at": "string",
               "scope": "string",
@@ -93,10 +103,12 @@
         "blocks": [
           {
             "lines": [
-              "H2 Government contracts — BOEING CO (BA)",
+              "H2 Government contracts — THE BOEING COMPANY (BA)",
+              "TEXT *ko.io Free-plan window: action_date <DATE> to <DATE>. History outside this Free window requires Pro.*",
               "TEXT Window: <DATE> to <DATE> (action date).",
               "TEXT Amounts are signed obligations, not payments. Recent months are provisional (*); partial months are marked ~. Defense reports about <VAL> days late.",
               "TEXT Automatic exact matches cover companies listed today, plus reviewed links with recorded evidence. Current parents are not historical ownership. [Methodology](<URL>)",
+              "TEXT Issuer-level: all share classes (BA, BA-PA).",
               "BLANK",
               "THEAD Gross obligations (USD) | Deobligations (USD) | Net obligations (USD) | Actions | Awards | Agencies",
               "TBODY",
@@ -131,7 +143,7 @@
                   "Actions",
                   "Awards"
                 ],
-                "dataRows": 1
+                "dataRows": 3
               },
               {
                 "columns": [
@@ -141,14 +153,14 @@
                   "Actions",
                   "Gross share"
                 ],
-                "dataRows": 1
+                "dataRows": 8
               },
               {
                 "columns": [
                   "Link tier",
                   "Actions"
                 ],
-                "dataRows": 1
+                "dataRows": 2
               }
             ]
           }
@@ -192,7 +204,16 @@
               "monthly": {
                 "_array": null
               },
-              "plan_limit": "null",
+              "plan_limit": {
+                "continuation": "string",
+                "date_basis": "string",
+                "effective_period": "null",
+                "policy_version": "string",
+                "row_cap": "number",
+                "truncated": "boolean",
+                "window_end": "string",
+                "window_start": "string"
+              },
               "provisional_from": "string",
               "refreshed_at": "string",
               "scope": "string",
@@ -222,10 +243,12 @@
         "blocks": [
           {
             "lines": [
-              "H2 Government contracts — BOEING CO (BA)",
+              "H2 Government contracts — THE BOEING COMPANY (BA)",
+              "TEXT *ko.io Free-plan window: action_date <DATE> to <DATE>. History outside this Free window requires Pro.*",
               "TEXT Window: <DATE> to <DATE> (action date).",
               "TEXT Amounts are signed obligations, not payments. Recent months are provisional (*); partial months are marked ~. Defense reports about <VAL> days late.",
               "TEXT Automatic exact matches cover companies listed today, plus reviewed links with recorded evidence. Current parents are not historical ownership. [Methodology](<URL>)",
+              "TEXT Issuer-level: all share classes (BA, BA-PA).",
               "TEXT No contract actions linked to BA in this window for the selected agency filters; this is not evidence of zero federal contracts.",
               "BLANK",
               "THEAD Gross obligations (USD) | Deobligations (USD) | Net obligations (USD) | Actions | Awards | Agencies",
@@ -312,7 +335,7 @@
         "blocks": [
           {
             "lines": [
-              "TEXT ko.io API error (403): Access forbidden (check your plan): History requires Pro. This is a plan limit, not missing data."
+              "TEXT ko.io API error (403): Access forbidden (check your plan): Earlier periods require Pro. [PLAN_REQUIRED (history); parameter `period`; Free window starts action_date <DATE>] This is a limit of the caller's ko.io plan, not missing data. Retry inside the Free window (omit `period` to get the plan default), or use a Pro API key: <URL>"
             ],
             "tables": []
           }
