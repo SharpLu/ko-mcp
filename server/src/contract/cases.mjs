@@ -274,11 +274,12 @@ export const CASES = [
   {
     tool: 'get_form144_notices',
     cases: [
-      // limit 1, not 5: the keyless answer adds a "More notices exist" footer
-      // whenever the 3-month window holds more notices than the limit. At 5 that
-      // flipped with AAPL's filing volume (6 on 2026-10-17); at 1 it stays present
-      // for any quarter with two or more AAPL notices.
-      { name: 'normal', arguments: { ticker: 'AAPL', limit: 1 },
+      // ABNB, not AAPL: the keyless answer adds a "More notices exist" footer only
+      // while the 3-month window holds more notices than the limit. AAPL's window
+      // fell to 0-1 on 121 of 290 days in 2026, so the footer flapped. ABNB's
+      // window never held fewer than 16 (2026-05-07; max 40) over 2024-10-17 ..
+      // 2026-10-17, against limit 5. Re-derive: GOLDEN_CONTRACT.md section 8b.
+      { name: 'normal', arguments: { ticker: 'ABNB', limit: 5 },
         why: 'Notices table; limit honoured; keyless "more notices" footer.' },
       { name: 'empty', arguments: { ticker: NO_SUCH_TICKER },
         why: 'Unknown ticker: heading, a zero-count line, then a soft sentence and no table.' },
