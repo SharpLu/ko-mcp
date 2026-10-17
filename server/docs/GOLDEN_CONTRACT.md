@@ -352,8 +352,9 @@ Two consequences worth writing down:
 conditional. The honest thing is to enumerate this surface's equivalent rather
 than claim there is none.
 
-Eight pinned cases contain a pagination hint that eight tools emit **only when
-there is a next page** (`rows.length === limit`, or a computed page count > 1):
+Nine pinned cases contain a pagination hint that nine tools emit **only when
+there is a next page** (`rows.length === limit`, a computed page count > 1, or a
+`total_count` above the rows shown):
 
 | case | line | why the condition cannot flip |
 |---|---|---|
@@ -361,6 +362,7 @@ there is a next page** (`rows.length === limit`, or a computed page count > 1):
 | `get_stock_holders.normal` | same | asks for 5 of AAPL's 6,127 institutional holders |
 | `get_crypto_holders.normal` | same | asks for 5 of IBIT's 1,481 holders |
 | `get_congress_trades.normal` | same | asks for 5 of the whole STOCK Act feed |
+| `get_form144_notices.normal` | `*More notices exist than this answer shows (keyless cap: N rows)...*` | asks for 5 of ABNB's keyless 3-month window: never below 16 on any day 2024-10-17..2026-10-17 (min 16 on 2026-05-07, max 40); 23 on 2026-10-17 |
 | `list_institutions.normal` | `*More results available -- use page=N+1*` | asks for 5 of ~6,000 tracked institutions |
 | `get_insider_trades.normal` | `*Full page of N rows -- more may exist; use page=N+1.*` | asks for 5 of AAPL's Form 4 history |
 | `get_congress_member.normal` | `*Showing N trades -- use page=N+1 for more.*` | asks for 5 of Pelosi's multi-year disclosure history |
@@ -391,7 +393,22 @@ double-probe at capture cannot catch a conditional this slow-moving -- it catche
 cold-vs-warm, not month-over-month -- so this table, and the arithmetic in it, is
 the control.
 
-If a ninth such line ever appears, it belongs here before the fixture is
+The Form 144 row was AAPL until 2026-10-17: its window held 0-1 notices on 121
+of 290 days in 2026, so the footer came and went with the filing calendar and
+the gate went red on an unrelated PR. The margin is re-derived on A1 with:
+
+```sql
+WITH (SELECT groupArray(fd) FROM (SELECT accession_no, any(filed_date) AS fd
+        FROM marts.fact_form144_notices WHERE issuer_ticker = 'ABNB'
+        AND filed_date >= toDate('2024-07-01') GROUP BY accession_no)) AS ds
+SELECT min(c), argMin(d, c), max(c) FROM (SELECT d,
+  arrayCount(x -> x > addMonths(d, -3) AND x <= d, ds) AS c
+  FROM (SELECT toDate('2024-10-17') + number AS d
+        FROM numbers(dateDiff('day', toDate('2024-10-17'), today()) + 1)))
+SETTINGS use_query_cache = 0
+```
+
+If a tenth such line ever appears, it belongs here before the fixture is
 committed.
 
 ## 9. What this gate does not prove

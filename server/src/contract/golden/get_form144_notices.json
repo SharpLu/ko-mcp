@@ -1,9 +1,10 @@
 {
   "tool": "get_form144_notices",
   "planGated": false,
-  "capturedAt": "2026-09-26",
+  "activationGated": false,
+  "capturedAt": "2026-10-17",
   "provenance": {
-    "source": "http://127.0.0.1:62061",
+    "source": "http://127.0.0.1:35195",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -11,10 +12,10 @@
     {
       "name": "normal",
       "arguments": {
-        "ticker": "AAPL",
+        "ticker": "ABNB",
         "limit": 5
       },
-      "why": "Notices table; limit honoured.",
+      "why": "Notices table; limit honoured; keyless \"more notices\" footer.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -79,13 +80,15 @@
         "blocks": [
           {
             "lines": [
-              "H2 Form <VAL> Notices — AAPL",
+              "H2 Form <VAL> Notices — ABNB",
               "TEXT <VAL> filings returned*",
               "BLANK",
               "TEXT *ko.io Free-plan window: filed_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "BLANK",
               "THEAD Filed | Ticker | Seller | Relationship | Units to Sell | Market Value | 10b5-1",
-              "TBODY"
+              "TBODY",
+              "BLANK",
+              "TEXT *More notices exist than this answer shows (keyless cap: <VAL> rows); send a free ko.io API key to raise the limit.*"
             ],
             "tables": [
               {
@@ -98,7 +101,7 @@
                   "Market Value",
                   "10b5-1"
                 ],
-                "dataRows": 2
+                "dataRows": 5
               }
             ]
           }
