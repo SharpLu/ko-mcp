@@ -2,9 +2,9 @@
   "tool": "get_eu_annual_reports",
   "planGated": false,
   "activationGated": false,
-  "capturedAt": "2026-10-16",
+  "capturedAt": "2026-10-17",
   "provenance": {
-    "source": "http://127.0.0.1:46629",
+    "source": "http://127.0.0.1:43353",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -118,54 +118,6 @@
                 "dataRows": 5
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "pending",
-      "arguments": {
-        "country": "dk",
-        "limit": 5
-      },
-      "why": "PENDING STATE, NOT DATA (DK is pending). The honest pending answer: a success envelope naming the state, never an isError that reads as an outage. Turns red when DK is activated -- move EU_PENDING to a still-pending market then (section 6b).",
-      "contract": {
-        "envelope": {
-          "id": "number",
-          "jsonrpc": "string",
-          "result": {
-            "content": {
-              "_array": {
-                "text": "string",
-                "type": "string"
-              }
-            },
-            "structuredContent": {
-              "country": "string",
-              "covered_countries": "null",
-              "dataset": "string",
-              "issuer_filter": "null",
-              "latest_retrieved_at": "null",
-              "latest_source_date": "null",
-              "paging": "null",
-              "plan_limit": "null",
-              "rows": "null",
-              "status": "string"
-            }
-          }
-        },
-        "isError": false,
-        "contentTypes": [
-          "text"
-        ],
-        "blocks": [
-          {
-            "lines": [
-              "H2 Denmark — Annual financial reports",
-              "BLANK",
-              "TEXT **Status: pending** -- Annual financial reports for Denmark (DK): offered, not live on ko.io yet. This is not an outage and not an empty result: no rows are served until ko.io activates it. `get_eu_markets` shows what is live."
-            ],
-            "tables": []
           }
         ]
       }

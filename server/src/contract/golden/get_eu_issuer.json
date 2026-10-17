@@ -2,9 +2,9 @@
   "tool": "get_eu_issuer",
   "planGated": false,
   "activationGated": false,
-  "capturedAt": "2026-10-16",
+  "capturedAt": "2026-10-17",
   "provenance": {
-    "source": "http://127.0.0.1:36161",
+    "source": "http://127.0.0.1:43353",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -101,7 +101,7 @@
               },
               "issuer": {
                 "id": "string",
-                "isin": "string",
+                "isin": "null",
                 "isin_valid": "boolean",
                 "lei": "string",
                 "lei_entity_verified": "boolean",
@@ -219,7 +219,7 @@
           {
             "lines": [
               "H2 <VAL> AB — Sweden issuer",
-              "TEXT **Id:** <VAL> (matched by lei) · **LEI:** <VAL> · **ISIN:** <VAL>",
+              "TEXT **Id:** <VAL> (matched by lei) · **LEI:** <VAL>",
               "TEXT *Newest rows per dataset (up to <VAL> each), matched through the id's LEI/ISIN/name closure in this market.*",
               "TEXT *ko.io Free-plan window: source_date <DATE> to <DATE>. Earlier data exists and requires Pro -- it is not absent.*",
               "TEXT *Keyless access caps each list at <VAL> rows; more rows may exist. Send a free ko.io API key (Authorization: Bearer ko_...) for the full list.*",
@@ -295,56 +295,6 @@
                 "dataRows": 1
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "pending",
-      "arguments": {
-        "country": "dk",
-        "issuer": "lei:213800EKD193RVI9HL76"
-      },
-      "why": "PENDING STATE, NOT DATA (DK is pending): the pending status answer, which ko-api gives from configuration before looking the issuer up. Turns red when DK is activated -- move EU_PENDING then (section 6b).",
-      "contract": {
-        "envelope": {
-          "id": "number",
-          "jsonrpc": "string",
-          "result": {
-            "content": {
-              "_array": {
-                "text": "string",
-                "type": "string"
-              }
-            },
-            "structuredContent": {
-              "annual_reports": "null",
-              "country": "string",
-              "covered_countries": "null",
-              "insider_dealings": "null",
-              "issuer": "null",
-              "live_datasets": "null",
-              "major_holdings": "null",
-              "match_basis": "null",
-              "plan_limit": "null",
-              "requested": "string",
-              "short_positions": "null",
-              "status": "string"
-            }
-          }
-        },
-        "isError": false,
-        "contentTypes": [
-          "text"
-        ],
-        "blocks": [
-          {
-            "lines": [
-              "H2 Denmark — issuer <VAL>",
-              "BLANK",
-              "TEXT **Status: pending** -- no dataset for Denmark (DK) is live on ko.io yet. This is not an outage and not an empty result: no rows are served until ko.io activates it. `get_eu_markets` shows what is live."
-            ],
-            "tables": []
           }
         ]
       }
