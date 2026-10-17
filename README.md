@@ -118,7 +118,7 @@ URL, or send `Authorization: Bearer YOUR_KEY`.
 | Stock prices & financials | Daily OHLCV + XBRL-derived statements | ✅ |
 | SEC filings gateway | Any filing document, signed shareable links | list/index ✅ · documents Pro |
 | Macro (Treasury, Fed, CPI, OFR stress) | Daily federal sources | Pro |
-| European disclosures (SE, NL, DK, UK) | Insider dealings (PDMR), major holdings, net short positions (not UK), annual reports; per-row source credit. Live: Netherlands, Sweden; Denmark and the UK pending -- `get_eu_markets` shows what is live | ✅ (trailing window) |
+| European disclosures (SE, NL, DK, UK) | Insider dealings (PDMR), major holdings, net short positions (not UK), annual reports; per-row source credit. Live: all four since 2026-10-17 (UK has no short positions) -- `get_eu_markets` shows what is live | ✅ (trailing window) |
 
 All data is source-traced through the pipeline, and the filings gateway can
 pull the underlying SEC documents — so your agent cites real filings instead
