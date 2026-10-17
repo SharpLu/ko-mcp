@@ -224,7 +224,7 @@ EU block in `src/contract/cases.mjs`:
   had mart rows in all four tables but the issuer view returned only its insider
   dealings.
 - No `pending` case: since `KO_EU_LIVE=NL,SE,UK,DK` no market is pending. Until
-  then `EU_PENDING` (DK, then UK on the four tools it offers) pinned the **pending
+  then `EU_PENDING` (DK) pinned the **pending
   status answer** -- a success envelope saying the dataset is not live yet, not an
   outage and not an empty result. That rendering stays covered offline
   (`src/__tests__/eu.test.ts`); a newly offered or withdrawn market brings the
