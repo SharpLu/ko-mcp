@@ -362,11 +362,11 @@ there is a next page** (`rows.length === limit`, a computed page count > 1, or a
 | `get_stock_holders.normal` | same | asks for 5 of AAPL's 6,127 institutional holders |
 | `get_crypto_holders.normal` | same | asks for 5 of IBIT's 1,481 holders |
 | `get_congress_trades.normal` | same | asks for 5 of the whole STOCK Act feed |
+| `get_form144_notices.normal` | `*More notices exist than this answer shows (keyless cap: N rows)...*` | asks for 5 of ABNB's keyless 3-month window: never below 16 on any day 2024-10-17..2026-10-17 (min 16 on 2026-05-07, max 40); 23 on 2026-10-17 |
 | `list_institutions.normal` | `*More results available -- use page=N+1*` | asks for 5 of ~6,000 tracked institutions |
 | `get_insider_trades.normal` | `*Full page of N rows -- more may exist; use page=N+1.*` | asks for 5 of AAPL's Form 4 history |
 | `get_congress_member.normal` | `*Showing N trades -- use page=N+1 for more.*` | asks for 5 of Pelosi's multi-year disclosure history |
 | `get_ftd_data.truncation` | `*Full page of N rows -- more may exist; use page=N+1.*` | takes the default 100 of a 1,825-day window with `total_count` 1,025 |
-| `get_form144_notices.normal` | `*More notices exist than this answer shows (keyless cap: N rows)...*` | asks for 5 of ABNB's keyless 3-month window: never below 16 on any day 2024-10-17..2026-10-17 (min 16 on 2026-05-07, max 40); 23 on 2026-10-17 |
 
 The bottom four arrived with the internal#126 fix: before it, the page size
 never reached ko-api, so `rows.length === limit` was false by accident and the
