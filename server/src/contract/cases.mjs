@@ -274,7 +274,12 @@ export const CASES = [
   {
     tool: 'get_form144_notices',
     cases: [
-      { name: 'normal', arguments: { ticker: 'AAPL', limit: 5 }, why: 'Notices table; limit honoured.' },
+      // limit 1, not 5: the keyless answer adds a "More notices exist" footer
+      // whenever the 3-month window holds more notices than the limit. At 5 that
+      // flipped with AAPL's filing volume (6 on 2026-10-17); at 1 it stays present
+      // for any quarter with two or more AAPL notices.
+      { name: 'normal', arguments: { ticker: 'AAPL', limit: 1 },
+        why: 'Notices table; limit honoured; keyless "more notices" footer.' },
       { name: 'empty', arguments: { ticker: NO_SUCH_TICKER },
         why: 'Unknown ticker: heading, a zero-count line, then a soft sentence and no table.' },
       { name: 'error', arguments: { ticker: 'AAPL', limit: 999 }, why: 'Above the clamp (max 200).' },
