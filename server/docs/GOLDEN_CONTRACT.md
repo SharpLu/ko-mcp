@@ -13,7 +13,7 @@ these 32 tools read; a renamed field upstream turns every table into a header
 with no body, and nothing in this repo would have noticed. That is the shape of
 two mart freezes this org has already paid for (2026-06, 2026-07).
 
-The gate replays 107 recorded tool calls (99 captures and 8 offline government-contract bootstrap captures) against the Worker **built from the
+The gate replays 102 recorded tool calls (94 captures and 8 offline government-contract bootstrap captures) against the Worker **built from the
 commit under test** and compares the **contract**:
 
 | pinned | not pinned |
@@ -104,12 +104,12 @@ skeleton records which lines exist and in what order.
 |---|---|
 | tools covered | 32 / 32 (`tools/list` returns 32; the deploy check asserts `>= 32`) |
 | fixture files | 32, one per tool, in `src/contract/golden/` |
-| replayed cases | 107 (76 + 18 for the six EU tools on 2026-10-12, + 5 `pending` cases when SE went live, + 8 offline government-contract bootstrap cases) |
+| replayed cases | 102 (76 + 18 for the six EU tools on 2026-10-12, + 5 `pending` cases when SE went live, - 5 when UK and DK were both live, + 8 offline government-contract bootstrap cases) |
 | excluded cases | 2, each with a written reason (below) |
 | annotated known defects | 1 case: `list_institutions.empty` (see §4) |
 | offline tests added | 37 (suite total 77 -> 114) |
 | plan-gated tools pinning a 403 rather than data | 5 (§6) |
-| activation-gated tools pinning only a pending state | 0 since SE went live (5 from 2026-10-12); the 5 EU dataset tools pin SE rows + DK's pending answer (§6b) |
+| activation-gated tools pinning only a pending state | 0 since SE went live (5 from 2026-10-12); the 5 EU dataset tools pin SE rows; no pending answer since every market is live (§6b) |
 
 ## 4. Known defects: annotated, never pinned
 
@@ -207,7 +207,7 @@ empty, `CLOUDFLARE_API_TOKEN` was unset and `wrangler whoami` reported not
 logged in, so the QA Pro key (`qa_mcp_test_f7a2b3e7`, in prod D1) could not be
 read.
 
-## 6b. The 5 EU dataset tools pin a live market AND a pending one
+## 6b. The 5 EU dataset tools pin a live market
 
 `get_eu_insider_dealings`, `get_eu_major_holdings`, `get_eu_short_positions`,
 `get_eu_annual_reports` and `get_eu_issuer` proxy ko-api `/api/v1/eu/*`, where a
@@ -223,19 +223,18 @@ EU block in `src/contract/cases.mjs`:
   `/eu/<cc>/issuers/<id>` answer, not from mart counts: BONESUPPORT HOLDING AB
   had mart rows in all four tables but the issuer view returned only its insider
   dealings.
-- `EU_PENDING` (`dk`): each `pending` case pins the **pending status answer** --
-  a success envelope that says the dataset is not live yet and that this is not
-  an outage and not an empty result. A pending dataset must never read as
-  `ko.io API error (404)` or as "no rows". Only the tools whose dataset the
-  market offers carry the case (`EU_PENDING_TOOLS`): with UK pending,
-  `get_eu_short_positions` has no `pending` case, because UK short positions
-  answer `not_offered` (pinned separately), not pending.
+- No `pending` case: since `KO_EU_LIVE=NL,SE,UK,DK` no market is pending. Until
+  then `EU_PENDING` (DK) pinned the **pending
+  status answer** -- a success envelope saying the dataset is not live yet, not an
+  outage and not an empty result. That rendering stays covered offline
+  (`src/__tests__/eu.test.ts`); a newly offered or withdrawn market brings the
+  case back (skip the tools it does not offer: UK has no short positions).
 
 The `not_covered` (`fr`), `not_offered` (UK short positions) and `error` cases
 are answered from configuration or zod and stay stable. `get_eu_markets` is not
 market-specific: its table body collapses and its legend line is constant.
-`npm test` asserts the split: `normal` populated (the issuer with four tables),
-`pending` the status answer, and `ACTIVATION_GATED_TOOLS` empty.
+`npm test` asserts `normal` populated (the issuer with four tables), no `pending`
+case, and `ACTIVATION_GATED_TOOLS` empty.
 
 History: from 2026-10-12 every market was pending, so `normal` could only pin the
 pending answer. Those fixtures were flagged `activationGated: true` (`why`:
@@ -244,8 +243,7 @@ mechanism stays in `cases.mjs` for a future market-gated tool with no live marke
 
 ### Activation runbook (ko-mcp half)
 
-**Trigger:** ko-api's `KO_EU_LIVE` changes `EU_LIVE` or `EU_PENDING`: SE is
-removed, or DK is added (`DK`, or a pair such as `DK:pdmr_dealings`). NL or UK
+**Trigger:** ko-api's `KO_EU_LIVE` changes `EU_LIVE`: SE is removed. NL, UK or DK
 alone leaves every case green; call the newly live tools on mcp.ko.io by hand
 instead (step 5). The flip is not a ko-mcp change, so nothing here notices it:
 after it, **every** ko-mcp `server/**` deploy fails its golden gate -- and so does
@@ -256,9 +254,7 @@ the same gate on every `server/**` pull request (`.github/workflows/golden-pr.ym
    does). Pending 404s carry `s-maxage=3600`; without the purge a re-capture
    can re-pin the old state.
 2. Branch ko-mcp from `origin/main`. In `src/contract/cases.mjs` move the
-   market that changed: `EU_PENDING` to a still-pending market (UK pins four
-   tools, `EU_NOT_OFFERED_TOOLS`; when none is left, delete the `pending` cases and their tests),
-   or `EU_LIVE` (with `EU_LIVE_ISSUER`) to a live market. Check first that the
+   market that changed: `EU_LIVE` (with `EU_LIVE_ISSUER`) to a live market. Check first that the
    issuer has rows in all four sections:
    `curl -s 'https://api.ko.io/api/v1/eu/<cc>/issuers/<id>?demo=true'`.
 3. For the five tools run
