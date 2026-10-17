@@ -17,7 +17,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createServer } from "node:http";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -99,6 +99,7 @@ if (argv[0] === "deployments" && argv[1] === "status") {
 
 afterAll(async () => {
   await new Promise((r) => http.close(r));
+  rmSync(dir, { recursive: true, force: true });
 });
 
 function runGuard(args, extraEnv = {}) {
