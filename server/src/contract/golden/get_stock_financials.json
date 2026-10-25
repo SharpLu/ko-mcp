@@ -4,7 +4,7 @@
   "activationGated": false,
   "capturedAt": "2026-10-25",
   "provenance": {
-    "source": "http://127.0.0.1:36259",
+    "source": "http://127.0.0.1:36003",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -89,7 +89,7 @@
               "THEAD Period | Op Cash Flow | Capex | Free Cash Flow | Buybacks | Dividends | Investing CF | Financing CF",
               "TBODY",
               "BLANK",
-              "TEXT *Capex, buybacks and dividends are cash paid (positive USD, as filed). Free cash flow = operating cash flow - capex, N/A when either is unreported. Investing and financing cash flow are signed (negative = net cash used). Cash & equivalents excludes short-term investments; long-term debt (in D/E) is us-gaap LongTermDebt, which includes the current portion.*",
+              "TEXT *Capex, buybacks and dividends are normally a positive cash payment (USD); negative values are passed through as filed or derived. Free cash flow = operating cash flow - capex, N/A when either is unreported or capex is negative. Investing and financing cash flow are signed (negative = net cash used). Cash & equivalents excludes short-term investments; long-term debt (in D/E) is us-gaap LongTermDebt, which includes the current portion.*",
               "BLANK",
               "TEXT *Free plan / keyless access: only the latest quarterly statement is returned; earlier quarters and all annual statements require Pro (they exist -- they are withheld, not missing).*"
             ],
