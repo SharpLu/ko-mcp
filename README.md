@@ -115,7 +115,7 @@ URL, or send `Authorization: Bearer YOUR_KEY`.
 | Crypto ETF exposure | Institutional spot-BTC-ETF holdings from 13F | ✅ |
 | Form 144 | Planned insider sales (forward-looking) | ✅ |
 | Fails-to-deliver + Reg SHO | Short-side stress footprints | ✅ |
-| Stock prices & financials | Daily OHLCV + XBRL-derived 10-K/10-Q statements incl. cash, capex, free cash flow, buybacks, dividends | ✅ (latest quarter) |
+| Stock prices & financials | Daily OHLCV + XBRL-derived 10-K/10-Q statements incl. cash, capex, free cash flow, buybacks, dividends | ✅ |
 | SEC filings gateway | Any filing document, signed shareable links | list/index ✅ · documents Pro |
 | Macro (Treasury, Fed, CPI, OFR stress) | Daily federal sources | Pro |
 | European disclosures (SE, NL, DK, UK) | Insider dealings (PDMR), major holdings, net short positions (not UK), annual reports; per-row source credit. Live: all four since 2026-10-17 (UK has no short positions) -- `get_eu_markets` shows what is live | ✅ (trailing window) |
@@ -148,8 +148,8 @@ Full parameter reference: [llms.txt](llms.txt) · [ko.io/docs](https://ko.io/doc
 `get_stock_financials` returns 10-K/10-Q statement values: revenue, net income, EPS, margins, operating cash flow,
 `cash_and_equivalents`, `total_assets`, `total_liabilities`, `capex`, `free_cash_flow`, `stock_repurchase` (buybacks),
 `dividends_paid`, `investing_cashflow`, `financing_cashflow` and debt.
-Capex, buybacks and dividends are cash paid, positive USD as filed.
-`free_cash_flow` = `operating_cashflow` - `capex`, null when either is unreported (a missing value is never read as 0).
+Capex, buybacks and dividends are each normally a positive cash payment (USD); negative values are passed through as filed or derived and make `free_cash_flow` null.
+`free_cash_flow` = `operating_cashflow` - `capex` only when both are reported and `capex` >= 0; otherwise null (a missing value is never read as 0).
 `cash_and_equivalents` excludes short-term investments; `long_term_debt` is us-gaap `LongTermDebt`, which includes the current portion.
 Example: *"MSFT buybacks last 4 quarters"* -> `get_stock_financials(ticker="MSFT", period_type="quarterly", limit=4)`.
 Free and keyless calls return the latest quarter only; earlier quarters and annual statements require Pro.

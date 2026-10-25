@@ -15,8 +15,10 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
     "Get quarterly or annual financial statements for a company from SEC 10-K/10-Q filings: revenue, net income, EPS, margins, " +
       "operating cash flow, cash, capex, free cash flow, buybacks, dividends, investing/financing cash flow, " +
       "total assets/liabilities and debt ratios. " +
-      "capex, stock_repurchase (buybacks) and dividends_paid are cash paid, positive USD as filed; " +
-      "free_cash_flow = operating_cashflow - capex, null when either is unreported (never computed from a missing value). " +
+      "capex, stock_repurchase (buybacks) and dividends_paid are each normally a positive cash payment (USD); negative values are " +
+      "passed through as filed or derived and make free_cash_flow null. " +
+      "free_cash_flow = operating_cashflow - capex only when both are reported and capex >= 0, otherwise null " +
+      "(never computed from a missing or negative value). " +
       "cash_and_equivalents excludes short-term investments; long_term_debt is us-gaap LongTermDebt, which includes the current portion. " +
       "Plan limits: the Free plan and keyless access return only the latest quarterly statement; annual statements and " +
       "earlier quarters require Pro (a request for them returns an explicit plan-limit error, never 'no data'). " +
@@ -175,14 +177,22 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
 // Field definitions (internal#374): the same wording as ko-api's OpenAPI field docs.
 // ---------------------------------------------------------------------------
 const DEFINITIONS =
-  "Capex, buybacks and dividends are cash paid (positive USD, as filed). " +
-  "Free cash flow = operating cash flow - capex, N/A when either is unreported. " +
+  "Capex, buybacks and dividends are normally a positive cash payment (USD); negative values are passed through as filed or derived. " +
+  "Free cash flow = operating cash flow - capex, N/A when either is unreported or capex is negative. " +
   "Investing and financing cash flow are signed (negative = net cash used). " +
   "Cash & equivalents excludes short-term investments; long-term debt (in D/E) is us-gaap LongTermDebt, which includes the current portion.";
 
-/** operating_cashflow - capex, exact; null unless BOTH were reported (null is unknown, never 0). */
+/**
+ * operating_cashflow - capex, exact. Null unless BOTH were reported (null is
+ * unknown, never 0) AND capex >= 0: capex is normally a positive cash payment,
+ * and a negative value (as filed, or from a YTD/Q4 derivation) would make FCF
+ * exceed operating cash flow (HIG FY2026 Q2: OCF 1.189B, capex -115M), so FCF is
+ * withheld rather than guessed. Sign normalisation belongs to the pipeline.
+ */
 function freeCashFlow(r: FinancialRow): string | null {
-  return decSub(dec(r.operating_cashflow), dec(r.capex));
+  const capex = dec(r.capex);
+  if (capex === null || Number(capex) < 0) return null;
+  return decSub(dec(r.operating_cashflow), capex);
 }
 
 // ---------------------------------------------------------------------------

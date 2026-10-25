@@ -149,7 +149,8 @@ export function planLimitOf(meta: KoMeta): Record<string, string | number | bool
 // The Markdown is for reading: 57,727 renders as "58K" and 227,917,808 as
 // "227.92M". structuredContent is for computing, so it carries the value ko-api
 // sent, unrounded: Int64 columns arrive as strings and stay strings, JS numbers
-// become their shortest round-trip decimal string. Nothing is re-derived.
+// become their shortest round-trip decimal string. The only derived value is
+// get_stock_financials free_cash_flow, computed exactly with decSub() below.
 // ---------------------------------------------------------------------------
 
 /** Exact decimal string, or null for null/absent/non-numeric. */

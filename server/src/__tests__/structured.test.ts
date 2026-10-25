@@ -291,6 +291,31 @@ describe("get_stock_financials: balance sheet and cash-flow uses (internal#374)"
     expect(text(r)).not.toMatch(/\$0\.00/);
   });
 
+  it("negative capex (live HIG FY2026 Q2) passes through as served and makes free_cash_flow null", async () => {
+    // api.ko.io demo row, 2026-10-25: OCF 1,189,000,000, capex -115,000,000. OCF - capex
+    // would be 1,304,000,000 -- more free cash flow than operating cash flow.
+    const hig = { ...msft, ticker: "HIG", fiscal_period: "Q2", operating_cashflow: 1189000000, capex: -115000000,
+      stock_repurchase: 466000000, dividends_paid: 165000000 };
+    mock.mockResolvedValue(walled(hig));
+    const r = await call("get_stock_financials", { ticker: "HIG" });
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent!.periods[0]).toMatchObject({
+      operating_cashflow: "1189000000", capex: "-115000000", free_cash_flow: null,
+      stock_repurchase: "466000000", dividends_paid: "165000000",
+    });
+    const lines = text(r).split("\n");
+    const row = lines.slice(lines.indexOf("### Cash Flow Uses")).find((l) => l.startsWith("| 2026-06-30 |"))!;
+    const cells = row.split("|").map((c) => c.trim());
+    expect(cells[3]).toBe("-$115.00M"); // Capex, as served
+    expect(cells[4]).toBe("N/A"); // Free Cash Flow withheld
+    expect(text(r)).not.toContain("$1.30B");
+    expect(text(r)).toMatch(/N\/A when either is unreported or capex is negative/);
+    // capex exactly 0 is not negative: FCF = OCF.
+    mock.mockResolvedValue(walled({ ...hig, capex: 0 }));
+    const z = await call("get_stock_financials", { ticker: "HIG" });
+    expect(z.structuredContent!.periods[0].free_cash_flow).toBe("1189000000");
+  });
+
   it("negative free cash flow and string (Int64-style) inputs stay exact", async () => {
     mock.mockResolvedValue(walled({ ...msft, operating_cashflow: "1000000000", capex: "1500000000.5" }));
     const r = await call("get_stock_financials", { ticker: "MSFT" });
