@@ -335,7 +335,8 @@ export const CASES = [
     tool: 'get_stock_financials',
     cases: [
       { name: 'normal', arguments: { ticker: 'AAPL' },
-        why: 'Quarterly financials table; keyless, the soft wall keeps only the latest statement and the answer says so.' },
+        why: 'Quarterly financials table plus the Balance Sheet and Cash Flow Uses tables (cash, capex, free cash flow, ' +
+             'buybacks, dividends; internal#374); keyless, the soft wall keeps only the latest statement and the answer says so.' },
       { name: 'plan_limit', arguments: { ticker: 'AAPL', period_type: 'annual' },
         why: 'EVAL_CODEX_TECH #4: keyless annual is emptied by the soft wall (annual: []). It used to render ' +
              '"No financial data found for AAPL." in a success envelope; it is now an isError naming Pro.' },

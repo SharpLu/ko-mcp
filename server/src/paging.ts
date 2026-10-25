@@ -149,7 +149,8 @@ export function planLimitOf(meta: KoMeta): Record<string, string | number | bool
 // The Markdown is for reading: 57,727 renders as "58K" and 227,917,808 as
 // "227.92M". structuredContent is for computing, so it carries the value ko-api
 // sent, unrounded: Int64 columns arrive as strings and stay strings, JS numbers
-// become their shortest round-trip decimal string. Nothing is re-derived.
+// become their shortest round-trip decimal string. The only derived value is
+// get_stock_financials free_cash_flow, computed exactly with decSub() below.
 // ---------------------------------------------------------------------------
 
 /** Exact decimal string, or null for null/absent/non-numeric. */
@@ -158,6 +159,48 @@ export function dec(v: unknown): string | null {
   if (typeof v === "string") return Number.isFinite(Number(v)) ? v.trim() : null;
   if (typeof v === "number") return Number.isFinite(v) ? String(v) : null;
   return null;
+}
+
+/**
+ * Exact `a - b` over two dec() strings, in the same decimal-string form.
+ *
+ * Null when either side is null (unknown): a missing operand is never read as
+ * 0, so a derived value exists only when both inputs were reported. BigInt
+ * arithmetic on the scaled digits, so the result carries no float rounding
+ * (0.3 - 0.1 is "0.2", not "0.19999999999999998").
+ */
+export function decSub(a: string | null, b: string | null): string | null {
+  const x = a === null ? null : parseDec(a);
+  const y = b === null ? null : parseDec(b);
+  if (!x || !y) return null;
+  const scale = Math.max(x.scale, y.scale);
+  const diff = x.units * 10n ** BigInt(scale - x.scale) - y.units * 10n ** BigInt(scale - y.scale);
+  return formatDec(diff, scale);
+}
+
+function parseDec(s: string): { units: bigint; scale: number } | null {
+  const m = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([-+]?\d+))?$/.exec(s.trim());
+  if (!m) return null;
+  const [, sign, whole, frac = "", exp = "0"] = m;
+  let digits = whole + frac;
+  let scale = frac.length - Number(exp);
+  if (scale < 0) {
+    digits += "0".repeat(-scale);
+    scale = 0;
+  }
+  const units = BigInt(digits);
+  return { units: sign ? -units : units, scale };
+}
+
+function formatDec(units: bigint, scale: number): string {
+  const neg = units < 0n;
+  let s = (neg ? -units : units).toString();
+  if (scale > 0) {
+    s = s.padStart(scale + 1, "0");
+    const frac = s.slice(-scale).replace(/0+$/, "");
+    s = frac ? `${s.slice(0, -scale)}.${frac}` : s.slice(0, -scale);
+  }
+  return neg && s !== "0" ? `-${s}` : s;
 }
 
 /** Small count as a JSON integer (safe range only), or null. */

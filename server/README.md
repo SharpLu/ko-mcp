@@ -17,7 +17,7 @@ Most "financial data" tools hand an LLM a blob of numbers with no provenance. KO
 
 - **88M+ institutional holdings rows**, 13F data 2013 → today
 - **Insider trades** (Form 4), **congressional trades**, **spot Bitcoin-ETF ownership**
-- **Company financials**, **macro series** (Treasury, Fed, BLS, OFR)
+- **Company financials** (incl. cash, capex, free cash flow, buybacks, dividends), **macro series** (Treasury, Fed, BLS, OFR)
 - **EDGAR source documents** — fetch the actual filing your answer came from
 
 ## Example prompts
@@ -29,6 +29,9 @@ Once connected, just ask your assistant:
 3. *"Which institutions hold the most spot Bitcoin ETF exposure?"*
 4. *"List recent insider buying at NVDA and who the buyers were."*
 5. *"Get Apple's quarterly revenue and net income for the last 8 quarters."*
+6. *"MSFT buybacks last 4 quarters"* -- `get_stock_financials` returns cash, capex, free cash flow
+   (operating cash flow - capex), buybacks (`stock_repurchase`), dividends and total assets/liabilities.
+   Free and keyless calls return the latest quarter; earlier quarters need Pro.
 
 > Live sample: institutions currently hold **$28B+** in US spot Bitcoin ETFs — BlackRock's IBIT alone is held by 1,400+ filers.
 

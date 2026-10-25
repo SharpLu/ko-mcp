@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { defineTool } from "../tool-def.js";
 import { koFetch, asEnvelope, type KoConfig } from "../ko-fetch.js";
-import { dec, planLimitOf } from "../paging.js";
+import { dec, decSub, planLimitOf } from "../paging.js";
 import { STOCK_FINANCIALS_OUTPUT } from "../output-schemas.js";
 import { fmtMoney } from "../format.js";
 
@@ -12,7 +12,14 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
   // ---------------------------------------------------------------------------
   defineTool(server, 
     "get_stock_financials",
-    "Get quarterly or annual financial statements for a company (revenue, net income, EPS, margins, cash flow, debt ratios) from SEC 10-K/10-Q filings. " +
+    "Get quarterly or annual financial statements for a company from SEC 10-K/10-Q filings: revenue, net income, EPS, margins, " +
+      "operating cash flow, cash, capex, free cash flow, buybacks, dividends, investing/financing cash flow, " +
+      "total assets/liabilities and debt ratios. " +
+      "capex, stock_repurchase (buybacks) and dividends_paid are each normally a positive cash payment (USD); negative values are " +
+      "passed through as filed or derived; a negative capex makes free_cash_flow null. " +
+      "free_cash_flow = operating_cashflow - capex only when both are reported and capex >= 0, otherwise null " +
+      "(never computed from a missing or negative value). " +
+      "cash_and_equivalents excludes short-term investments; long_term_debt is us-gaap LongTermDebt, which includes the current portion. " +
       "Plan limits: the Free plan and keyless access return only the latest quarterly statement; annual statements and " +
       "earlier quarters require Pro (a request for them returns an explicit plan-limit error, never 'no data'). " +
       "structuredContent carries the exact reported values.",
@@ -98,6 +105,36 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
           `| ${r.period_end ?? "N/A"} | ${fmtMoney(r.revenue)} | ${fmtMoney(r.net_income)} | ${fmtEps(r.eps_diluted ?? r.eps_basic)} | ${fmtPctVal(gm)} | ${fmtPctVal(om)} | ${fmtMoney(r.operating_cashflow)} | ${fmtRatio(de)} |`
         );
       }
+
+      // Balance sheet and cash-flow uses (internal#374). Separate tables so each stays
+      // readable; every value is also exact in structuredContent. fmtMoney(null)
+      // is "N/A", never $0 -- and free cash flow is N/A unless BOTH operating
+      // cash flow and capex were reported (iron rule 13).
+      lines.push(
+        "",
+        "### Balance Sheet",
+        "",
+        "| Period | Cash & Equivalents | Total Assets | Total Liabilities |",
+        "|--------|--------------------|--------------|-------------------|",
+      );
+      for (const r of rows) {
+        lines.push(
+          `| ${r.period_end ?? "N/A"} | ${fmtMoney(r.cash_and_equivalents)} | ${fmtMoney(r.total_assets)} | ${fmtMoney(r.total_liabilities)} |`
+        );
+      }
+      lines.push(
+        "",
+        "### Cash Flow Uses",
+        "",
+        "| Period | Op Cash Flow | Capex | Free Cash Flow | Buybacks | Dividends | Investing CF | Financing CF |",
+        "|--------|--------------|-------|----------------|----------|-----------|--------------|--------------|",
+      );
+      for (const r of rows) {
+        lines.push(
+          `| ${r.period_end ?? "N/A"} | ${fmtMoney(r.operating_cashflow)} | ${fmtMoney(r.capex)} | ${fmtMoney(freeCashFlow(r))} | ${fmtMoney(r.stock_repurchase)} | ${fmtMoney(r.dividends_paid)} | ${fmtMoney(r.investing_cashflow)} | ${fmtMoney(r.financing_cashflow)} |`
+        );
+      }
+      lines.push("", `*${DEFINITIONS}*`);
       if (planNote) lines.push("", `*${planNote}*`);
 
       return {
@@ -117,6 +154,15 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
             long_term_debt: dec(r.long_term_debt),
             short_term_debt: dec(r.short_term_debt),
             stockholders_equity: dec(r.stockholders_equity),
+            cash_and_equivalents: dec(r.cash_and_equivalents),
+            total_assets: dec(r.total_assets),
+            total_liabilities: dec(r.total_liabilities),
+            capex: dec(r.capex),
+            stock_repurchase: dec(r.stock_repurchase),
+            dividends_paid: dec(r.dividends_paid),
+            investing_cashflow: dec(r.investing_cashflow),
+            financing_cashflow: dec(r.financing_cashflow),
+            free_cash_flow: freeCashFlow(r),
           })),
           plan_note: planNote,
           plan_limit: planLimitOf(env.meta),
@@ -125,6 +171,28 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
     },
     { outputSchema: STOCK_FINANCIALS_OUTPUT },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Field definitions (internal#374): the same wording as ko-api's OpenAPI field docs.
+// ---------------------------------------------------------------------------
+const DEFINITIONS =
+  "Capex, buybacks and dividends are normally a positive cash payment (USD); negative values are passed through as filed or derived. " +
+  "Free cash flow = operating cash flow - capex, N/A when either is unreported or capex is negative. " +
+  "Investing and financing cash flow are signed (negative = net cash used). " +
+  "Cash & equivalents excludes short-term investments; long-term debt (in D/E) is us-gaap LongTermDebt, which includes the current portion.";
+
+/**
+ * operating_cashflow - capex, exact. Null unless BOTH were reported (null is
+ * unknown, never 0) AND capex >= 0: capex is normally a positive cash payment,
+ * and a negative value (as filed, or from a YTD/Q4 derivation) would make FCF
+ * exceed operating cash flow (HIG FY2026 Q2: OCF 1.189B, capex -115M), so FCF is
+ * withheld rather than guessed. Sign normalisation belongs to the pipeline.
+ */
+function freeCashFlow(r: FinancialRow): string | null {
+  const capex = dec(r.capex);
+  if (capex === null || Number(capex) < 0) return null;
+  return decSub(dec(r.operating_cashflow), capex);
 }
 
 // ---------------------------------------------------------------------------
@@ -161,4 +229,12 @@ interface FinancialRow {
   long_term_debt: number | null;
   short_term_debt: number | null;
   stockholders_equity: number | null;
+  cash_and_equivalents?: number | null;
+  total_assets?: number | null;
+  total_liabilities?: number | null;
+  capex?: number | null;
+  stock_repurchase?: number | null;
+  dividends_paid?: number | null;
+  investing_cashflow?: number | null;
+  financing_cashflow?: number | null;
 }
