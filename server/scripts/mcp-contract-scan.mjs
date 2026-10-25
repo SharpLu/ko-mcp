@@ -100,6 +100,9 @@ async function main() {
   const fin = await callTool("get_stock_financials", { ticker: "AAPL" });
   const finOk = fin.tag === "OK" && /revenue|net income|margin/i.test(fin.text) && !/not iterable|undefined/i.test(fin.text);
   console.log(`get_stock_financials usable: ${finOk ? "PASS" : "FAIL"}`);
+  // internal#374: cash, capex, free cash flow, buybacks and dividends reach the text answer.
+  const finUses = /Cash & Equivalents/.test(fin.text) && /\| Capex \| Free Cash Flow \| Buybacks \| Dividends \|/.test(fin.text);
+  console.log(`get_stock_financials cash-flow uses (internal#374): ${finUses ? "PASS" : "FAIL"}`);
 
   const prof = await callTool("get_stock_profile", { ticker: "NVDA" });
   const dyMatch = prof.text.match(/dividend[^\n]*?(-?\d+(?:\.\d+)?)\s*%/i);

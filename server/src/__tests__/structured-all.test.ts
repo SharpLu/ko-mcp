@@ -91,7 +91,9 @@ const ACTIVITY = {
   trend: [{ quarter: "2026-06-30", institutionsIncreased: 1, institutionsDecreased: 1, institutionsNew: 1, institutionsExited: 1, netShares: "0", netValue: "0" }],
 };
 const FIN = { period_end: "2026-06-27", revenue: 1, net_income: 1, eps_basic: 1, eps_diluted: 1, gross_profit: 1, operating_income: 1,
-  operating_cashflow: 1, long_term_debt: 1, short_term_debt: 1, stockholders_equity: 1 };
+  operating_cashflow: 1, long_term_debt: 1, short_term_debt: 1, stockholders_equity: 1,
+  cash_and_equivalents: 1, total_assets: 1, total_liabilities: 1, capex: 1, stock_repurchase: 1, dividends_paid: 1,
+  investing_cashflow: -1, financing_cashflow: -1 };
 
 interface Fixture {
   args: Record<string, unknown>;

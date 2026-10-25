@@ -221,6 +221,95 @@ describe("get_stock_financials: a plan limit is not 'No financial data found'", 
   });
 });
 
+// ── internal#374 cash, capex, free cash flow, buybacks, dividends ──────────────────
+describe("get_stock_financials: balance sheet and cash-flow uses (internal#374)", () => {
+  // Live api.ko.io demo row, MSFT FY2026 Q4 (2026-10-25), every internal#374 field verbatim.
+  const msft = {
+    ticker: "MSFT", fiscal_year: 2026, fiscal_period: "Q4", period_end: "2026-06-30",
+    revenue: 90007000000, net_income: 35766000000, eps_basic: null, eps_diluted: null,
+    gross_profit: 60482000000, operating_income: 40603000000, operating_cashflow: 55441000000,
+    long_term_debt: 40294000000, short_term_debt: null, stockholders_equity: 442387000000,
+    cash_and_equivalents: 20935000000, total_assets: 758376000000, total_liabilities: 315989000000,
+    capex: 35802000000, stock_repurchase: 4579000000, dividends_paid: 6758000000,
+    investing_cashflow: -54831000000, financing_cashflow: -11779000000,
+  };
+  const walled = (row: Record<string, unknown>) =>
+    ({ data: { quarterly: [row], annual: [] }, meta: { softwall: { policy_version: "softwall-v1", date_basis: "period_end" } } }) as never;
+
+  it("keyless MSFT: the latest quarter carries every new field, exact, and FCF = OCF - capex", async () => {
+    mock.mockResolvedValue(walled(msft));
+    const r = await call("get_stock_financials", { ticker: "MSFT", period_type: "quarterly", limit: 4 });
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent!.periods).toHaveLength(1);
+    expect(r.structuredContent!.periods[0]).toMatchObject({
+      period_end: "2026-06-30",
+      cash_and_equivalents: "20935000000", total_assets: "758376000000", total_liabilities: "315989000000",
+      capex: "35802000000", stock_repurchase: "4579000000", dividends_paid: "6758000000",
+      investing_cashflow: "-54831000000", financing_cashflow: "-11779000000",
+      operating_cashflow: "55441000000", free_cash_flow: "19639000000",
+      eps_diluted: null, short_term_debt: null,
+    });
+    const t = text(r);
+    expect(t).toContain("### Balance Sheet");
+    expect(t).toContain("| Period | Cash & Equivalents | Total Assets | Total Liabilities |");
+    expect(t).toContain("| 2026-06-30 | $20.93B | $758.38B | $315.99B |");
+    expect(t).toContain("### Cash Flow Uses");
+    expect(t).toContain("| Period | Op Cash Flow | Capex | Free Cash Flow | Buybacks | Dividends | Investing CF | Financing CF |");
+    expect(t).toContain("| 2026-06-30 | $55.44B | $35.80B | $19.64B | $4.58B | $6.76B | -$54.83B | -$11.78B |");
+    expect(t).toMatch(/Cash & equivalents excludes short-term investments/);
+    expect(t).toMatch(/LongTermDebt, which includes the current portion/);
+    // Plan behaviour unchanged: the soft wall is still stated.
+    expect(t).toMatch(/only the latest quarterly statement/);
+  });
+
+  it("free cash flow is null -- never computed from a missing value -- when capex or OCF is unreported", async () => {
+    for (const missing of ["capex", "operating_cashflow"] as const) {
+      mock.mockResolvedValue(walled({ ...msft, [missing]: null }));
+      const r = await call("get_stock_financials", { ticker: "MSFT" });
+      expect(r.isError).toBeFalsy();
+      expect(r.structuredContent!.periods[0].free_cash_flow, missing).toBeNull();
+      expect(r.structuredContent!.periods[0][missing], missing).toBeNull();
+      const lines = text(r).split("\n");
+      const row = lines.slice(lines.indexOf("### Cash Flow Uses")).find((l) => l.startsWith("| 2026-06-30 |"))!;
+      expect(row.split("|").map((c) => c.trim())[4], missing).toBe("N/A"); // Free Cash Flow column
+    }
+  });
+
+  it("absent upstream fields are null in structuredContent and N/A in the text, never 0", async () => {
+    mock.mockResolvedValue(walled(q)); // the older fixture row: none of the internal#374 fields
+    const r = await call("get_stock_financials", { ticker: "AAPL" });
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent!.periods[0]).toMatchObject({
+      cash_and_equivalents: null, total_assets: null, total_liabilities: null, capex: null, stock_repurchase: null,
+      dividends_paid: null, investing_cashflow: null, financing_cashflow: null, free_cash_flow: null,
+    });
+    expect(text(r)).toContain("| 2026-06-27 | N/A | N/A | N/A |");
+    expect(text(r)).not.toMatch(/\$0\.00/);
+  });
+
+  it("negative free cash flow and string (Int64-style) inputs stay exact", async () => {
+    mock.mockResolvedValue(walled({ ...msft, operating_cashflow: "1000000000", capex: "1500000000.5" }));
+    const r = await call("get_stock_financials", { ticker: "MSFT" });
+    expect(r.structuredContent!.periods[0].free_cash_flow).toBe("-500000000.5");
+    expect(text(r)).toContain("| -$500.00M |");
+  });
+});
+
+describe("decSub: exact decimal-string subtraction", () => {
+  it("is exact, signed and null-propagating", async () => {
+    const { decSub } = await import("../paging.js");
+    expect(decSub("55441000000", "35802000000")).toBe("19639000000");
+    expect(decSub("0.3", "0.1")).toBe("0.2");
+    expect(decSub("1", "1.25")).toBe("-0.25");
+    expect(decSub("-5", "-5")).toBe("0");
+    expect(decSub("1.5e3", "500")).toBe("1000");
+    expect(decSub("9007199254740993", "1")).toBe("9007199254740992");
+    expect(decSub(null, "1")).toBeNull();
+    expect(decSub("1", null)).toBeNull();
+    expect(decSub("abc", "1")).toBeNull();
+  });
+});
+
 describe("plan-limit 403s say they are plan limits", () => {
   it("the error names the code, the parameter and that the data is not missing", async () => {
     const { koFetch: realKoFetch } = await vi.importActual<typeof import("../ko-fetch.js")>("../ko-fetch.js");
