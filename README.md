@@ -148,7 +148,7 @@ Full parameter reference: [llms.txt](llms.txt) · [ko.io/docs](https://ko.io/doc
 `get_stock_financials` returns 10-K/10-Q statement values: revenue, net income, EPS, margins, operating cash flow,
 `cash_and_equivalents`, `total_assets`, `total_liabilities`, `capex`, `free_cash_flow`, `stock_repurchase` (buybacks),
 `dividends_paid`, `investing_cashflow`, `financing_cashflow` and debt.
-Capex, buybacks and dividends are each normally a positive cash payment (USD); negative values are passed through as filed or derived and make `free_cash_flow` null.
+Capex, buybacks and dividends are each normally a positive cash payment (USD); negative values are passed through as filed or derived; a negative `capex` makes `free_cash_flow` null.
 `free_cash_flow` = `operating_cashflow` - `capex` only when both are reported and `capex` >= 0; otherwise null (a missing value is never read as 0).
 `cash_and_equivalents` excludes short-term investments; `long_term_debt` is us-gaap `LongTermDebt`, which includes the current portion.
 Example: *"MSFT buybacks last 4 quarters"* -> `get_stock_financials(ticker="MSFT", period_type="quarterly", limit=4)`.

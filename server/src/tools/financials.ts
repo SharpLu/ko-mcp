@@ -16,7 +16,7 @@ export function registerFinancialTools(server: McpServer, config: KoConfig) {
       "operating cash flow, cash, capex, free cash flow, buybacks, dividends, investing/financing cash flow, " +
       "total assets/liabilities and debt ratios. " +
       "capex, stock_repurchase (buybacks) and dividends_paid are each normally a positive cash payment (USD); negative values are " +
-      "passed through as filed or derived and make free_cash_flow null. " +
+      "passed through as filed or derived; a negative capex makes free_cash_flow null. " +
       "free_cash_flow = operating_cashflow - capex only when both are reported and capex >= 0, otherwise null " +
       "(never computed from a missing or negative value). " +
       "cash_and_equivalents excludes short-term investments; long_term_debt is us-gaap LongTermDebt, which includes the current portion. " +
