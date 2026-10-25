@@ -276,7 +276,11 @@ describe("get_stock_financials: balance sheet and cash-flow uses (internal#374)"
   });
 
   it("absent upstream fields are null in structuredContent and N/A in the text, never 0", async () => {
-    mock.mockResolvedValue(walled(q)); // the older fixture row: none of the internal#374 fields
+    // A row shaped like the pre-internal#374 fixtures: none of the new fields present at all.
+    const legacy = { period_end: "2026-06-27", revenue: 94036000000, net_income: 23434000000, eps_basic: 1.57, eps_diluted: 1.57,
+      gross_profit: 43718000000, operating_income: 28202000000, operating_cashflow: null, long_term_debt: null,
+      short_term_debt: null, stockholders_equity: 65830000000 };
+    mock.mockResolvedValue(walled(legacy));
     const r = await call("get_stock_financials", { ticker: "AAPL" });
     expect(r.isError).toBeFalsy();
     expect(r.structuredContent!.periods[0]).toMatchObject({
