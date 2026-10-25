@@ -1,9 +1,10 @@
 {
   "tool": "get_stock_financials",
   "planGated": false,
-  "capturedAt": "2026-09-26",
+  "activationGated": false,
+  "capturedAt": "2026-10-25",
   "provenance": {
-    "source": "http://127.0.0.1:62061",
+    "source": "http://127.0.0.1:36259",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -13,7 +14,7 @@
       "arguments": {
         "ticker": "AAPL"
       },
-      "why": "Quarterly financials table; keyless, the soft wall keeps only the latest statement and the answer says so.",
+      "why": "Quarterly financials table plus the Balance Sheet and Cash Flow Uses tables (cash, capex, free cash flow, buybacks, dividends; internal#374); keyless, the soft wall keeps only the latest statement and the answer says so.",
       "contract": {
         "envelope": {
           "id": "number",
@@ -29,9 +30,15 @@
               "period_type": "string",
               "periods": {
                 "_array": {
+                  "capex": "string",
+                  "cash_and_equivalents": "string",
+                  "dividends_paid": "string",
                   "eps_basic": "string",
                   "eps_diluted": "string",
+                  "financing_cashflow": "string",
+                  "free_cash_flow": "string",
                   "gross_profit": "string",
+                  "investing_cashflow": "string",
                   "long_term_debt": "string",
                   "net_income": "string",
                   "operating_cashflow": "string",
@@ -39,7 +46,10 @@
                   "period_end": "string",
                   "revenue": "string",
                   "short_term_debt": "string",
-                  "stockholders_equity": "string"
+                  "stock_repurchase": "string",
+                  "stockholders_equity": "string",
+                  "total_assets": "string",
+                  "total_liabilities": "string"
                 }
               },
               "plan_limit": {
@@ -69,6 +79,18 @@
               "THEAD Period | Revenue | Net Income | EPS | Gross Margin | Op Margin | Op Cash Flow | D/E",
               "TBODY",
               "BLANK",
+              "H3 Balance Sheet",
+              "BLANK",
+              "THEAD Period | Cash & Equivalents | Total Assets | Total Liabilities",
+              "TBODY",
+              "BLANK",
+              "H3 Cash Flow Uses",
+              "BLANK",
+              "THEAD Period | Op Cash Flow | Capex | Free Cash Flow | Buybacks | Dividends | Investing CF | Financing CF",
+              "TBODY",
+              "BLANK",
+              "TEXT *Capex, buybacks and dividends are cash paid (positive USD, as filed). Free cash flow = operating cash flow - capex, N/A when either is unreported. Investing and financing cash flow are signed (negative = net cash used). Cash & equivalents excludes short-term investments; long-term debt (in D/E) is us-gaap LongTermDebt, which includes the current portion.*",
+              "BLANK",
               "TEXT *Free plan / keyless access: only the latest quarterly statement is returned; earlier quarters and all annual statements require Pro (they exist -- they are withheld, not missing).*"
             ],
             "tables": [
@@ -82,6 +104,28 @@
                   "Op Margin",
                   "Op Cash Flow",
                   "D/E"
+                ],
+                "dataRows": 1
+              },
+              {
+                "columns": [
+                  "Period",
+                  "Cash & Equivalents",
+                  "Total Assets",
+                  "Total Liabilities"
+                ],
+                "dataRows": 1
+              },
+              {
+                "columns": [
+                  "Period",
+                  "Op Cash Flow",
+                  "Capex",
+                  "Free Cash Flow",
+                  "Buybacks",
+                  "Dividends",
+                  "Investing CF",
+                  "Financing CF"
                 ],
                 "dataRows": 1
               }
