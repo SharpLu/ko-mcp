@@ -162,6 +162,9 @@ const sourceOut = (s: Row | undefined) => ({
 });
 const issuerOut = (i: Row | undefined) => ({ id: str(i?.id), name: str(i?.name), lei: str(i?.lei), isin: str(i?.isin) });
 
+/** ko-api `transaction.price_kind`; null = upstream did not say (unknown, never a guess). */
+const priceKind = (v: unknown): "exercise" | "reported" | null => (v === "exercise" || v === "reported" ? v : null);
+
 const pdmrOut = (r: Row) => ({
   record_id: str(r.record_id), notice_id: str(r.notice_id), notice_version: int(r.notice_version),
   latest_version: int(r.latest_version), notice_status_label: str(r.notice_status_label),
@@ -174,7 +177,8 @@ const pdmrOut = (r: Row) => ({
     date: str(r.transaction?.date), nature_label: str(r.transaction?.nature_label),
     instrument_name: str(r.transaction?.instrument_name), instrument_type_label: str(r.transaction?.instrument_type_label),
     quantity: dec(r.transaction?.quantity), quantity_unit: str(r.transaction?.quantity_unit),
-    price: dec(r.transaction?.price), currency: str(r.transaction?.currency), price_unit: str(r.transaction?.price_unit),
+    price: dec(r.transaction?.price), price_kind: priceKind(r.transaction?.price_kind),
+    currency: str(r.transaction?.currency), price_unit: str(r.transaction?.price_unit),
     venue: str(r.transaction?.venue),
   },
   source: sourceOut(r.source),
@@ -236,7 +240,9 @@ function table(dataset: EuDataset, rows: Row[]): string[] {
           ? ` (superseded: v${int(r.notice_version)} of ${int(r.latest_version)})` : "";
         const person = `${cell(p.name)}${p.closely_associated ? " (closely associated)" : ""}`;
         const qty = `${fmtNum(t.quantity)}${t.quantity_unit ? ` ${cell(t.quantity_unit)}` : ""}`;
-        const price = dec(t.price) === null ? "—" : `${fmtNum(t.price)}${t.price_unit ? ` ${cell(t.price_unit)}` : ""}`;
+        // A strike is not a market price: say so in the cell.
+        const price = dec(t.price) === null ? "—"
+          : `${fmtNum(t.price)}${t.price_unit ? ` ${cell(t.price_unit)}` : ""}${t.price_kind === "exercise" ? " (exercise price)" : ""}`;
         out.push(
           `| ${cell(r.publication_date)} | ${cell(r.issuer?.name)} | ${person} | ${cell(p.role)} | ${cell(t.nature_label)}${superseded} | ` +
           `${cell(t.instrument_name)} | ${qty} | ${price} | ${cell(t.date)} | ${sourceCell(r.source)} |`,

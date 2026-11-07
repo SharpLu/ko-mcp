@@ -577,7 +577,16 @@ const EU_PDMR_ROW = z.object({
   person: z.object({ name: Str, reporting_person: Str, role: Str, closely_associated: Bool }),
   transaction: z.object({
     date: Str, nature_label: Str, instrument_name: Str, instrument_type_label: Str,
-    quantity: Dec, quantity_unit: Str, price: Dec, currency: Str, price_unit: Str, venue: Str,
+    quantity: Dec, quantity_unit: Str, price: Dec,
+    price_kind: z
+      .enum(["exercise", "reported"])
+      .nullable()
+      .describe(
+        "exercise = the notice's own label calls price an exercise, strike or option price (a grant or exercise term, " +
+        "not a market price; UK only today); reported = the price as the notice states it, unclassified (can still be " +
+        "a nil-cost or grant term); null = not stated upstream",
+      ),
+    currency: Str, price_unit: Str, venue: Str,
   }),
   source: EU_SOURCE,
 });

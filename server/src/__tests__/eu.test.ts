@@ -30,7 +30,7 @@ const PDMR = (over: Record<string, unknown> = {}) => ({
   issuer: { id: "lei:984500F33AB40805EE63", name: "Proport invest ab", lei: "984500F33AB40805EE63", isin: "SE0027767724" },
   person: { name: "Ing-Marie Thunvik", reporting_person: "Ing-Marie Thunvik", role: "Styrelseordförande", closely_associated: false },
   transaction: { date: "2026-10-09", nature_label: "Förvärv", instrument_name: "Proport invest AB", instrument_type_label: "Aktie",
-    quantity: 11600, quantity_unit: "Antal", price: 2.01, currency: "SEK", price_unit: "SEK", venue: "SPOTLIGHT" },
+    quantity: 11600, quantity_unit: "Antal", price: 2.01, price_kind: "reported", currency: "SEK", price_unit: "SEK", venue: "SPOTLIGHT" },
   source: SRC,
   ...over,
 });
@@ -145,8 +145,23 @@ describe("EU lists: proxy contract", () => {
       paging: { total_count: 60, has_more: true, next_page: 2 },
     });
     const row = (r.structuredContent!.rows as Array<Record<string, any>>)[0];
-    expect(row.transaction).toMatchObject({ quantity: "11600", price: "2.01", currency: "SEK" });
+    expect(row.transaction).toMatchObject({ quantity: "11600", price: "2.01", price_kind: "reported", currency: "SEK" });
+    expect(t).not.toContain("(exercise price)");
     expect(row.source).toEqual({ ...SRC, copyright_note: null });
+  });
+
+  it("an exercise price says so in the table and passes price_kind through; absent upstream is null", async () => {
+    // 7458e596 (UK): "£1.51 (exercise price)" in the notice; ko-api serves price_kind "exercise".
+    const strike = PDMR({ record_id: "7458e596:1", country: "UK",
+      transaction: { ...PDMR().transaction, price: 1.51, price_kind: "exercise", currency: "GBP", price_unit: "GBP" } });
+    const legacy = PDMR({ record_id: "old:1", transaction: { ...PDMR().transaction, price_kind: undefined } });
+    mock.mockResolvedValue({ data: [strike, legacy], meta: META(2) } as never);
+    const r = await call("get_eu_insider_dealings", { country: "uk", page: 1, limit: 25 });
+    expect(textOf(r)).toContain("| 1.51 GBP (exercise price) |");
+    expect(textOf(r).match(/\(exercise price\)/g)).toHaveLength(1);
+    const rows = r.structuredContent!.rows as Array<Record<string, any>>;
+    expect(rows.map((x) => x.transaction.price_kind)).toEqual(["exercise", null]);
+    expect(rows[0].transaction.price).toBe("1.51"); // the strike itself is unchanged
   });
 
   it("marks a superseded notice version instead of letting it read as a current trade", async () => {
