@@ -2,9 +2,9 @@
   "tool": "get_eu_insider_dealings",
   "planGated": false,
   "activationGated": false,
-  "capturedAt": "2026-10-17",
+  "capturedAt": "2026-11-07",
   "provenance": {
-    "source": "http://127.0.0.1:43353",
+    "source": "http://127.0.0.1:45333",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -91,6 +91,7 @@
                     "instrument_type_label": "string",
                     "nature_label": "string",
                     "price": "string",
+                    "price_kind": "null",
                     "price_unit": "string",
                     "quantity": "string",
                     "quantity_unit": "string",
