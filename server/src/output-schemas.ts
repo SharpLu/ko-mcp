@@ -584,7 +584,7 @@ const EU_PDMR_ROW = z.object({
       .describe(
         "exercise = the notice's own label calls price an exercise, strike or option price (a grant or exercise term, " +
         "not a market price; UK only today); reported = the price as the notice states it, unclassified (can still be " +
-        "a nil-cost or grant term); null = not stated upstream",
+        "a nil-cost or grant term); null = not stated upstream or not a recognised kind",
       ),
     currency: Str, price_unit: Str, venue: Str,
   }),

@@ -162,7 +162,7 @@ const sourceOut = (s: Row | undefined) => ({
 });
 const issuerOut = (i: Row | undefined) => ({ id: str(i?.id), name: str(i?.name), lei: str(i?.lei), isin: str(i?.isin) });
 
-/** ko-api `transaction.price_kind`; null = upstream did not say (unknown, never a guess). */
+/** ko-api `transaction.price_kind`; null = upstream did not say or sent an unrecognised kind (unknown, never a guess). */
 const priceKind = (v: unknown): "exercise" | "reported" | null => (v === "exercise" || v === "reported" ? v : null);
 
 const pdmrOut = (r: Row) => ({
@@ -409,7 +409,7 @@ export function registerEuTools(server: McpServer, config: KoConfig) {
     {
       dataset: "pdmr_dealings",
       description:
-        "European insider dealings: transactions by managers and closely associated persons (PDMR, MAR article 19) from the national registers of Sweden, Netherlands, Denmark or the UK, newest first. One row per notice transaction line with person, role, nature, quantity, price and per-row source credit. Filter by issuer id; check get_eu_markets for which markets are live.",
+        "European insider dealings: transactions by managers and closely associated persons (PDMR, MAR article 19) from the national registers of Sweden, Netherlands, Denmark or the UK, newest first. One row per notice transaction line with person, role, nature, quantity, price (transaction.price_kind marks an exercise/strike price) and per-row source credit. Filter by issuer id; check get_eu_markets for which markets are live.",
       output: EU_INSIDER_DEALINGS_OUTPUT,
     },
     {

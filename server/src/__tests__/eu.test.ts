@@ -155,12 +155,13 @@ describe("EU lists: proxy contract", () => {
     const strike = PDMR({ record_id: "7458e596:1", country: "UK",
       transaction: { ...PDMR().transaction, price: 1.51, price_kind: "exercise", currency: "GBP", price_unit: "GBP" } });
     const legacy = PDMR({ record_id: "old:1", transaction: { ...PDMR().transaction, price_kind: undefined } });
-    mock.mockResolvedValue({ data: [strike, legacy], meta: META(2) } as never);
+    const unknown = PDMR({ record_id: "odd:1", transaction: { ...PDMR().transaction, price_kind: "EXERCISE" } });
+    mock.mockResolvedValue({ data: [strike, legacy, unknown], meta: META(3) } as never);
     const r = await call("get_eu_insider_dealings", { country: "uk", page: 1, limit: 25 });
     expect(textOf(r)).toContain("| 1.51 GBP (exercise price) |");
     expect(textOf(r).match(/\(exercise price\)/g)).toHaveLength(1);
     const rows = r.structuredContent!.rows as Array<Record<string, any>>;
-    expect(rows.map((x) => x.transaction.price_kind)).toEqual(["exercise", null]);
+    expect(rows.map((x) => x.transaction.price_kind)).toEqual(["exercise", null, null]); // unknown value: null, never a guess
     expect(rows[0].transaction.price).toBe("1.51"); // the strike itself is unchanged
   });
 
@@ -280,6 +281,7 @@ describe("get_eu_issuer", () => {
       status: "live", live_datasets: ["pdmr_dealings", "major_holdings"], major_holdings: [], short_positions: null, annual_reports: null,
     });
     expect((r.structuredContent!.insider_dealings as unknown[]).length).toBe(1);
+    expect((r.structuredContent!.insider_dealings as Array<Record<string, any>>)[0].transaction.price_kind).toBe("reported");
   });
 
   it("states the per-dataset row bound from meta, and a keyless truncation in words (iron rule 12)", async () => {

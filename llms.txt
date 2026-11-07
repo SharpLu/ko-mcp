@@ -51,7 +51,7 @@ Errors: {"error": {"code": "PLAN_REQUIRED" | "RATE_LIMIT_EXCEEDED" | ..., "messa
 - get_economic_indicators(category, days) [Pro]
 - get_financial_stress(days) [Pro]
 - get_eu_markets(): status per European market (se, nl, dk, uk) and dataset -- live / pending (not activated yet) / not offered
-- get_eu_insider_dealings(country, issuer, page, limit): PDMR (MAR art. 19) transaction lines, newest first, per-row source credit; transaction.price_kind = exercise marks an exercise/strike/option price (UK), not a market price
+- get_eu_insider_dealings(country, issuer, page, limit): PDMR (MAR art. 19) transaction lines, newest first, per-row source credit; transaction.price_kind: exercise = an exercise/strike/option price (UK), not a market price; reported = as stated; null = unknown
 - get_eu_major_holdings(country, issuer, page, limit): voting-rights notifications (votes % incl. instruments, shares %)
 - get_eu_short_positions(country, issuer, page, limit): disclosed net short positions (not offered for uk)
 - get_eu_annual_reports(country, issuer, page, limit): annual financial report filings with links where the source allows
