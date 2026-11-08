@@ -107,7 +107,8 @@ interface Fixture {
 
 const same = (body: unknown) => () => body;
 
-// EU rows, shapes from ko-api openapi.public.yaml examples (captured 2026-10-12).
+// EU rows, shapes from ko-api openapi.public.yaml examples (captured 2026-10-12); price_kind "exercise"
+// so the real outputSchema validates the non-null enum value too.
 const EU_SRC = { attribution: "Källa: Finansinspektionen (FI), 2026-10-11", source_date: "2026-10-10", retrieved_at: "2026-10-11T21:31:22Z", url: "https://marknadssok.fi.se/x", link_policy: "record", copyright_note: null };
 const EU_PDMR = {
   record_id: "A004D046-1:1", country: "SE", notice_id: "A004D046", notice_version: 1, latest_version: 1, notice_status_label: "Aktuell",
@@ -115,7 +116,7 @@ const EU_PDMR = {
   issuer: { id: "lei:984500F33AB40805EE63", name: "Proport invest ab", lei: "984500F33AB40805EE63", isin: "SE0027767724" },
   person: { name: "I T", reporting_person: "I T", role: "Styrelseordförande", closely_associated: false },
   transaction: { date: "2026-10-09", nature_label: "Förvärv", nature_code: null, instrument_name: "Proport invest AB", instrument_type_label: "Aktie",
-    quantity: 11600, quantity_unit: "Antal", price: 2.01, currency: "SEK", price_unit: "SEK", venue: "SPOTLIGHT STOCK MARKET" },
+    quantity: 11600, quantity_unit: "Antal", price: 2.01, price_kind: "exercise", currency: "SEK", price_unit: "SEK", venue: "SPOTLIGHT STOCK MARKET" },
   source: EU_SRC,
 };
 const EU_MAJOR = {

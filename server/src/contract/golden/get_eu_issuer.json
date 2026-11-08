@@ -2,9 +2,9 @@
   "tool": "get_eu_issuer",
   "planGated": false,
   "activationGated": false,
-  "capturedAt": "2026-10-17",
+  "capturedAt": "2026-11-07",
   "provenance": {
-    "source": "http://127.0.0.1:43353",
+    "source": "http://127.0.0.1:45333",
     "mode": "build",
     "note": "Captured from the Worker built from this working tree, on loopback. Each case was probed twice and written only because the two probes agreed."
   },
@@ -33,14 +33,14 @@
                   "issuer": {
                     "id": "string",
                     "isin": "null",
-                    "lei": "null",
+                    "lei": "string",
                     "name": "string"
                   },
-                  "package_sha256": "null",
+                  "package_sha256": "string",
                   "package_url": "string",
-                  "period_end": "null",
-                  "publication_date": "string",
-                  "published_at": "string",
+                  "period_end": "string",
+                  "publication_date": "null",
+                  "published_at": "null",
                   "record_id": "string",
                   "report_url": "string",
                   "source": {
@@ -92,6 +92,7 @@
                     "instrument_type_label": "string",
                     "nature_label": "string",
                     "price": "string",
+                    "price_kind": "null",
                     "price_unit": "string",
                     "quantity": "string",
                     "quantity_unit": "string",
@@ -270,7 +271,7 @@
                   "Reason",
                   "Source"
                 ],
-                "dataRows": 9
+                "dataRows": 7
               },
               {
                 "columns": [
@@ -292,7 +293,7 @@
                   "Report",
                   "Source"
                 ],
-                "dataRows": 1
+                "dataRows": 2
               }
             ]
           }
